@@ -1,7 +1,7 @@
 """
 Live Hardware Microphone Executive Communication Coach.
 Records your real voice from the microphone, transcribes it on-device,
-and generates structured executive coaching feedback.
+and dynamically coaches your actual spoken words into Executive BLUF phrasing.
 """
 
 import sys
@@ -36,10 +36,9 @@ def main():
         except ValueError:
             duration = 8
 
-    # Default to Upward evaluation (BLUF) or allow passing persona
-    axis = PowerAxis.UPWARD
     counterpart_name = "Vikram Malhotra"
     counterpart_role = "VP of Engineering"
+    axis = PowerAxis.UPWARD
 
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     session_id = f"live_mic_{int(time.time())}"
@@ -51,14 +50,14 @@ def main():
     compliance_mgr.log_session_consent(session_id, counterpart_notified=True)
 
     # Step 2: Live Microphone Recording
-    print(f"\n [MICROPHONE INGESTION] Recording {duration} seconds of your speech...")
-    print(" >> TIP: Try speaking a status update with some Hinglish (e.g., 'Basically, matlab we decided to ship tomorrow at 10 AM')...\n")
+    print(f"\n [MICROPHONE INGESTION] Recording {duration} seconds from your microphone...")
+    print(" >> Speak naturally (e.g. state your project status, blockers, or timeline)...\n")
     
     recorder = LiveMicRecorder()
     wav_path = recorder.record_to_wav(duration_seconds=duration)
 
     # Step 3: Local Speech-to-Text Transcription (Faster-Whisper on CPU/NPU)
-    print("\n [ON-DEVICE STT] Transcribing captured speech locally...")
+    print("\n [ON-DEVICE STT] Transcribing captured speech locally with Whisper...")
     stt_engine = LocalSTTEngine(model_size="tiny")
     utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
 
@@ -66,18 +65,18 @@ def main():
         print(" [WARNING] No distinct speech detected in audio recording.")
         return
 
-    print("\n [CAPTURED TRANSCRIPT]:")
+    print("\n [YOUR EXACT WORDS AS TRANSCRIBED]:")
     for u in utterances:
-        print(f"   👤 [USER] [{u.start_time}s - {u.end_time}s]: \"{u.transcript}\"")
+        print(f"   >>> \"{u.transcript}\"")
 
     # Step 4: Privacy Redaction
     redacted_turns = []
     for u in utterances:
-        red_text, _ = PIIRedactor.redact_text(u.transcript)
+        red_text, counts = PIIRedactor.redact_text(u.transcript)
         redacted_turns.append(Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text))
 
-    # Step 5: Executive Coaching Synthesis
-    print("\n [EXECUTIVE ANALYSIS] Calibrating feedback against UPWARD (BLUF) strategy...")
+    # Step 5: Dynamic Executive Coaching Synthesis
+    print(f"\n [EXECUTIVE ANALYSIS] Calibrating coaching against {axis.value} (BLUF) dynamic...")
     session = ConversationSession(
         session_id=session_id,
         timestamp_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -108,13 +107,13 @@ def main():
         print(f"    {idx}. {s.observation}")
         print(f"       Quote: \"{s.verbatim_quote}\"")
 
-    print("\n  AREAS FOR IMPROVEMENT & HIGH-IMPACT COACHED PHRASING:")
+    print("\n  AREAS FOR IMPROVEMENT & DYNAMIC COACHED BLUF REPHRASING:")
     for idx, a in enumerate(evaluation.areas_for_improvement, 1):
         print(f"    {idx}. Critique: {a.critique}")
-        print(f"       Original: \"{a.verbatim_quote}\"")
-        print(f"       Coached:  \"{a.coached_phrasing}\"")
+        print(f"       Original Spoken:  \"{a.verbatim_quote}\"")
+        print(f"       Coached BLUF:     \"{a.coached_phrasing}\"")
 
-    # Step 6: Cleanup / Erasure
+    # Step 6: Cleanup
     if os.path.exists(wav_path):
         os.remove(wav_path)
     print("\n [COMPLETE] Audio buffer flushed and temporary session secured.")
