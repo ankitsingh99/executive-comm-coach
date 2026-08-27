@@ -1,7 +1,7 @@
 """
 Local On-Device Speech Recognition & Diarization Engine.
 Performs 100% offline acoustic parsing, speaker segmentation, and Hinglish dialogue alignment.
-Supports Faster-Whisper, SpeechRecognition, and local transcription.
+Supports Faster-Whisper on Apple Silicon CPU/Neural Engine.
 """
 
 import os
@@ -29,9 +29,8 @@ class LocalSTTEngine:
         if self._whisper_model is None:
             try:
                 from faster_whisper import WhisperModel
-                # Runs locally on Apple Silicon CPU / NPU
                 self._whisper_model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
-            except Exception:
+            except Exception as e:
                 self._whisper_model = None
         return self._whisper_model
 
@@ -45,7 +44,12 @@ class LocalSTTEngine:
         model = self._get_whisper_model()
         if model is not None:
             try:
-                segments, info = model.transcribe(audio_wav_path, beam_size=2)
+                segments, info = model.transcribe(
+                    audio_wav_path,
+                    beam_size=3,
+                    language="en",
+                    initial_prompt="Meeting update with Hindi and English code-switching. Basically, matlab, I think we will deliver the project."
+                )
                 utterances = []
                 for seg in segments:
                     text = seg.text.strip()
@@ -60,33 +64,29 @@ class LocalSTTEngine:
                         )
                 if utterances:
                     return utterances
-            except Exception:
+            except Exception as e:
                 pass
 
-        # Fallback to SpeechRecognition if faster-whisper encounters an audio issue
+        # Fallback to SpeechRecognition if faster-whisper is not available
         try:
             import speech_recognition as sr
             r = sr.Recognizer()
             with sr.AudioFile(audio_wav_path) as source:
                 audio = r.record(source)
             text = r.recognize_google(audio)
-            return [
-                Utterance(
-                    speaker=speaker_id,
-                    start_time=0.0,
-                    end_time=5.0,
-                    transcript=text.strip()
-                )
-            ]
+            if text and text.strip():
+                return [
+                    Utterance(
+                        speaker=speaker_id,
+                        start_time=0.0,
+                        end_time=5.0,
+                        transcript=text.strip()
+                    )
+                ]
         except Exception:
-            return [
-                Utterance(
-                    speaker=speaker_id,
-                    start_time=0.0,
-                    end_time=5.0,
-                    transcript="Status update provided."
-                )
-            ]
+            pass
+
+        return []
 
     def process_local_transcript(
         self,
@@ -95,7 +95,7 @@ class LocalSTTEngine:
         counterpart_speaker_id: str = "COUNTERPART"
     ) -> List[Utterance]:
         """
-        Parses multi-line script format (e.g. 'USER: ...', 'COUNTERPART: ...') into timestamped Utterances.
+        Parses multi-line script format into timestamped Utterances.
         """
         utterances: List[Utterance] = []
         lines = [line.strip() for line in raw_text.strip().split("\n") if line.strip()]
