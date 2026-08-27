@@ -1,7 +1,6 @@
 """
 Local On-Device Speech Recognition & Diarization Engine.
-Performs 100% offline acoustic parsing, speaker segmentation, and Hinglish dialogue alignment.
-Supports Faster-Whisper on Apple Silicon CPU/Neural Engine.
+Powered by NVIDIA Parakeet STT as primary acoustic model with Faster-Whisper fallback.
 """
 
 import os
@@ -10,46 +9,63 @@ from typing import List, Dict, Any, Optional
 
 try:
     from ..engine.schema import Utterance
+    from .nvidia_parakeet_engine import NvidiaParakeetEngine
 except (ImportError, ValueError):
     from engine.schema import Utterance
+    from asr_diarization.nvidia_parakeet_engine import NvidiaParakeetEngine
 
 
 class LocalSTTEngine:
     """
-    On-device speech recognizer and speaker diarizer for local development.
-    Transcribes live microphone audio files on CPU / Apple Silicon Neural Engine.
+    On-device speech recognizer and speaker diarizer.
+    Utilizes NVIDIA Parakeet CTC as primary SOTA model for transcription.
     """
 
-    def __init__(self, sample_rate: int = 16000, model_size: str = "tiny"):
+    def __init__(self, sample_rate: int = 16000, use_parakeet: bool = True):
         self.sample_rate = sample_rate
-        self.model_size = model_size
+        self.use_parakeet = use_parakeet
+        self._parakeet_engine = None
         self._whisper_model = None
+
+    def _get_parakeet_engine(self):
+        if self._parakeet_engine is None and self.use_parakeet:
+            try:
+                self._parakeet_engine = NvidiaParakeetEngine()
+            except Exception:
+                self._parakeet_engine = None
+        return self._parakeet_engine
 
     def _get_whisper_model(self):
         if self._whisper_model is None:
             try:
                 from faster_whisper import WhisperModel
-                self._whisper_model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
-            except Exception as e:
+                self._whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+            except Exception:
                 self._whisper_model = None
         return self._whisper_model
 
     def transcribe_audio_file(self, audio_wav_path: str, speaker_id: str = "USER") -> List[Utterance]:
         """
-        Transcribes a real recorded WAV audio file into timestamped Utterances.
+        Transcribes a recorded WAV audio file using NVIDIA Parakeet (or Whisper fallback).
         """
         if not os.path.exists(audio_wav_path):
             return []
 
-        model = self._get_whisper_model()
-        if model is not None:
+        # 1. Primary Engine: NVIDIA Parakeet
+        parakeet = self._get_parakeet_engine()
+        if parakeet is not None:
             try:
-                segments, info = model.transcribe(
-                    audio_wav_path,
-                    beam_size=3,
-                    language="en",
-                    initial_prompt="Meeting update with Hindi and English code-switching. Basically, matlab, I think we will deliver the project."
-                )
+                results = parakeet.transcribe_audio_file(audio_wav_path, speaker_id=speaker_id)
+                if results and results[0].transcript.strip():
+                    return results
+            except Exception:
+                pass
+
+        # 2. Fallback Engine: Faster-Whisper
+        whisper_model = self._get_whisper_model()
+        if whisper_model is not None:
+            try:
+                segments, info = whisper_model.transcribe(audio_wav_path, beam_size=3)
                 utterances = []
                 for seg in segments:
                     text = seg.text.strip()
@@ -64,27 +80,8 @@ class LocalSTTEngine:
                         )
                 if utterances:
                     return utterances
-            except Exception as e:
+            except Exception:
                 pass
-
-        # Fallback to SpeechRecognition if faster-whisper is not available
-        try:
-            import speech_recognition as sr
-            r = sr.Recognizer()
-            with sr.AudioFile(audio_wav_path) as source:
-                audio = r.record(source)
-            text = r.recognize_google(audio)
-            if text and text.strip():
-                return [
-                    Utterance(
-                        speaker=speaker_id,
-                        start_time=0.0,
-                        end_time=5.0,
-                        transcript=text.strip()
-                    )
-                ]
-        except Exception:
-            pass
 
         return []
 
@@ -106,10 +103,7 @@ class LocalSTTEngine:
             if match:
                 speaker_raw, text = match.groups()
                 speaker_clean = speaker_raw.strip().upper()
-                if "USER" in speaker_clean:
-                    speaker = "USER"
-                else:
-                    speaker = "COUNTERPART"
+                speaker = "USER" if "USER" in speaker_clean else "COUNTERPART"
             else:
                 speaker = "USER" if len(utterances) % 2 == 0 else "COUNTERPART"
                 text = line

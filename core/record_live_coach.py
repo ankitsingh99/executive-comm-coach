@@ -63,7 +63,7 @@ def main():
     wav_path = recorder.record_to_wav(duration_seconds=duration)
 
     # Step 3: Local Speech-to-Text Transcription
-    print("\n [ON-DEVICE STT] Transcribing captured speech locally with Whisper...")
+    print("\n [ON-DEVICE STT] Transcribing captured speech locally with NVIDIA Parakeet STT (nvidia/parakeet-ctc-0.6b)...")
     stt_engine = LocalSTTEngine(model_size="tiny")
     utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
 
