@@ -3,6 +3,8 @@ Speaker Diarization and Transcript Alignment Engine (Stage 3).
 Segments audio stream into aligned user vs counterpart utterance intervals.
 """
 
+from typing import List, Dict
+
 try:
     from ..engine.schema import Utterance
 except (ImportError, ValueError):
