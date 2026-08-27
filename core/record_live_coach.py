@@ -7,6 +7,7 @@ and dynamically coaches your actual spoken words into Executive BLUF phrasing.
 import sys
 import os
 import time
+import argparse
 
 # Ensure path resolution
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +22,18 @@ from privacy.dpdp_compliance import DPDPComplianceManager
 from config import DATA_DIR
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Live Microphone Executive Communication Coach")
+    parser.add_argument("duration", type=int, nargs="?", default=8, help="Recording duration in seconds (default: 8)")
+    parser.add_argument("--axis", type=str, default="UPWARD", choices=["UPWARD", "LATERAL", "DOWNWARD"], help="Power Axis (UPWARD, LATERAL, DOWNWARD)")
+    parser.add_argument("--counterpart", type=str, default="Senior Leadership", help="Counterpart Name / Title")
+    parser.add_argument("--role", type=str, default="Manager / Executive", help="Counterpart Role")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     print("""
  +------------------------------------------------------------------------------+
  |       LIVE MICROPHONE ON-DEVICE EXECUTIVE COMMUNICATION COACH                |
@@ -29,16 +41,10 @@ def main():
  +------------------------------------------------------------------------------+
 """)
 
-    duration = 8
-    if len(sys.argv) > 1:
-        try:
-            duration = int(sys.argv[1])
-        except ValueError:
-            duration = 8
-
-    counterpart_name = "Vikram Malhotra"
-    counterpart_role = "VP of Engineering"
-    axis = PowerAxis.UPWARD
+    duration = args.duration
+    axis_enum = PowerAxis(args.axis.upper())
+    counterpart_name = args.counterpart
+    counterpart_role = args.role
 
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     session_id = f"live_mic_{int(time.time())}"
@@ -50,19 +56,22 @@ def main():
     compliance_mgr.log_session_consent(session_id, counterpart_notified=True)
 
     # Step 2: Live Microphone Recording
-    print(f"\n [MICROPHONE INGESTION] Recording {duration} seconds from your microphone...")
-    print(" >> Speak naturally (e.g. state your project status, blockers, or timeline)...\n")
+    print(f"\n [MICROPHONE INGESTION] Recording {duration}s from your microphone...")
+    print(" >> Speak now naturally into your microphone...\n")
     
     recorder = LiveMicRecorder()
     wav_path = recorder.record_to_wav(duration_seconds=duration)
 
-    # Step 3: Local Speech-to-Text Transcription (Faster-Whisper on CPU/NPU)
+    # Step 3: Local Speech-to-Text Transcription
     print("\n [ON-DEVICE STT] Transcribing captured speech locally with Whisper...")
     stt_engine = LocalSTTEngine(model_size="tiny")
     utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
 
-    if not utterances or not utterances[0].transcript.strip():
-        print(" [WARNING] No distinct speech detected in audio recording.")
+    if not utterances or not any(u.transcript.strip() for u in utterances):
+        print("\n [NOTICE] No speech was detected during the recording window.")
+        print(" Please verify your microphone volume and speak closer to the mic.")
+        if os.path.exists(wav_path):
+            os.remove(wav_path)
         return
 
     print("\n [YOUR EXACT WORDS AS TRANSCRIBED]:")
@@ -72,18 +81,18 @@ def main():
     # Step 4: Privacy Redaction
     redacted_turns = []
     for u in utterances:
-        red_text, counts = PIIRedactor.redact_text(u.transcript)
+        red_text, _ = PIIRedactor.redact_text(u.transcript)
         redacted_turns.append(Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text))
 
     # Step 5: Dynamic Executive Coaching Synthesis
-    print(f"\n [EXECUTIVE ANALYSIS] Calibrating coaching against {axis.value} (BLUF) dynamic...")
+    print(f"\n [EXECUTIVE ANALYSIS] Calibrating coaching against {axis_enum.value} strategy...")
     session = ConversationSession(
         session_id=session_id,
         timestamp_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         target_speaker="USER",
         counterpart_name=counterpart_name,
         counterpart_role=counterpart_role,
-        power_axis=axis.value,
+        power_axis=axis_enum.value,
         dialogue=redacted_turns
     )
 

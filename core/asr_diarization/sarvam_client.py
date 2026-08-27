@@ -1,7 +1,6 @@
 """
 Sarvam AI Saaras v3 Client for Bilingual Hinglish Speech Recognition.
-Handles multi-speaker Indic / English code-mixed audio transcription with fallback.
-Zero external package dependencies required (uses standard library with optional requests).
+Handles multi-speaker Indic / English code-mixed audio transcription.
 """
 
 import os
@@ -33,10 +32,9 @@ class SarvamSpeechClient:
     ) -> List[Utterance]:
         """
         Submits audio to Sarvam AI Saaras v3 endpoint for code-mixed transcription.
-        If no API key is configured or file is mock, returns formatted mock utterances.
         """
         if not self.api_key or not os.path.exists(audio_file_path):
-            return self._mock_hinglish_diarization()
+            return []
 
         try:
             req = urllib.request.Request(
@@ -51,9 +49,9 @@ class SarvamSpeechClient:
                     data = json.loads(response.read().decode("utf-8"))
                     return self._parse_sarvam_response(data)
                 else:
-                    return self._mock_hinglish_diarization()
+                    return []
         except Exception:
-            return self._mock_hinglish_diarization()
+            return []
 
     def _parse_sarvam_response(self, response_json: Dict[str, Any]) -> List[Utterance]:
         utterances: List[Utterance] = []
@@ -67,33 +65,4 @@ class SarvamSpeechClient:
                     transcript=entry.get("transcript", "")
                 )
             )
-        return utterances or self._mock_hinglish_diarization()
-
-    def _mock_hinglish_diarization(self) -> List[Utterance]:
-        """Realistic sample Hinglish corporate 1-on-1 dialogue for testing & development."""
-        return [
-            Utterance(
-                speaker="COUNTERPART",
-                start_time=0.0,
-                end_time=4.2,
-                transcript="Reshma, can you give me a quick status update on the Q3 mobile latency project?"
-            ),
-            Utterance(
-                speaker="USER",
-                start_time=4.5,
-                end_time=12.8,
-                transcript="Yeah so basically, matlab we were looking at the logs and I just think maybe we could possibly finish by Friday, but there were some team blockers."
-            ),
-            Utterance(
-                speaker="COUNTERPART",
-                start_time=13.0,
-                end_time=18.5,
-                transcript="What is the exact impact on the P99 latency SLA? Are we at risk of breaching?"
-            ),
-            Utterance(
-                speaker="USER",
-                start_time=18.8,
-                end_time=27.4,
-                transcript="Understood. Our data demonstrates that the P99 latency dropped by 42ms across all regional servers. The blocker is resolved, and we have decided to ship the release branch tomorrow at 10 AM."
-            )
-        ]
+        return utterances

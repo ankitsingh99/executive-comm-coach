@@ -28,7 +28,7 @@ def sample_session():
         session_id="test_session_101",
         timestamp_utc="2026-08-27T18:00:00Z",
         target_speaker="USER",
-        counterpart_name="Ananya Rao",
+        counterpart_name="VP of Product",
         counterpart_role="VP of Product",
         power_axis="UPWARD",
         dialogue=dialogue

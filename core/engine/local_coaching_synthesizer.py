@@ -91,9 +91,12 @@ class LocalCoachingSynthesizer:
         except ValueError:
             power_axis = PowerAxis.UPWARD
 
+        counterpart_label = session.counterpart_name or "Counterpart"
+        counterpart_role = session.counterpart_role or "Colleague"
+
         profile = PersonaOntologyEngine.create_persona_profile(
-            counterpart_name=session.counterpart_name,
-            role_title=session.counterpart_role,
+            counterpart_name=counterpart_label,
+            role_title=counterpart_role,
             power_axis=power_axis
         )
 
@@ -172,7 +175,7 @@ class LocalCoachingSynthesizer:
 
         raw_sentences = [s.strip() for s in re.split(r"[.!?\n]+", raw_text) if len(s.strip()) > 3]
         if not raw_sentences:
-            raw_sentences = [raw_text.strip() or "General inquiry."]
+            raw_sentences = [raw_text.strip() or "Speech turn."]
 
         full_quote = raw_text.strip()
 
@@ -192,7 +195,7 @@ class LocalCoachingSynthesizer:
 
         if is_question:
             strengths.append(TopStrength(
-                observation=f"Demonstrated intellectual curiosity and proactively initiated exploration into {extracted_topic}.",
+                observation=f"Demonstrated intellectual curiosity and initiated exploration into {extracted_topic}.",
                 verbatim_quote=full_quote
             ))
             if not has_fillers:
@@ -202,12 +205,12 @@ class LocalCoachingSynthesizer:
                 ))
             else:
                 strengths.append(TopStrength(
-                    observation="Kept sentence concise and focused squarely on the key subject area.",
+                    observation="Kept sentence concise and focused on the key subject area.",
                     verbatim_quote=full_quote
                 ))
         else:
             strengths.append(TopStrength(
-                observation=f"Directly addressed the topic ({extracted_topic}) with clear conversational focus.",
+                observation=f"Directly addressed {extracted_topic} with clear conversational focus.",
                 verbatim_quote=full_quote
             ))
             strengths.append(TopStrength(
@@ -215,18 +218,20 @@ class LocalCoachingSynthesizer:
                 verbatim_quote=full_quote
             ))
 
+        target_counterpart = profile.counterpart_name if profile.counterpart_name != "Counterpart" else "your counterpart"
+
         if is_seeking_learning and is_question:
             if profile.power_axis == PowerAxis.UPWARD:
                 critique_1 = "Phrased as a passive question ('how do I start') rather than framing it as proactive initiative ownership."
                 coached_1 = f"I am initiating an evaluation of {extracted_topic}. What core frameworks or milestones do you recommend we prioritize?"
                 
-                critique_2 = "Hypothetical preamble ('If I have to...') softens executive gravitas when speaking with senior leadership."
-                coached_2 = f"I am developing our roadmap for {extracted_topic}. I'd like to align on the key architectural requirements."
+                critique_2 = "Hypothetical preamble ('If I have to...') softens executive gravitas when speaking upward."
+                coached_2 = f"I am developing our roadmap for {extracted_topic}. I would like to align on the key architectural requirements."
             elif profile.power_axis == PowerAxis.LATERAL:
                 critique_1 = "Frame inquiry collaboratively around team roadmap impact rather than purely individual learning."
-                coached_1 = f"I'm exploring {extracted_topic} for our team roadmap. Let's align on technical prerequisites and shared dependencies."
+                coached_1 = f"I am exploring {extracted_topic} for our team roadmap. Let's align on technical prerequisites and shared dependencies."
                 critique_2 = "Open questions to peers should propose an initial approach to invite constructive technical review."
-                coached_2 = f"I'm reviewing approaches for {extracted_topic}; what tradeoffs have you seen in similar implementations?"
+                coached_2 = f"I am reviewing approaches for {extracted_topic}; what tradeoffs have you seen in similar implementations?"
             else: # DOWNWARD
                 critique_1 = "When guiding direct reports, model structured problem breakdown before asking open-ended questions."
                 coached_1 = f"As we build expertise in {extracted_topic}, what foundational concepts have you explored so far?"
@@ -239,26 +244,26 @@ class LocalCoachingSynthesizer:
         elif has_hedging:
             clean_bluf = self._clean_and_reframe(full_quote, extracted_topic, profile.power_axis)
             improvements.append(AreaForImprovement(
-                critique="Spoken delivery contained self-diminishing qualifiers ('just think', 'maybe') that diluted assertiveness.",
+                critique="Spoken delivery contained qualifiers ('just think', 'maybe') that diluted assertiveness.",
                 verbatim_quote=full_quote,
                 coached_phrasing=clean_bluf
             ))
             improvements.append(AreaForImprovement(
                 critique="State the decision or objective directly in the opening clause to maximize executive brevity (BLUF).",
                 verbatim_quote=full_quote,
-                coached_phrasing=f"Our priority is to deliver {extracted_topic} on schedule."
+                coached_phrasing=f"Our priority is to execute on {extracted_topic} effectively."
             ))
         else:
             clean_bluf = self._clean_and_reframe(full_quote, extracted_topic, profile.power_axis)
             improvements.append(AreaForImprovement(
-                critique=f"When speaking to {profile.counterpart_name}, elevate your delivery by leading with high-impact executive BLUF framing.",
+                critique=f"When speaking to {target_counterpart}, elevate your delivery by leading with high-impact executive BLUF framing.",
                 verbatim_quote=full_quote,
                 coached_phrasing=clean_bluf
             ))
             improvements.append(AreaForImprovement(
                 critique="Strengthen authority by stating quantified outcomes, clear timelines, or next strategic actions.",
                 verbatim_quote=full_quote,
-                coached_phrasing=f"I recommend we focus on {extracted_topic} to drive measurable impact this quarter."
+                coached_phrasing=f"I recommend we focus on {extracted_topic} to drive measurable impact this cycle."
             ))
 
         # Pad to exact top_n if top_n > 2
@@ -281,17 +286,17 @@ class LocalCoachingSynthesizer:
 
         if is_question and profile.power_axis == PowerAxis.UPWARD:
             summary = (
-                f"When consulting {profile.counterpart_name} ({profile.role_title}), reframe open questions ('how do I start') "
+                f"When consulting {target_counterpart}, reframe open questions ('how do I start') "
                 "into structured proposals with clear ownership. Leadership responds best to proactive roadmaps rather than open-ended inquiries."
             )
         elif is_question and profile.power_axis == PowerAxis.LATERAL:
             summary = (
-                f"Your inquiry on {extracted_topic} with peer {profile.counterpart_name} establishes alignment. "
+                f"Your inquiry on {extracted_topic} with {target_counterpart} establishes alignment. "
                 "Pair questions with concrete collaborative milestones to drive joint momentum."
             )
         else:
             summary = (
-                f"Your conversation with {profile.counterpart_name} effectively highlighted {extracted_topic}. "
+                f"Your communication with {target_counterpart} effectively highlighted {extracted_topic}. "
                 "Ensure your first sentence delivers the core takeaway (BLUF) before expanding into background details."
             )
 
