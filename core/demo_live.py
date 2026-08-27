@@ -24,15 +24,15 @@ def print_step_header(step_num: int, title: str):
     print("\n" + "=" * 80)
     print(f" STEP {step_num}: {title.upper()}")
     print("=" * 80)
-    time.sleep(0.3)
+    time.sleep(0.1)
 
 
 def main():
     print("""
- ╔══════════════════════════════════════════════════════════════════════════════╗
- ║         🚀 ON-DEVICE EXECUTIVE CONVERSATIONAL INTELLIGENCE COACH             ║
- ║                   Live Demonstration & Coaching Pipeline                     ║
- ╚══════════════════════════════════════════════════════════════════════════════╝
+ +------------------------------------------------------------------------------+
+ |          ON-DEVICE EXECUTIVE CONVERSATIONAL INTELLIGENCE COACH               |
+ |                   Live Demonstration & Coaching Pipeline                     |
+ +------------------------------------------------------------------------------+
 """)
 
     # -------------------------------------------------------------------------
@@ -46,16 +46,16 @@ def main():
 
     # Frame 1 & 2: Background ambient noise
     _, msg1 = vad.evaluate_frame(timestamp_ms=0, speech_prob=0.12)
-    print(f"  [0ms   - Background Noise]: τ = 0.12 -> {msg1}")
+    print(f"  [0ms   - Background Noise]: tau = 0.12 -> {msg1}")
     _, msg2 = vad.evaluate_frame(timestamp_ms=100, speech_prob=0.18)
-    print(f"  [100ms - Background Noise]: τ = 0.18 -> {msg2}")
+    print(f"  [100ms - Background Noise]: tau = 0.18 -> {msg2}")
 
     # Speech onset: Dialogue begins
     print("\n  >> Meeting dialogue detected in room...")
     for t in [200, 300, 400, 500, 600, 700, 800]:
         triggered, msg = vad.evaluate_frame(timestamp_ms=t, speech_prob=0.89)
         if triggered:
-            print(f"  [{t}ms - Speech Onset   ]: τ = 0.89 -> 🚨 {msg}")
+            print(f"  [{t}ms - Speech Onset   ]: tau = 0.89 -> [TRIGGER] {msg}")
             break
 
     # -------------------------------------------------------------------------
@@ -66,10 +66,10 @@ def main():
     session_id = f"demo_session_{int(time.time())}"
 
     chime = compliance_mgr.trigger_audible_chime()
-    print(f"  🔔 {chime}")
+    print(f"  [CHIME] {chime}")
     consent = compliance_mgr.log_session_consent(session_id, counterpart_notified=True)
-    print(f"  📜 Explicit Consent Record Logged: {consent.session_id}")
-    print("  🔒 Storage: Local-first AES-256 encrypted vault initialized.")
+    print(f"  [CONSENT] Explicit Consent Record Logged: {consent.session_id}")
+    print("  [VAULT] Storage: Local-first AES-256 encrypted vault initialized.")
 
     # -------------------------------------------------------------------------
     # STEP 3: Local Speech-to-Text & Speaker Diarization
@@ -80,7 +80,7 @@ def main():
 COUNTERPART: Reshma, Vikram here. Can you give me a quick status on the cloud migration and P99 latency?
 USER: Yeah so basically, matlab we were looking at the logs and I just think maybe we could finish by Friday, but there were some database blockers.
 COUNTERPART: What is the exact quantitative impact on our API latency? Are we going to breach our SLA?
-USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms across all regional clusters. We have decided to ship the release branch tomorrow at 10 AM, and project budget is ₹35 lakh.
+USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms across all regional clusters. We have decided to ship the release branch tomorrow at 10 AM, and project budget is Rs. 35 lakh.
 """
 
     stt_engine = LocalSTTEngine()
@@ -88,8 +88,8 @@ USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms acr
 
     print("  [Diarized Transcript Turns]:")
     for u in utterances:
-        speaker_tag = f"👤 {u.speaker}" if u.speaker == "USER" else f"👔 {u.speaker}"
-        print(f"   {speaker_tag} [{u.start_time:04.1f}s - {u.end_time:04.1f}s]: \"{u.transcript}\"")
+        speaker_tag = f"[{u.speaker}]"
+        print(f"   {speaker_tag:<15} [{u.start_time:04.1f}s - {u.end_time:04.1f}s]: \"{u.transcript}\"")
 
     # -------------------------------------------------------------------------
     # STEP 4: Local PII & Sensitive Entity Redaction
@@ -107,8 +107,8 @@ USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms acr
 
     for u in redacted_turns:
         if "REDACTED" in u.transcript:
-            print(f"   🛡️ Scrubbed Turn: \"{u.transcript}\"")
-    print(f"   📊 Redaction Summary: {total_redactions}")
+            print(f"   [SCRUBBED] \"{u.transcript}\"")
+    print(f"   [SUMMARY] Redaction Summary: {total_redactions}")
 
     # -------------------------------------------------------------------------
     # STEP 5: Persona Context & Executive Coaching Synthesis
@@ -132,42 +132,42 @@ USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms acr
     coach = ExecutiveCoachingEngine(use_local_only=True)
     evaluation = coach.evaluate_session(session, top_n=2)
 
-    print(f"  🎯 Relational Dynamic: {evaluation.persona_context}\n")
+    print(f"  [CONTEXT] Relational Dynamic: {evaluation.persona_context}\n")
     
     # Quantitative Scores
-    print("  ┌────────────────────────────────────────────────────────┐")
-    print("  │              📊 EXECUTIVE SCORECARD                    │")
-    print("  ├────────────────────────┬───────────────────────────────┤")
-    print(f"  │  Executive Presence    │  {evaluation.metrics.presence_score:>3}/100                      │")
-    print(f"  │  Assertiveness Index   │  {evaluation.metrics.assertiveness_score:>3}/100                      │")
-    print(f"  │  Active Listening      │  {evaluation.metrics.active_listening_score:>3}/100                      │")
+    print("  +--------------------------------------------------------+")
+    print("  |                  EXECUTIVE SCORECARD                   |")
+    print("  +------------------------+-------------------------------+");
+    print(f"  |  Executive Presence    |  {evaluation.metrics.presence_score:>3}/100                      |")
+    print(f"  |  Assertiveness Index   |  {evaluation.metrics.assertiveness_score:>3}/100                      |")
+    print(f"  |  Active Listening      |  {evaluation.metrics.active_listening_score:>3}/100                      |")
     fillers_str = ", ".join([f"{f.token}: {f.count}" for f in evaluation.metrics.filler_words_detected]) or "None"
-    print(f"  │  Fillers Detected      │  {fillers_str:<29}│")
-    print("  └────────────────────────┴───────────────────────────────┘\n")
+    print(f"  |  Fillers Detected      |  {fillers_str:<29}|")
+    print("  +------------------------+-------------------------------+\n")
 
-    print(f"  📝 Executive Summary:\n     {evaluation.longitudinal_summary}\n")
+    print(f"  [EXECUTIVE SUMMARY]:\n     {evaluation.longitudinal_summary}\n")
 
-    print("  🌟 TOP POSITIVE STRENGTHS:")
+    print("  TOP POSITIVE STRENGTHS:")
     for idx, s in enumerate(evaluation.top_strengths, 1):
         print(f"    {idx}. {s.observation}")
-        print(f"       💬 Exact Quote: \"{s.verbatim_quote}\"")
+        print(f"       Quote: \"{s.verbatim_quote}\"")
 
-    print("\n  📈 AREAS FOR IMPROVEMENT & HIGH-IMPACT COACHED PHRASING:")
+    print("\n  AREAS FOR IMPROVEMENT & HIGH-IMPACT COACHED PHRASING:")
     for idx, a in enumerate(evaluation.areas_for_improvement, 1):
         print(f"    {idx}. Critique: {a.critique}")
-        print(f"       ❌ What You Said:   \"{a.verbatim_quote}\"")
-        print(f"       ✅ Executive BLUF:  \"{a.coached_phrasing}\"")
+        print(f"       Original: \"{a.verbatim_quote}\"")
+        print(f"       Coached:  \"{a.coached_phrasing}\"")
 
     # -------------------------------------------------------------------------
     # STEP 6: Statutory Right to Erasure
     # -------------------------------------------------------------------------
     print_step_header(6, "DPDP Act Statutory Right to Erasure Test")
     wipe_res = compliance_mgr.execute_statutory_erasure(session_id)
-    print(f"  🗑️ Erasure Result: Status={wipe_res['status']} | Session ID={wipe_res['session_id']}")
-    print(f"  🔒 Compliance Rule: {wipe_res['compliance_standard']}")
+    print(f"  [ERASURE RESULT] Status={wipe_res['status']} | Session ID={wipe_res['session_id']}")
+    print(f"  [COMPLIANCE] {wipe_res['compliance_standard']}")
 
     print("\n" + "=" * 80)
-    print(" 🎉 DEMO COMPLETED SUCCESSFULLY: 100% ON-DEVICE LOCAL EXECUTION")
+    print(" [COMPLETE] DEMO FINISHED: 100% ON-DEVICE LOCAL EXECUTION")
     print("=" * 80 + "\n")
 
 

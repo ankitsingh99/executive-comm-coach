@@ -40,7 +40,7 @@ from privacy import (
 
 def run_pipeline_demo():
     print("=" * 80)
-    print(" 🎙️  EXECUTIVE CONVERSATIONAL INTELLIGENCE & COMMUNICATION COACH - CORE MVP")
+    print(" [EXEC COACH] CONVERSATIONAL INTELLIGENCE & COACHING PIPELINE")
     print("=" * 80)
 
     # -------------------------------------------------------------------------
@@ -52,7 +52,7 @@ def run_pipeline_demo():
     # Simulate passive non-speech noise frames
     for t_ms in [0, 100, 200]:
         triggered, msg = vad.evaluate_frame(t_ms, speech_prob=0.15)
-        print(f"  Frame at {t_ms}ms: τ=0.15 -> {msg}")
+        print(f"  Frame at {t_ms}ms: tau=0.15 -> {msg}")
 
     # Simulate sustained human speech onset
     print("\n  >> Human dialogue begins...")
@@ -60,7 +60,7 @@ def run_pipeline_demo():
     for t_ms in [300, 400, 500, 600, 700, 800, 900]:
         triggered, msg = vad.evaluate_frame(t_ms, speech_prob=0.88)
         if triggered:
-            print(f"  Frame at {t_ms}ms: τ=0.88 -> 🚨 {msg}")
+            print(f"  Frame at {t_ms}ms: tau=0.88 -> [TRIGGER] {msg}")
             break
 
     # -------------------------------------------------------------------------
@@ -71,10 +71,10 @@ def run_pipeline_demo():
     session_id = f"session_{int(datetime.now(timezone.utc).timestamp())}"
     
     chime_msg = compliance_mgr.trigger_audible_chime()
-    print(f"  🔔 {chime_msg}")
+    print(f"  [CHIME] {chime_msg}")
     
     consent_record = compliance_mgr.log_session_consent(session_id, counterpart_notified=True)
-    print(f"  📜 Statutory Consent Logged: Session ID={consent_record.session_id}, AES-256 Storage=Active")
+    print(f"  [CONSENT] Statutory Consent Logged: Session ID={consent_record.session_id}, AES-256 Storage=Active")
 
     # -------------------------------------------------------------------------
     # Stage 3: Bilingual Hinglish ASR & Speaker Diarization
@@ -93,7 +93,7 @@ def run_pipeline_demo():
     # Stage 4: Local Privacy-Preserving PII Redaction
     # -------------------------------------------------------------------------
     print("\n[STAGE 4] Privacy Redaction (Local Scrubber)...")
-    sample_sensitive_turn = "Hey Reshma, send the API token secret: tok_83921048 to my email ashish@enterprise.internal or call +919876543210 regarding our ₹45 lakh budget."
+    sample_sensitive_turn = "Hey Reshma, send the API token secret: tok_83921048 to my email ashish@enterprise.internal or call +919876543210 regarding our Rs. 45 lakh budget."
     redacted_sample, red_counts = PIIRedactor.redact_text(sample_sensitive_turn)
     print(f"  Raw:      \"{sample_sensitive_turn}\"")
     print(f"  Redacted: \"{redacted_sample}\"")
@@ -113,7 +113,7 @@ def run_pipeline_demo():
 
     for name, role, axis in personas_to_test:
         print("\n" + "-" * 70)
-        print(f" 🎯 TESTING PERSONA: {name} ({role}) | POWER AXIS: {axis}")
+        print(f" [PERSONA] {name} ({role}) | POWER AXIS: {axis}")
         print("-" * 70)
 
         session = ConversationSession(
@@ -128,19 +128,19 @@ def run_pipeline_demo():
 
         evaluation = engine.evaluate_session(session, top_n=2, use_llm=False)
 
-        print(f"  📊 Presence Score:         {evaluation.metrics.presence_score}/100")
-        print(f"  ⚡ Assertiveness Score:    {evaluation.metrics.assertiveness_score}/100")
-        print(f"  👂 Active Listening Score: {evaluation.metrics.active_listening_score}/100")
-        print(f"  🗣️  Fillers Detected:       {[f'{f.token}: {f.count}' for f in evaluation.metrics.filler_words_detected]}")
-        print(f"\n  💡 Strategy Focus:\n    {evaluation.persona_context}")
-        print(f"\n  📝 Strategic Summary:\n    {evaluation.longitudinal_summary}")
+        print(f"  Presence Score:         {evaluation.metrics.presence_score}/100")
+        print(f"  Assertiveness Score:    {evaluation.metrics.assertiveness_score}/100")
+        print(f"  Active Listening Score: {evaluation.metrics.active_listening_score}/100")
+        print(f"  Fillers Detected:       {[f'{f.token}: {f.count}' for f in evaluation.metrics.filler_words_detected]}")
+        print(f"\n  Strategy Focus:\n    {evaluation.persona_context}")
+        print(f"\n  Strategic Summary:\n    {evaluation.longitudinal_summary}")
 
-        print("\n  🌟 Top Strengths (N=2):")
+        print("\n  Top Strengths (N=2):")
         for idx, s in enumerate(evaluation.top_strengths, 1):
             print(f"    {idx}. {s.observation}")
             print(f"       Quote: \"{s.verbatim_quote}\"")
 
-        print("\n  📈 Areas for Improvement & Coached Rephrasing (N=2):")
+        print("\n  Areas for Improvement & Coached Rephrasing (N=2):")
         for idx, a in enumerate(evaluation.areas_for_improvement, 1):
             print(f"    {idx}. Critique: {a.critique}")
             print(f"       Original Quote: \"{a.verbatim_quote}\"")
@@ -151,10 +151,10 @@ def run_pipeline_demo():
     # -------------------------------------------------------------------------
     print("\n[STAGE 6] Statutory Right to Erasure Verification...")
     erase_res = compliance_mgr.execute_statutory_erasure(session_id)
-    print(f"  🗑️  Erasure Executed: Status={erase_res['status']}, Session={erase_res['session_id']}, Standard={erase_res['compliance_standard']}")
+    print(f"  [ERASED] Status={erase_res['status']}, Session={erase_res['session_id']}, Standard={erase_res['compliance_standard']}")
 
     print("\n" + "=" * 80)
-    print(" ✅ CORE MVP PIPELINE EXECUTION COMPLETED SUCCESSFULLY")
+    print(" [SUCCESS] CORE MVP PIPELINE EXECUTION COMPLETED")
     print("=" * 80)
 
 

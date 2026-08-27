@@ -4,7 +4,7 @@ An on-device conversational intelligence platform and executive communication co
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 +---------------------------------------------------------------------------------------+
@@ -29,7 +29,7 @@ An on-device conversational intelligence platform and executive communication co
 
 ---
 
-## 📁 Repository Directory Structure
+## Repository Directory Structure
 
 ```
 executive-comm-coach/
@@ -38,9 +38,11 @@ executive-comm-coach/
 │   │   ├── schema.py                      # Deterministic Pydantic / JSON Coaching Schemas
 │   │   ├── persona_ontology.py            # Power Axis Strategies (Upward, Lateral, Downward)
 │   │   ├── metrics_calculator.py          # Presence, Assertiveness, Filler words, Pause analysis
+│   │   ├── local_coaching_synthesizer.py  # Pure on-device semantic coaching synthesizer
 │   │   └── coaching_engine.py             # LLM Executive Coaching Prompter & Evaluator
 │   ├── asr_diarization/
-│   │   ├── vad_gater.py                   # Silero VAD gating & threshold simulation (τ >= 0.75)
+│   │   ├── vad_gater.py                   # Silero VAD gating & threshold simulation (tau >= 0.75)
+│   │   ├── local_stt_engine.py            # On-device Hinglish STT & diarizer
 │   │   ├── sarvam_client.py               # Sarvam AI Saaras v3 client for Hinglish STT
 │   │   └── diarizer.py                    # Speaker separation ([USER] vs [COUNTERPART])
 │   ├── privacy/
@@ -51,7 +53,10 @@ executive-comm-coach/
 │   │   ├── test_persona_ontology.py       # Upward (BLUF) vs Lateral vs Downward rubrics
 │   │   ├── test_asr_and_redaction.py      # Hinglish transcript handling & PII wipe
 │   │   └── test_dpdp_compliance.py        # Statutory consent logging & erasure
-│   └── run_mvp_demo.py                    # End-to-end interactive CLI runner
+│   ├── config.py                          # Local processing mode configuration
+│   ├── cli_coach.py                       # Interactive on-device CLI coach
+│   ├── demo_live.py                       # Step-by-step live demonstration
+│   └── run_mvp_demo.py                    # End-to-end interactive runner
 │
 ├── android/                               # Android Application (Jetpack Compose + Architecture)
 │   ├── app/src/main/
@@ -75,21 +80,26 @@ executive-comm-coach/
 
 ---
 
-## 🚀 Running the Core MVP Pipeline
+## Running the Core MVP Pipeline
 
-### 1. Execute the Interactive End-to-End Pipeline Demo
+### 1. Execute the Live Step-by-Step Demonstration
 ```bash
-python executive-comm-coach/core/run_mvp_demo.py
+python core/demo_live.py
 ```
 
-### 2. Run the Automated Test Suite
+### 2. Execute the Interactive Local CLI Coach
 ```bash
-PYTHONPATH=executive-comm-coach/core pytest executive-comm-coach/core/tests
+python core/cli_coach.py
+```
+
+### 3. Run the Automated Test Suite
+```bash
+PYTHONPATH=core pytest core/tests
 ```
 
 ---
 
-## 🛡️ DPDP Act (2023) Privacy-by-Design Features
+## DPDP Act (2023) Privacy-by-Design Features
 
 1. **Audible Notification Chime**: Distinct acoustic cue informing all participants before recording.
 2. **Local Cryptographic Isolation**: Audio recordings and transcripts are encrypted with AES-256 via SQLCipher.
