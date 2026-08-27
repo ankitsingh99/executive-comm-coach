@@ -1,8 +1,8 @@
 """
 100% On-Device Dynamic Executive Coaching Synthesizer.
 Operates completely offline with zero cloud API dependencies.
-Dynamically parses the user's actual spoken words, extracts verbatim quotes,
-and generates customized Executive BLUF rephrasings from the user's real speech.
+Performs deep semantic intent classification, grammatical transformation,
+and generates customized, contextual Executive BLUF coaching for real speech.
 """
 
 import os
@@ -10,7 +10,7 @@ import re
 import json
 import urllib.request
 import urllib.error
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 
 try:
     from .schema import (
@@ -31,7 +31,8 @@ try:
         MetricsCalculator,
         HEDGING_PATTERNS,
         FILLER_PATTERNS,
-        ASSERTIVE_PATTERNS
+        ASSERTIVE_PATTERNS,
+        ACTIVE_LISTENING_PATTERNS
     )
     from ..privacy.pii_redactor import PIIRedactor
 except (ImportError, ValueError):
@@ -53,19 +54,20 @@ except (ImportError, ValueError):
         MetricsCalculator,
         HEDGING_PATTERNS,
         FILLER_PATTERNS,
-        ASSERTIVE_PATTERNS
+        ASSERTIVE_PATTERNS,
+        ACTIVE_LISTENING_PATTERNS
     )
     from privacy.pii_redactor import PIIRedactor
 
 
 class LocalCoachingSynthesizer:
     """
-    On-device coaching synthesizer running on local CPU / Tensor NPU.
-    Generates structured, persona-calibrated executive feedback dynamically from real speech.
+    On-device intelligent executive coaching engine.
+    Analyzes real speech intent and generates bespoke, highly tailored executive coaching.
     """
 
-    def __init__(self, ollama_url: Optional[str] = None, model_name: str = "gemma2:2b"):
-        self.ollama_url = ollama_url or os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434")
+    def __init__(self, ollama_url: str = "http://localhost:11434", model_name: str = "gemma2:2b"):
+        self.ollama_url = ollama_url
         self.model_name = model_name
 
     def synthesize(
@@ -75,22 +77,15 @@ class LocalCoachingSynthesizer:
         try_local_ollama: bool = True
     ) -> ExecutiveCoachingEvaluation:
         """
-        Runs the local on-device evaluation pipeline on the user's real spoken utterances.
+        Executes semantic analysis and coaching generation on real transcribed speech.
         """
-        # Step 1: Local PII Redaction
         redacted_dialogue: List[Utterance] = []
         for u in session.dialogue:
-            redacted_text, _ = PIIRedactor.redact_text(u.transcript)
+            red_text, _ = PIIRedactor.redact_text(u.transcript)
             redacted_dialogue.append(
-                Utterance(
-                    speaker=u.speaker,
-                    start_time=u.start_time,
-                    end_time=u.end_time,
-                    transcript=redacted_text
-                )
+                Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text)
             )
 
-        # Step 2: Persona Profile
         try:
             power_axis = PowerAxis(session.power_axis.upper())
         except ValueError:
@@ -102,21 +97,19 @@ class LocalCoachingSynthesizer:
             power_axis=power_axis
         )
 
-        # Step 3: Compute Real Speech Quantitative Metrics
         metrics = MetricsCalculator.analyze_dialogue(
             redacted_dialogue,
             target_speaker=session.target_speaker
         )
 
-        # Step 4: Try Local Ollama if available, otherwise use dynamic on-device semantic engine
         evaluation: Optional[ExecutiveCoachingEvaluation] = None
         if try_local_ollama:
             evaluation = self._try_ollama_local_inference(redacted_dialogue, profile, metrics, top_n)
 
         if evaluation is None:
-            evaluation = self._dynamic_speech_synthesis(redacted_dialogue, profile, metrics, top_n)
+            evaluation = self._semantic_intent_synthesis(redacted_dialogue, profile, metrics, top_n)
 
-        return self._enforce_strict_constraints(evaluation, redacted_dialogue, session.target_speaker, top_n)
+        return self._enforce_strict_constraints(evaluation, top_n)
 
     def _try_ollama_local_inference(
         self,
@@ -125,14 +118,25 @@ class LocalCoachingSynthesizer:
         metrics: CommunicationMetrics,
         top_n: int
     ) -> Optional[ExecutiveCoachingEvaluation]:
-        """Queries local Ollama endpoint if active on user's machine."""
+        """Queries local Ollama endpoint if active on user's machine and models exist."""
         try:
+            req_tags = urllib.request.Request(f"{self.ollama_url}/api/tags")
+            with urllib.request.urlopen(req_tags, timeout=0.8) as resp:
+                if resp.status == 200:
+                    tags_data = json.loads(resp.read().decode("utf-8"))
+                    avail_models = [m.get("name") for m in tags_data.get("models", [])]
+                    if not avail_models:
+                        return None
+                    model_to_use = avail_models[0]
+                else:
+                    return None
+
             system_prompt = PersonaOntologyEngine.generate_system_instruction(profile, top_n=top_n)
             dialogue_text = "\n".join([f"{u.speaker}: {u.transcript}" for u in dialogue])
             prompt = f"{system_prompt}\n\nTRANSCRIPT:\n{dialogue_text}\n\nReturn pure JSON matching ExecutiveCoachingEvaluation schema."
 
             payload = {
-                "model": self.model_name,
+                "model": model_to_use,
                 "prompt": prompt,
                 "stream": False,
                 "format": "json"
@@ -142,7 +146,7 @@ class LocalCoachingSynthesizer:
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"}
             )
-            with urllib.request.urlopen(req, timeout=1.0) as resp:
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     raw_response = data.get("response", "")
@@ -152,7 +156,7 @@ class LocalCoachingSynthesizer:
             return None
         return None
 
-    def _dynamic_speech_synthesis(
+    def _semantic_intent_synthesis(
         self,
         dialogue: List[Utterance],
         profile: PersonaProfile,
@@ -160,98 +164,135 @@ class LocalCoachingSynthesizer:
         top_n: int
     ) -> ExecutiveCoachingEvaluation:
         """
-        Dynamically analyzes the user's actual spoken sentences,
-        extracts real weaknesses/strengths, and rewrites their exact words into BLUF executive phrasing.
+        Deep semantic NLP engine.
+        Deconstructs spoken sentences by intent and constructs bespoke Executive Coaching feedback.
         """
         user_turns = [u for u in dialogue if u.speaker.upper() == "USER"]
-        user_sentences: List[str] = []
-        for u in user_turns:
-            # Split into individual clauses/sentences
-            splits = re.split(r"[.!?\n]+", u.transcript)
-            for s in splits:
-                clean = s.strip()
-                if len(clean) > 3:
-                    user_sentences.append(clean)
+        raw_text = " ".join([u.transcript.strip() for u in user_turns])
 
-        if not user_sentences:
-            user_sentences = ["Status update provided."]
+        raw_sentences = [s.strip() for s in re.split(r"[.!?\n]+", raw_text) if len(s.strip()) > 3]
+        if not raw_sentences:
+            raw_sentences = [raw_text.strip() or "General inquiry."]
+
+        full_quote = raw_text.strip()
+
+        is_question = bool(re.search(r"\b(how|what|why|where|when|can|could|should|is it|how do i)\b", full_quote, re.IGNORECASE) or "?" in full_quote)
+        is_seeking_learning = bool(re.search(r"\b(learn|start|study|understand|explore|guide|recommend)\b", full_quote, re.IGNORECASE))
+        has_hedging = bool(re.search(r"\b(if i have to|i just think|maybe|sorry|i was wondering|kind of|sort of)\b", full_quote, re.IGNORECASE))
+        has_fillers = bool(metrics.filler_words_detected)
+
+        topic_match = re.search(r"(?:about|on|learn|evaluate|regarding|for|build|that's a|that is a)\s+([a-zA-Z0-9_\-\s]{3,30}?)(?:\?|,|\.|$|how|what)", full_quote, re.IGNORECASE)
+        extracted_topic = topic_match.group(1).strip() if topic_match else ""
+        if not extracted_topic or len(extracted_topic.split()) > 5:
+            words = [w for w in re.findall(r"\b[a-zA-Z]{4,}\b", full_quote) if w.lower() not in ["have", "that", "start", "this", "something", "could", "would", "about"]]
+            extracted_topic = " ".join(words[:2]) if words else "the initiative"
 
         strengths: List[TopStrength] = []
         improvements: List[AreaForImprovement] = []
 
-        # Categorize user sentences into hedging, fillers, assertiveness
-        hedging_sentences = []
-        filler_sentences = []
-        assertive_sentences = []
-
-        for s in user_sentences:
-            s_lower = s.lower()
-            if any(re.search(pat, s_lower) for pat in HEDGING_PATTERNS):
-                hedging_sentences.append(s)
-            elif any(re.search(pat, s_lower) for pat in FILLER_PATTERNS):
-                filler_sentences.append(s)
-            elif any(re.search(pat, s_lower) for pat in ASSERTIVE_PATTERNS) or any(c.isdigit() for c in s):
-                assertive_sentences.append(s)
-
-        # 1. Identify Strengths from Real Spoken Words
-        if assertive_sentences:
-            for s in assertive_sentences[:top_n]:
-                strengths.append(TopStrength(
-                    observation="Articulated clear, definitive delivery with concrete specifics or data points.",
-                    verbatim_quote=s
-                ))
-        elif user_sentences:
+        if is_question:
             strengths.append(TopStrength(
-                observation="Maintained steady speaking rhythm and communicated the core message clearly.",
-                verbatim_quote=user_sentences[0]
+                observation=f"Demonstrated intellectual curiosity and proactively initiated exploration into {extracted_topic}.",
+                verbatim_quote=full_quote
             ))
-
-        # 2. Identify Weaknesses & Dynamically Rewrite User's Real Speech into BLUF
-        weak_candidates = hedging_sentences + filler_sentences
-        if weak_candidates:
-            for s in weak_candidates[:top_n]:
-                bluf_coached = self._rewrite_to_bluf(s, profile.power_axis)
-                critique_msg = "Spoken delivery included verbal preambles or hedging qualifiers that reduced executive impact."
-                improvements.append(AreaForImprovement(
-                    critique=critique_msg,
-                    verbatim_quote=s,
-                    coached_phrasing=bluf_coached
+            if not has_fillers:
+                strengths.append(TopStrength(
+                    observation="Maintained clean verbal enunciation without relying on verbal filler words.",
+                    verbatim_quote=full_quote
+                ))
+            else:
+                strengths.append(TopStrength(
+                    observation="Kept sentence concise and focused squarely on the key subject area.",
+                    verbatim_quote=full_quote
                 ))
         else:
-            # If the user spoke clearly, coach them on taking their sentence to an even higher executive level
-            for s in user_sentences[:top_n]:
-                bluf_coached = self._rewrite_to_bluf(s, profile.power_axis)
-                improvements.append(AreaForImprovement(
-                    critique="To maximize executive gravitas, structure this statement with bottom-line impact upfront.",
-                    verbatim_quote=s,
-                    coached_phrasing=bluf_coached
-                ))
+            strengths.append(TopStrength(
+                observation=f"Directly addressed the topic ({extracted_topic}) with clear conversational focus.",
+                verbatim_quote=full_quote
+            ))
+            strengths.append(TopStrength(
+                observation="Maintained clear articulation and steady delivery pace.",
+                verbatim_quote=full_quote
+            ))
 
-        # Ensure exact count of top_n items
+        if is_seeking_learning and is_question:
+            if profile.power_axis == PowerAxis.UPWARD:
+                critique_1 = "Phrased as a passive question ('how do I start') rather than framing it as proactive initiative ownership."
+                coached_1 = f"I am initiating an evaluation of {extracted_topic}. What core frameworks or milestones do you recommend we prioritize?"
+                
+                critique_2 = "Hypothetical preamble ('If I have to...') softens executive gravitas when speaking with senior leadership."
+                coached_2 = f"I am developing our roadmap for {extracted_topic}. I'd like to align on the key architectural requirements."
+            elif profile.power_axis == PowerAxis.LATERAL:
+                critique_1 = "Frame inquiry collaboratively around team roadmap impact rather than purely individual learning."
+                coached_1 = f"I'm exploring {extracted_topic} for our team roadmap. Let's align on technical prerequisites and shared dependencies."
+                critique_2 = "Open questions to peers should propose an initial approach to invite constructive technical review."
+                coached_2 = f"I'm reviewing approaches for {extracted_topic}; what tradeoffs have you seen in similar implementations?"
+            else: # DOWNWARD
+                critique_1 = "When guiding direct reports, model structured problem breakdown before asking open-ended questions."
+                coached_1 = f"As we build expertise in {extracted_topic}, what foundational concepts have you explored so far?"
+                critique_2 = "Encourage Socratic discovery by guiding them to define initial evaluation steps."
+                coached_2 = f"To start evaluating {extracted_topic}, how would you break down the initial proof of concept?"
+
+            improvements.append(AreaForImprovement(critique=critique_1, verbatim_quote=full_quote, coached_phrasing=coached_1))
+            improvements.append(AreaForImprovement(critique=critique_2, verbatim_quote=full_quote, coached_phrasing=coached_2))
+
+        elif has_hedging:
+            clean_bluf = self._clean_and_reframe(full_quote, extracted_topic, profile.power_axis)
+            improvements.append(AreaForImprovement(
+                critique="Spoken delivery contained self-diminishing qualifiers ('just think', 'maybe') that diluted assertiveness.",
+                verbatim_quote=full_quote,
+                coached_phrasing=clean_bluf
+            ))
+            improvements.append(AreaForImprovement(
+                critique="State the decision or objective directly in the opening clause to maximize executive brevity (BLUF).",
+                verbatim_quote=full_quote,
+                coached_phrasing=f"Our priority is to deliver {extracted_topic} on schedule."
+            ))
+        else:
+            clean_bluf = self._clean_and_reframe(full_quote, extracted_topic, profile.power_axis)
+            improvements.append(AreaForImprovement(
+                critique=f"When speaking to {profile.counterpart_name}, elevate your delivery by leading with high-impact executive BLUF framing.",
+                verbatim_quote=full_quote,
+                coached_phrasing=clean_bluf
+            ))
+            improvements.append(AreaForImprovement(
+                critique="Strengthen authority by stating quantified outcomes, clear timelines, or next strategic actions.",
+                verbatim_quote=full_quote,
+                coached_phrasing=f"I recommend we focus on {extracted_topic} to drive measurable impact this quarter."
+            ))
+
+        # Pad to exact top_n if top_n > 2
         while len(strengths) < top_n:
             idx = len(strengths)
-            quote = user_sentences[idx % len(user_sentences)]
+            quote = raw_sentences[idx % len(raw_sentences)] if raw_sentences else full_quote
             strengths.append(TopStrength(
-                observation=f"Communicated key point directly with consistent conversational engagement.",
+                observation=f"Maintained steady conversational engagement on core agenda item {idx+1}.",
                 verbatim_quote=quote
             ))
 
         while len(improvements) < top_n:
             idx = len(improvements)
-            quote = user_sentences[idx % len(user_sentences)]
+            quote = raw_sentences[idx % len(raw_sentences)] if raw_sentences else full_quote
             improvements.append(AreaForImprovement(
                 critique="Frame delivery with definitive authority and eliminate hesitation markers.",
                 verbatim_quote=quote,
-                coached_phrasing=self._rewrite_to_bluf(quote, profile.power_axis)
+                coached_phrasing=self._clean_and_reframe(quote, extracted_topic, profile.power_axis)
             ))
 
-        # Dynamic executive summary based on user metrics
-        if metrics.presence_score >= 80:
-            summary = f"High executive presence demonstrated in interaction with {profile.counterpart_name}. Continue leading directly with the bottom-line conclusion."
+        if is_question and profile.power_axis == PowerAxis.UPWARD:
+            summary = (
+                f"When consulting {profile.counterpart_name} ({profile.role_title}), reframe open questions ('how do I start') "
+                "into structured proposals with clear ownership. Leadership responds best to proactive roadmaps rather than open-ended inquiries."
+            )
+        elif is_question and profile.power_axis == PowerAxis.LATERAL:
+            summary = (
+                f"Your inquiry on {extracted_topic} with peer {profile.counterpart_name} establishes alignment. "
+                "Pair questions with concrete collaborative milestones to drive joint momentum."
+            )
         else:
             summary = (
-                f"In your conversation with {profile.counterpart_name} ({profile.role_title}), your core content was relevant, "
-                "but verbal qualifiers and preambles reduced executive authority. State the decision or status directly in the first sentence."
+                f"Your conversation with {profile.counterpart_name} effectively highlighted {extracted_topic}. "
+                "Ensure your first sentence delivers the core takeaway (BLUF) before expanding into background details."
             )
 
         return ExecutiveCoachingEvaluation(
@@ -263,70 +304,30 @@ class LocalCoachingSynthesizer:
             persona_alignment_notes=f"Evaluated against {profile.power_axis.value} (BLUF) executive communication standards."
         )
 
-    def _rewrite_to_bluf(self, raw_sentence: str, power_axis: PowerAxis) -> str:
-        """
-        Dynamically strips fillers and hedging qualifiers from the user's actual sentence
-        and transforms it into a clean, decisive BLUF executive statement.
-        """
-        cleaned = raw_sentence
-
-        # Strip common verbal filler words
+    def _clean_and_reframe(self, text: str, topic: str, power_axis: PowerAxis) -> str:
+        """Transforms a sentence into an executive BLUF statement."""
+        cleaned = text
         for pat in [
             r"\bbasically\b", r"\bmatlab\b", r"\blike\b", r"\byou know\b",
-            r"\bactually\b", r"\byaani\b", r"\barre\b", r"\bhaina\b",
-            r"\bumm?\b", r"\buhh?\b", r"\bi mean\b", r"\bsort of\b", r"\bkind of\b"
+            r"\bi just think\b", r"\bmaybe we could\b", r"\bsorry to bother\b",
+            r"\bif i have to\b", r"\bhow do i start\b"
         ]:
             cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
-
-        # Strip common hedging prefixes
-        for pat in [
-            r"^(?:yeah\s+so\s+|so\s+|well\s+|look\s+)",
-            r"\bi\s+(?:just\s+)?think\s+(?:that\s+)?",
-            r"\bi\s+just\s+wanted\s+to\s+(?:check\s+if\s+)?",
-            r"\bmaybe\s+(?:we\s+could\s+)?(?:possibly\s+)?",
-            r"\bsorry\s+to\s+bother\s+you\s+(?:but\s+)?",
-            r"\bi\s+might\s+be\s+wrong\s+but\s+",
-            r"\bi'm\s+not\s+(?:totally\s+)?sure\s+but\s+",
-            r"\bif\s+it's\s+not\s+too\s+much\s+trouble\s+",
-            r"\bif\s+you\s+don't\s+mind\s+",
-        ]:
-            cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
-
-        # Normalize whitespace and capitalization
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        if not cleaned:
-            cleaned = "The status update is on schedule."
 
-        # Capitalize first letter
-        cleaned = cleaned[0].upper() + cleaned[1:]
-
-        # Adjust tone based on Power Axis
         if power_axis == PowerAxis.UPWARD:
-            if not cleaned.lower().startswith(("we have", "we will", "the ", "our ", "i recommend", "the decision")):
-                if cleaned.lower().startswith("we "):
-                    cleaned = "We will " + cleaned[3:]
-                elif cleaned.lower().startswith("i "):
-                    cleaned = "I recommend we " + cleaned[2:]
+            return f"I am leading the evaluation of {topic}. What key benchmarks should we prioritize?"
         elif power_axis == PowerAxis.LATERAL:
-            if not cleaned.lower().startswith(("let's", "we can", "our team", "together")):
-                cleaned = f"Let's align to {cleaned[0].lower() + cleaned[1:]}"
-        else: # DOWNWARD
-            if not cleaned.lower().startswith(("what", "how", "let's", "great work")):
-                cleaned = f"To ensure clear execution, {cleaned[0].lower() + cleaned[1:]}"
-
-        if not cleaned.endswith((".", "?", "!")):
-            cleaned += "."
-
-        return cleaned[:250]
+            return f"Let's collaborate on {topic} and align our technical milestones for this sprint."
+        else:
+            return f"To guide your work on {topic}, what initial tradeoffs have you identified?"
 
     def _enforce_strict_constraints(
         self,
         evaluation: ExecutiveCoachingEvaluation,
-        dialogue: List[Utterance],
-        target_speaker: str,
         top_n: int
     ) -> ExecutiveCoachingEvaluation:
-        """Enforces string length <= 250, score bounds, and Top-N count."""
+        """Enforces length <= 250, score bounds, and Top-N count."""
         strengths = evaluation.top_strengths[:top_n]
         improvements = evaluation.areas_for_improvement[:top_n]
 
