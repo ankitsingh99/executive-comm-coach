@@ -5,13 +5,23 @@ and 3-second non-speech buffer purging.
 """
 
 from typing import List, Tuple
-from pydantic import BaseModel, Field
+
+try:
+    from ..engine.schema import BaseModel
+except (ImportError, ValueError):
+    from engine.schema import BaseModel
 
 
 class VadFrameResult(BaseModel):
-    timestamp_ms: float
-    speech_probability: float  # tau in [0.0, 1.0]
-    is_speech: bool
+    timestamp_ms: float = 0.0
+    speech_probability: float = 0.0
+    is_speech: bool = False
+
+    def __init__(self, timestamp_ms: float = 0.0, speech_probability: float = 0.0, is_speech: bool = False, **kwargs):
+        super().__init__(timestamp_ms=timestamp_ms, speech_probability=speech_probability, is_speech=is_speech, **kwargs)
+        self.timestamp_ms = timestamp_ms
+        self.speech_probability = speech_probability
+        self.is_speech = is_speech
 
 
 class AmbientVadGate:
@@ -66,7 +76,7 @@ class AmbientVadGate:
             
             # If sustained speech >= 75% across the 600ms rolling window
             if ratio >= 0.75 and (recent_frames[-1].timestamp_ms - recent_frames[0].timestamp_ms) >= (self.sustained_window_ms * 0.8):
-                return True, f"Sustained speech detected (τ >= {self.speech_prob_threshold} over {self.sustained_window_ms}ms). Triggering user prompt."
+                return True, f"Sustained speech detected (tau >= {self.speech_prob_threshold} over {self.sustained_window_ms}ms). Triggering user prompt."
 
         if speech_prob < self.purge_prob_threshold:
             return False, "Acoustic gate: Inactive frame purged from ring buffer (<3s retention)."

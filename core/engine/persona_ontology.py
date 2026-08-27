@@ -4,8 +4,12 @@ Defines dynamic evaluation strategies, power axis rubrics, and relational prompt
 """
 
 from enum import Enum
-from typing import Dict, List, Any
-from pydantic import BaseModel, Field
+from typing import Dict, List, Any, Optional
+
+try:
+    from .schema import BaseModel
+except (ImportError, ValueError):
+    from engine.schema import BaseModel
 
 
 class PowerAxis(str, Enum):
@@ -15,23 +19,72 @@ class PowerAxis(str, Enum):
 
 
 class EvaluationRubricDimension(BaseModel):
-    name: str
-    description: str
-    target_behavior: str
-    anti_pattern: str
+    name: str = ""
+    description: str = ""
+    target_behavior: str = ""
+    anti_pattern: str = ""
     weight: float = 1.0
+
+    def __init__(
+        self,
+        name: str = "",
+        description: str = "",
+        target_behavior: str = "",
+        anti_pattern: str = "",
+        weight: float = 1.0,
+        **kwargs
+    ):
+        super().__init__(
+            name=name,
+            description=description,
+            target_behavior=target_behavior,
+            anti_pattern=anti_pattern,
+            weight=weight,
+            **kwargs
+        )
+        self.name = name
+        self.description = description
+        self.target_behavior = target_behavior
+        self.anti_pattern = anti_pattern
+        self.weight = weight
 
 
 class PersonaProfile(BaseModel):
-    power_axis: PowerAxis
-    role_title: str
-    counterpart_name: str
-    strategic_focus: str
-    rubric_dimensions: List[EvaluationRubricDimension]
-    custom_guidelines: List[str] = Field(default_factory=list)
+    power_axis: PowerAxis = PowerAxis.LATERAL
+    role_title: str = ""
+    counterpart_name: str = ""
+    strategic_focus: str = ""
+    rubric_dimensions: List[EvaluationRubricDimension] = []
+    custom_guidelines: List[str] = []
+
+    def __init__(
+        self,
+        power_axis: PowerAxis = PowerAxis.LATERAL,
+        role_title: str = "",
+        counterpart_name: str = "",
+        strategic_focus: str = "",
+        rubric_dimensions: Optional[List[EvaluationRubricDimension]] = None,
+        custom_guidelines: Optional[List[str]] = None,
+        **kwargs
+    ):
+        super().__init__(
+            power_axis=power_axis,
+            role_title=role_title,
+            counterpart_name=counterpart_name,
+            strategic_focus=strategic_focus,
+            rubric_dimensions=rubric_dimensions or [],
+            custom_guidelines=custom_guidelines or [],
+            **kwargs
+        )
+        self.power_axis = power_axis
+        self.role_title = role_title
+        self.counterpart_name = counterpart_name
+        self.strategic_focus = strategic_focus
+        self.rubric_dimensions = rubric_dimensions or []
+        self.custom_guidelines = custom_guidelines or []
 
 
-# Detailed Relational Strategy Matrix based on the Executive Framework (Pages 9-10)
+# Detailed Relational Strategy Matrix based on the Executive Framework
 UPWARD_RUBRIC = [
     EvaluationRubricDimension(
         name="Executive Brevity & BLUF",
@@ -145,7 +198,7 @@ class PersonaOntologyEngine:
         counterpart_name: str,
         role_title: str,
         power_axis: PowerAxis,
-        custom_notes: List[str] = None
+        custom_notes: Optional[List[str]] = None
     ) -> PersonaProfile:
         rubric = cls.get_rubric_for_power_axis(power_axis)
         

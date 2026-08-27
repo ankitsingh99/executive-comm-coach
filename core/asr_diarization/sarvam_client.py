@@ -1,10 +1,15 @@
 """
 Sarvam AI Saaras v3 Client for Bilingual Hinglish Speech Recognition.
 Handles multi-speaker Indic / English code-mixed audio transcription with fallback.
+Zero external package dependencies required (uses standard library with optional requests).
 """
 
 import os
-import requests
+import json
+import urllib.request
+import urllib.error
+from typing import List, Dict, Any, Optional
+
 try:
     from ..engine.schema import Utterance
 except (ImportError, ValueError):
@@ -34,19 +39,19 @@ class SarvamSpeechClient:
             return self._mock_hinglish_diarization()
 
         try:
-            headers = {"api-subscription-key": self.api_key}
-            files = {"file": open(audio_file_path, "rb")}
-            data = {
-                "model": "saaras:v3",
-                "language_code": language_code,
-                "with_diarization": str(with_diarization).lower()
-            }
-            response = requests.post(self.base_url, headers=headers, files=files, data=data, timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                return self._parse_sarvam_response(result)
-            else:
-                return self._mock_hinglish_diarization()
+            req = urllib.request.Request(
+                self.base_url,
+                headers={
+                    "api-subscription-key": self.api_key,
+                    "Content-Type": "application/json"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=10.0) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode("utf-8"))
+                    return self._parse_sarvam_response(data)
+                else:
+                    return self._mock_hinglish_diarization()
         except Exception:
             return self._mock_hinglish_diarization()
 

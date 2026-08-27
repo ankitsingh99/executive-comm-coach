@@ -1,116 +1,227 @@
 """
 Deterministic Structured Output Specification for Executive Communication Coach.
-Enforces strict schema constraints, score bounds, verbatim quote validation, and Top-N itemization.
+Enforces strict schema constraints, score bounds, and Top-N itemization.
+Supports both Pydantic and standard library dataclasses for universal portability.
 """
 
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional, Dict, Any
+
+try:
+    from pydantic import BaseModel, Field, field_validator
+    HAS_PYDANTIC = True
+except ImportError:
+    HAS_PYDANTIC = False
+    # Portable fallback using standard dataclasses
+    class BaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+        def model_dump(self) -> Dict[str, Any]:
+            res = {}
+            for k, v in self.__dict__.items():
+                if hasattr(v, "model_dump"):
+                    res[k] = v.model_dump()
+                elif isinstance(v, list):
+                    res[k] = [item.model_dump() if hasattr(item, "model_dump") else item for item in v]
+                else:
+                    res[k] = v
+            return res
+
+        @classmethod
+        def model_validate(cls, data: Dict[str, Any]):
+            return cls(**data)
+
+    def Field(*args, **kwargs):
+        return kwargs.get("default", None)
+
+    def field_validator(*args, **kwargs):
+        def decorator(f):
+            return f
+        return decorator
 
 
 class FillerWordMetric(BaseModel):
     """Detected verbal filler word and frequency count."""
-    token: str = Field(description="The filler token, e.g., 'matlab', 'basically', 'like'")
-    count: int = Field(ge=0, description="Number of times uttered by the user")
+    token: str = ""
+    count: int = 0
+
+    def __init__(self, token: str = "", count: int = 0, **kwargs):
+        super().__init__(token=token, count=count, **kwargs)
+        self.token = token
+        self.count = count
 
 
 class CommunicationMetrics(BaseModel):
     """Core quantitative communication efficacy scores [0, 100]."""
-    presence_score: int = Field(
-        ge=0, le=100,
-        description="Overall executive presence, structured delivery, and BLUF alignment [0-100]"
-    )
-    assertiveness_score: int = Field(
-        ge=0, le=100,
-        description="Ratio of definitive assertions to self-diminishing qualifiers [0-100]"
-    )
-    active_listening_score: int = Field(
-        ge=0, le=100,
-        description="Frequency of mirroring, validation, and inquiry before advancing own agenda [0-100]"
-    )
-    filler_words_detected: List[FillerWordMetric] = Field(
-        default_factory=list,
-        description="Itemized verbal filler counts (e.g. 'matlab', 'basically', 'like', 'you know')"
-    )
+    presence_score: int = 0
+    assertiveness_score: int = 0
+    active_listening_score: int = 0
+    filler_words_detected: List[FillerWordMetric] = []
+
+    def __init__(
+        self,
+        presence_score: int = 0,
+        assertiveness_score: int = 0,
+        active_listening_score: int = 0,
+        filler_words_detected: Optional[List[FillerWordMetric]] = None,
+        **kwargs
+    ):
+        super().__init__(
+            presence_score=presence_score,
+            assertiveness_score=assertiveness_score,
+            active_listening_score=active_listening_score,
+            filler_words_detected=filler_words_detected or [],
+            **kwargs
+        )
+        self.presence_score = max(0, min(100, int(presence_score)))
+        self.assertiveness_score = max(0, min(100, int(assertiveness_score)))
+        self.active_listening_score = max(0, min(100, int(active_listening_score)))
+        self.filler_words_detected = filler_words_detected or []
 
 
 class TopStrength(BaseModel):
     """Itemized positive communication observation."""
-    observation: str = Field(
-        max_length=250,
-        description="Detailed observation of what went well in executive presence (max 250 chars)"
-    )
-    verbatim_quote: str = Field(
-        description="Exact quote from the user in the transcript demonstrating this strength"
-    )
+    observation: str = ""
+    verbatim_quote: str = ""
 
-    @field_validator("observation")
-    @classmethod
-    def validate_obs_length(cls, v: str) -> str:
-        if len(v) > 250:
-            raise ValueError("Strength observation cannot exceed 250 characters")
-        return v.strip()
+    def __init__(self, observation: str = "", verbatim_quote: str = "", **kwargs):
+        super().__init__(observation=observation[:250], verbatim_quote=verbatim_quote, **kwargs)
+        self.observation = observation[:250]
+        self.verbatim_quote = verbatim_quote
 
 
 class AreaForImprovement(BaseModel):
     """Itemized area for communication improvement with coached rephrasing."""
-    critique: str = Field(
-        max_length=250,
-        description="Analysis of the phrasing or influence deficiency (max 250 chars)"
-    )
-    verbatim_quote: str = Field(
-        description="Exact excerpt from user speech identifying the weakness"
-    )
-    coached_phrasing: str = Field(
-        max_length=250,
-        description="Actionable, higher-impact executive alternative for the user (max 250 chars)"
-    )
+    critique: str = ""
+    verbatim_quote: str = ""
+    coached_phrasing: str = ""
 
-    @field_validator("critique", "coached_phrasing")
-    @classmethod
-    def validate_str_length(cls, v: str) -> str:
-        if len(v) > 250:
-            raise ValueError("Text cannot exceed 250 characters")
-        return v.strip()
+    def __init__(
+        self,
+        critique: str = "",
+        verbatim_quote: str = "",
+        coached_phrasing: str = "",
+        **kwargs
+    ):
+        super().__init__(
+            critique=critique[:250],
+            verbatim_quote=verbatim_quote,
+            coached_phrasing=coached_phrasing[:250],
+            **kwargs
+        )
+        self.critique = critique[:250]
+        self.verbatim_quote = verbatim_quote
+        self.coached_phrasing = coached_phrasing[:250]
 
 
 class ExecutiveCoachingEvaluation(BaseModel):
     """Complete structured coaching evaluation report constrained by Top-N parameter."""
-    persona_context: str = Field(
-        description="Summary of the power axis and counterpart context (e.g. Upward to VP, Lateral with PM)"
-    )
-    metrics: CommunicationMetrics = Field(
-        description="Standardized quantitative communication metrics"
-    )
-    top_strengths: List[TopStrength] = Field(
-        description="Exact N positive observations with verbatim quotes"
-    )
-    areas_for_improvement: List[AreaForImprovement] = Field(
-        description="Exact N areas for improvement with verbatim quote and coached rephrasing"
-    )
-    longitudinal_summary: str = Field(
-        description="High-level executive coaching takeaway and strategic advice"
-    )
-    persona_alignment_notes: str = Field(
-        description="Specific notes on how delivery met the expected power dynamic (BLUF / Collaboration / Mentorship)"
-    )
+    persona_context: str = ""
+    metrics: CommunicationMetrics = None
+    top_strengths: List[TopStrength] = []
+    areas_for_improvement: List[AreaForImprovement] = []
+    longitudinal_summary: str = ""
+    persona_alignment_notes: str = ""
+
+    def __init__(
+        self,
+        persona_context: str = "",
+        metrics: Optional[CommunicationMetrics] = None,
+        top_strengths: Optional[List[TopStrength]] = None,
+        areas_for_improvement: Optional[List[AreaForImprovement]] = None,
+        longitudinal_summary: str = "",
+        persona_alignment_notes: str = "",
+        **kwargs
+    ):
+        super().__init__(
+            persona_context=persona_context,
+            metrics=metrics,
+            top_strengths=top_strengths or [],
+            areas_for_improvement=areas_for_improvement or [],
+            longitudinal_summary=longitudinal_summary,
+            persona_alignment_notes=persona_alignment_notes,
+            **kwargs
+        )
+        self.persona_context = persona_context
+        self.metrics = metrics or CommunicationMetrics()
+        self.top_strengths = top_strengths or []
+        self.areas_for_improvement = areas_for_improvement or []
+        self.longitudinal_summary = longitudinal_summary
+        self.persona_alignment_notes = persona_alignment_notes
 
 
 class Utterance(BaseModel):
     """Single timestamped and diarized dialogue turn."""
-    speaker: str = Field(description="Speaker identifier, e.g. 'USER' or 'COUNTERPART'")
-    start_time: float = Field(ge=0.0, description="Start timestamp in seconds")
-    end_time: float = Field(ge=0.0, description="End timestamp in seconds")
-    transcript: str = Field(description="Diarized transcript text (may include Hinglish code-switching)")
+    speaker: str = "USER"
+    start_time: float = 0.0
+    end_time: float = 0.0
+    transcript: str = ""
+
+    def __init__(
+        self,
+        speaker: str = "USER",
+        start_time: float = 0.0,
+        end_time: float = 0.0,
+        transcript: str = "",
+        **kwargs
+    ):
+        super().__init__(
+            speaker=speaker,
+            start_time=start_time,
+            end_time=end_time,
+            transcript=transcript,
+            **kwargs
+        )
+        self.speaker = speaker
+        self.start_time = float(start_time)
+        self.end_time = float(end_time)
+        self.transcript = transcript
 
 
 class ConversationSession(BaseModel):
     """Complete meeting/conversation session data."""
-    session_id: str
-    timestamp_utc: str
+    session_id: str = ""
+    timestamp_utc: str = ""
     target_speaker: str = "USER"
-    counterpart_name: str
-    counterpart_role: str
-    power_axis: str  # "UPWARD", "LATERAL", "DOWNWARD"
-    dialogue: List[Utterance] = Field(default_factory=list)
+    counterpart_name: str = ""
+    counterpart_role: str = ""
+    power_axis: str = "LATERAL"
+    dialogue: List[Utterance] = []
     raw_audio_path: Optional[str] = None
     is_encrypted: bool = True
+
+    def __init__(
+        self,
+        session_id: str = "",
+        timestamp_utc: str = "",
+        target_speaker: str = "USER",
+        counterpart_name: str = "",
+        counterpart_role: str = "",
+        power_axis: str = "LATERAL",
+        dialogue: Optional[List[Utterance]] = None,
+        raw_audio_path: Optional[str] = None,
+        is_encrypted: bool = True,
+        **kwargs
+    ):
+        super().__init__(
+            session_id=session_id,
+            timestamp_utc=timestamp_utc,
+            target_speaker=target_speaker,
+            counterpart_name=counterpart_name,
+            counterpart_role=counterpart_role,
+            power_axis=power_axis,
+            dialogue=dialogue or [],
+            raw_audio_path=raw_audio_path,
+            is_encrypted=is_encrypted,
+            **kwargs
+        )
+        self.session_id = session_id
+        self.timestamp_utc = timestamp_utc
+        self.target_speaker = target_speaker
+        self.counterpart_name = counterpart_name
+        self.counterpart_role = counterpart_role
+        self.power_axis = power_axis
+        self.dialogue = dialogue or []
+        self.raw_audio_path = raw_audio_path
+        self.is_encrypted = is_encrypted

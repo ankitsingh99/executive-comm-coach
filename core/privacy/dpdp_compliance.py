@@ -7,17 +7,50 @@ import os
 import shutil
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
+
+try:
+    from ..engine.schema import BaseModel
+except (ImportError, ValueError):
+    from engine.schema import BaseModel
 
 
 class ConsentRecord(BaseModel):
-    session_id: str
-    timestamp_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    session_id: str = ""
+    timestamp_iso: str = ""
     counterpart_notified: bool = True
     audible_chime_played: bool = True
     purpose: str = "Executive Communication Skills Analysis"
     data_retention_days: int = 30
     local_storage_encrypted: bool = True
+
+    def __init__(
+        self,
+        session_id: str = "",
+        timestamp_iso: Optional[str] = None,
+        counterpart_notified: bool = True,
+        audible_chime_played: bool = True,
+        purpose: str = "Executive Communication Skills Analysis",
+        data_retention_days: int = 30,
+        local_storage_encrypted: bool = True,
+        **kwargs
+    ):
+        super().__init__(
+            session_id=session_id,
+            timestamp_iso=timestamp_iso or datetime.now(timezone.utc).isoformat(),
+            counterpart_notified=counterpart_notified,
+            audible_chime_played=audible_chime_played,
+            purpose=purpose,
+            data_retention_days=data_retention_days,
+            local_storage_encrypted=local_storage_encrypted,
+            **kwargs
+        )
+        self.session_id = session_id
+        self.timestamp_iso = timestamp_iso or datetime.now(timezone.utc).isoformat()
+        self.counterpart_notified = counterpart_notified
+        self.audible_chime_played = audible_chime_played
+        self.purpose = purpose
+        self.data_retention_days = data_retention_days
+        self.local_storage_encrypted = local_storage_encrypted
 
 
 class DPDPComplianceManager:
@@ -45,7 +78,6 @@ class DPDPComplianceManager:
         Simulates / triggers the audible notification chime to inform all present parties
         that the conversation is being recorded for coaching per DPDP safeguards.
         """
-        # In Android, this sends an AudioTrack or MediaPlayer event with a distinct 440Hz dual-tone
         return "[DPDP_CHIME_TRIGGERED]: Dual-tone audible notification played to room."
 
     def execute_statutory_erasure(self, session_id: str) -> Dict[str, Any]:
