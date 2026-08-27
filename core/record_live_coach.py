@@ -64,7 +64,7 @@ def main():
 
     # Step 3: Local Speech-to-Text Transcription
     print("\n [ON-DEVICE STT] Transcribing captured speech locally with NVIDIA Parakeet STT (nvidia/parakeet-ctc-0.6b)...")
-    stt_engine = LocalSTTEngine(model_size="tiny")
+    stt_engine = LocalSTTEngine()
     utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
 
     if not utterances or not any(u.transcript.strip() for u in utterances):

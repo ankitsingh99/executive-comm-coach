@@ -21,9 +21,10 @@ class LocalSTTEngine:
     Utilizes NVIDIA Parakeet CTC as primary SOTA model for transcription.
     """
 
-    def __init__(self, sample_rate: int = 16000, use_parakeet: bool = True):
+    def __init__(self, sample_rate: int = 16000, use_parakeet: bool = True, model_size: str = "tiny"):
         self.sample_rate = sample_rate
         self.use_parakeet = use_parakeet
+        self.model_size = model_size
         self._parakeet_engine = None
         self._whisper_model = None
 
@@ -39,7 +40,7 @@ class LocalSTTEngine:
         if self._whisper_model is None:
             try:
                 from faster_whisper import WhisperModel
-                self._whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+                self._whisper_model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
             except Exception:
                 self._whisper_model = None
         return self._whisper_model
