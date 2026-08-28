@@ -19,6 +19,7 @@ from .persona_ontology import (
 )
 from .metrics_calculator import MetricsCalculator
 from .coaching_engine import ExecutiveCoachingEngine
+from .gemini_coaching_engine import GeminiCoachingSynthesizer
 
 __all__ = [
     "FillerWordMetric",
@@ -36,5 +37,6 @@ __all__ = [
     "LATERAL_RUBRIC",
     "DOWNWARD_RUBRIC",
     "MetricsCalculator",
-    "ExecutiveCoachingEngine"
+    "ExecutiveCoachingEngine",
+    "GeminiCoachingSynthesizer"
 ]

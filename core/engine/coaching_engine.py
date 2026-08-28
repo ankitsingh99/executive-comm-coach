@@ -7,17 +7,23 @@ import os
 from typing import Optional
 from .schema import ConversationSession, ExecutiveCoachingEvaluation
 from .local_coaching_synthesizer import LocalCoachingSynthesizer
+from .gemini_coaching_engine import GeminiCoachingSynthesizer
+try:
+    from ..config import get_gemini_api_key
+except (ImportError, ValueError):
+    from config import get_gemini_api_key
 
 
 class ExecutiveCoachingEngine:
     """
     Primary interface for Executive Coaching evaluation.
-    Operates locally on-device by default with zero cloud dependencies.
+    Leverages Gemini for SOTA contextual coaching with automated local fallback.
     """
 
-    def __init__(self, use_local_only: bool = True):
+    def __init__(self, use_local_only: bool = False):
         self.use_local_only = use_local_only
         self.local_synthesizer = LocalCoachingSynthesizer()
+        self.gemini_synthesizer = GeminiCoachingSynthesizer()
 
     def evaluate_session(
         self,
@@ -26,8 +32,13 @@ class ExecutiveCoachingEngine:
         use_llm: bool = False
     ) -> ExecutiveCoachingEvaluation:
         """
-        Executes on-device coaching evaluation with dynamic, conversation-adaptive feedback item count.
+        Executes coaching evaluation via Gemini when available, falling back to on-device NLP.
         """
+        if not self.use_local_only and self.gemini_synthesizer.is_available():
+            gemini_eval = self.gemini_synthesizer.synthesize(session=session, top_n=top_n)
+            if gemini_eval is not None:
+                return gemini_eval
+
         return self.local_synthesizer.synthesize(
             session=session,
             top_n=top_n,

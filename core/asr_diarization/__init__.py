@@ -5,6 +5,7 @@ from .diarizer import DiarizationEngine
 from .local_stt_engine import LocalSTTEngine
 from .nvidia_parakeet_engine import NvidiaParakeetEngine
 from .acoustic_speaker_detector import AcousticSpeakerToneDetector
+from .gemini_audio_engine import GeminiAudioEngine
 
 __all__ = [
     "AmbientVadGate",
@@ -13,5 +14,6 @@ __all__ = [
     "DiarizationEngine",
     "LocalSTTEngine",
     "NvidiaParakeetEngine",
-    "AcousticSpeakerToneDetector"
+    "AcousticSpeakerToneDetector",
+    "GeminiAudioEngine"
 ]

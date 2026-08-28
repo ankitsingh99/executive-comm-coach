@@ -15,3 +15,6 @@ SpeechRecognition>=3.10.0
 # Schema & Testing
 pydantic>=2.0.0
 pytest>=8.0.0
+
+# Gemini Multimodal Intelligence
+google-genai>=2.20.0

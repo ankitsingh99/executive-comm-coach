@@ -10,21 +10,25 @@ from typing import List, Dict, Any, Optional
 try:
     from ..engine.schema import Utterance
     from .nvidia_parakeet_engine import NvidiaParakeetEngine
+    from .gemini_audio_engine import GeminiAudioEngine
 except (ImportError, ValueError):
     from engine.schema import Utterance
     from asr_diarization.nvidia_parakeet_engine import NvidiaParakeetEngine
+    from asr_diarization.gemini_audio_engine import GeminiAudioEngine
 
 
 class LocalSTTEngine:
     """
-    On-device speech recognizer and speaker diarizer.
-    Utilizes NVIDIA Parakeet CTC as primary SOTA model for transcription.
+    Speech recognizer and speaker diarizer.
+    Utilizes Google Gemini as primary multimodal engine when available,
+    with local NVIDIA Parakeet and Whisper fallbacks.
     """
 
     def __init__(self, sample_rate: int = 16000, use_parakeet: bool = True, model_size: str = "tiny"):
         self.sample_rate = sample_rate
         self.use_parakeet = use_parakeet
         self.model_size = model_size
+        self._gemini_engine = GeminiAudioEngine()
         self._parakeet_engine = None
         self._whisper_model = None
 
@@ -47,12 +51,21 @@ class LocalSTTEngine:
 
     def transcribe_audio_file(self, audio_wav_path: str, speaker_id: str = "USER") -> List[Utterance]:
         """
-        Transcribes a recorded WAV audio file using NVIDIA Parakeet (or Whisper fallback).
+        Transcribes a recorded WAV audio file using Gemini (or Parakeet / Whisper fallback).
         """
         if not os.path.exists(audio_wav_path):
             return []
 
-        # 1. Primary Engine: NVIDIA Parakeet
+        # 1. Primary Engine: Google Gemini (Highest accuracy & verbatim phonetic hesitations)
+        if self._gemini_engine.is_available():
+            try:
+                gemini_utterances, _ = self._gemini_engine.process_audio(audio_wav_path, speaker_id=speaker_id)
+                if gemini_utterances and any(u.transcript.strip() for u in gemini_utterances):
+                    return gemini_utterances
+            except Exception:
+                pass
+
+        # 2. Secondary Engine: NVIDIA Parakeet
         parakeet = self._get_parakeet_engine()
         if parakeet is not None:
             try:
@@ -62,7 +75,7 @@ class LocalSTTEngine:
             except Exception:
                 pass
 
-        # 2. Fallback Engine: Faster-Whisper
+        # 3. Fallback Engine: Faster-Whisper
         whisper_model = self._get_whisper_model()
         if whisper_model is not None:
             try:

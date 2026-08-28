@@ -19,9 +19,10 @@ from engine.coaching_engine import ExecutiveCoachingEngine
 from asr_diarization.live_mic_recorder import LiveMicRecorder
 from asr_diarization.local_stt_engine import LocalSTTEngine
 from asr_diarization.acoustic_speaker_detector import AcousticSpeakerToneDetector
+from asr_diarization.gemini_audio_engine import GeminiAudioEngine
 from privacy.pii_redactor import PIIRedactor
 from privacy.dpdp_compliance import DPDPComplianceManager
-from config import DATA_DIR
+from config import DATA_DIR, get_gemini_api_key, GEMINI_MODEL
 
 
 def parse_args():
@@ -30,6 +31,8 @@ def parse_args():
     parser.add_argument("--axis", type=str, default=None, choices=["SOLO", "CASUAL", "LATERAL", "UPWARD", "DOWNWARD", "CONFLICT"], help="Power Axis / Communication Mode")
     parser.add_argument("--counterpart", type=str, default=None, help="Counterpart Name / Title")
     parser.add_argument("--role", type=str, default=None, help="Counterpart Role")
+    parser.add_argument("--gemini-key", type=str, default=None, help="Gemini API Key (optional)")
+    parser.add_argument("--local-only", action="store_true", help="Force local on-device models only")
     parser.add_argument("--non-interactive", action="store_true", help="Skip post-transcription interactive context prompt")
     return parser.parse_args()
 
@@ -95,10 +98,32 @@ def prompt_for_communication_context(detected_count: int = 1, detected_tone: str
 def main():
     args = parse_args()
 
-    print("""
+    # Configure Gemini API Key if provided via args or interactive
+    if args.gemini_key:
+        os.environ["GEMINI_API_KEY"] = args.gemini_key
+
+    gemini_key = get_gemini_api_key()
+    if not gemini_key and not args.local_only and sys.stdin.isatty():
+        try:
+            print("\n  [GEMINI SETUP] Tip: You can use Google Gemini for SOTA speech & vocal tone sensing.")
+            entered_key = input("  Enter your GEMINI_API_KEY (or press Enter to run locally): ").strip()
+            if entered_key:
+                os.environ["GEMINI_API_KEY"] = entered_key
+                env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+                with open(env_path, "a", encoding="utf-8") as f:
+                    f.write(f"\nGEMINI_API_KEY={entered_key}\n")
+                print("  >> Saved GEMINI_API_KEY to .env successfully!\n")
+        except (EOFError, KeyboardInterrupt):
+            pass
+
+    gemini_engine = GeminiAudioEngine()
+    use_gemini = not args.local_only and gemini_engine.is_available()
+
+    engine_tag = f"Powered by Google Gemini ({GEMINI_MODEL})" if use_gemini else "Running On-Device (Local Models)"
+    print(f"""
  +------------------------------------------------------------------------------+
- |           LIVE ON-DEVICE UNIVERSAL COMMUNICATION COACH                       |
- |       Hardware Microphone Sensing & Register-Adaptive Coaching               |
+ |           LIVE UNIVERSAL COMMUNICATION COACH                                 |
+ |       {engine_tag:<71}|
  +------------------------------------------------------------------------------+
 """)
 
@@ -119,10 +144,35 @@ def main():
     recorder = LiveMicRecorder()
     wav_path = recorder.record_to_wav(duration_seconds=duration)
 
-    # Step 3: Acoustic Voice & Tone Detection + Local STT
-    print("\n [ACOUSTIC SENSING] Analyzing vocal pitch, energy dynamics, and speaker count...")
-    acoustic_detector = AcousticSpeakerToneDetector()
-    acoustic_result = acoustic_detector.analyze_wav_file(wav_path)
+    # Step 3: Transcription & Acoustic Voice Analysis
+    utterances = []
+    acoustic_result = None
+
+    if use_gemini:
+        print(f"\n [GEMINI MULTIMODAL SENSING] Transcribing speech & analyzing vocal tone via Gemini...")
+        utterances, acoustic_result = gemini_engine.process_audio(wav_path, speaker_id="USER")
+
+    # Fallback to local if Gemini was not available or returned empty
+    if not utterances or not any(u.transcript.strip() for u in utterances):
+        if use_gemini:
+            print(" [FALLBACK] Reverting to local acoustic models...")
+        print("\n [ACOUSTIC SENSING] Analyzing vocal pitch, energy dynamics, and speaker count...")
+        acoustic_detector = AcousticSpeakerToneDetector()
+        acoustic_result = acoustic_detector.analyze_wav_file(wav_path)
+
+        print(" [ON-DEVICE STT] Transcribing captured speech locally...")
+        stt_engine = LocalSTTEngine()
+        utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
+
+    if not utterances or not any(u.transcript.strip() for u in utterances):
+        print("\n [NOTICE] No speech was detected during the recording window.")
+        print(" Please verify your microphone volume and speak closer to the mic.")
+        if os.path.exists(wav_path):
+            os.remove(wav_path)
+        return
+
+    if acoustic_result is None:
+        acoustic_result = AcousticSpeakerToneDetector().analyze_wav_file(wav_path)
 
     print(f"\n  +--------------------------------------------------------------+")
     print(f"  |              ACOUSTIC VOICE & TONE DETECTION                 |")
@@ -131,19 +181,8 @@ def main():
     print(f"  • Detected Voices: {acoustic_result.detected_speaker_count} [{spk_type}]")
     print(f"  • Overall Vocal Tone: {acoustic_result.overall_tone}")
     for spk in acoustic_result.speakers:
-        print(f"    - {spk.speaker_id}: Tone: {spk.tone_label} | Pitch: {spk.mean_pitch_hz} Hz (Range: {spk.pitch_range_hz} Hz) | Talk Time: {spk.talk_time_percentage}%")
+        print(f"    - {spk.speaker_id}: Tone: {spk.tone_label} | Pitch: {spk.mean_pitch_hz} Hz | Talk Time: {spk.talk_time_percentage}%")
     print(f"  +--------------------------------------------------------------+\n")
-
-    print(" [ON-DEVICE STT] Transcribing captured speech locally with NVIDIA Parakeet STT (nvidia/parakeet-ctc-0.6b)...")
-    stt_engine = LocalSTTEngine()
-    utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
-
-    if not utterances or not any(u.transcript.strip() for u in utterances):
-        print("\n [NOTICE] No speech was detected during the recording window.")
-        print(" Please verify your microphone volume and speak closer to the mic.")
-        if os.path.exists(wav_path):
-            os.remove(wav_path)
-        return
 
     print("\n [YOUR EXACT WORDS AS TRANSCRIBED]:")
     for u in utterances:
@@ -178,7 +217,7 @@ def main():
         dialogue=redacted_turns
     )
 
-    coach = ExecutiveCoachingEngine(use_local_only=True)
+    coach = ExecutiveCoachingEngine(use_local_only=args.local_only)
     evaluation = coach.evaluate_session(session, top_n=None)
     evaluation.metrics.acoustic_analysis = acoustic_result
 
