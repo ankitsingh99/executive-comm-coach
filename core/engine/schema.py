@@ -52,12 +52,89 @@ class FillerWordMetric(BaseModel):
         self.count = count
 
 
+class SpeakerAcousticProfile(BaseModel):
+    """Acoustic voice characteristics and tone classification for an individual speaker."""
+    speaker_id: str = "SPEAKER_01"
+    mean_pitch_hz: float = 0.0
+    pitch_range_hz: float = 0.0
+    energy_rms: float = 0.0
+    speech_rate_wpm: float = 0.0
+    tone_label: str = "Calm & Measured"
+    talk_time_percentage: float = 100.0
+    confidence_score: float = 1.0
+
+    def __init__(
+        self,
+        speaker_id: str = "SPEAKER_01",
+        mean_pitch_hz: float = 0.0,
+        pitch_range_hz: float = 0.0,
+        energy_rms: float = 0.0,
+        speech_rate_wpm: float = 0.0,
+        tone_label: str = "Calm & Measured",
+        talk_time_percentage: float = 100.0,
+        confidence_score: float = 1.0,
+        **kwargs
+    ):
+        super().__init__(
+            speaker_id=speaker_id,
+            mean_pitch_hz=mean_pitch_hz,
+            pitch_range_hz=pitch_range_hz,
+            energy_rms=energy_rms,
+            speech_rate_wpm=speech_rate_wpm,
+            tone_label=tone_label,
+            talk_time_percentage=talk_time_percentage,
+            confidence_score=confidence_score,
+            **kwargs
+        )
+        self.speaker_id = speaker_id
+        self.mean_pitch_hz = float(mean_pitch_hz)
+        self.pitch_range_hz = float(pitch_range_hz)
+        self.energy_rms = float(energy_rms)
+        self.speech_rate_wpm = float(speech_rate_wpm)
+        self.tone_label = tone_label
+        self.talk_time_percentage = float(talk_time_percentage)
+        self.confidence_score = float(confidence_score)
+
+
+class AcousticAnalysisResult(BaseModel):
+    """Aggregate acoustic voice and speaker detection analysis."""
+    detected_speaker_count: int = 1
+    is_multi_speaker: bool = False
+    speakers: List[SpeakerAcousticProfile] = []
+    overall_tone: str = "Calm & Measured"
+    turn_taking_events: int = 0
+
+    def __init__(
+        self,
+        detected_speaker_count: int = 1,
+        is_multi_speaker: bool = False,
+        speakers: Optional[List[SpeakerAcousticProfile]] = None,
+        overall_tone: str = "Calm & Measured",
+        turn_taking_events: int = 0,
+        **kwargs
+    ):
+        super().__init__(
+            detected_speaker_count=detected_speaker_count,
+            is_multi_speaker=is_multi_speaker,
+            speakers=speakers or [],
+            overall_tone=overall_tone,
+            turn_taking_events=turn_taking_events,
+            **kwargs
+        )
+        self.detected_speaker_count = int(detected_speaker_count)
+        self.is_multi_speaker = bool(is_multi_speaker)
+        self.speakers = speakers or []
+        self.overall_tone = overall_tone
+        self.turn_taking_events = int(turn_taking_events)
+
+
 class CommunicationMetrics(BaseModel):
     """Core quantitative communication efficacy scores [0, 100]."""
     presence_score: int = 0
     assertiveness_score: int = 0
     active_listening_score: int = 0
     filler_words_detected: List[FillerWordMetric] = []
+    acoustic_analysis: Optional[AcousticAnalysisResult] = None
 
     def __init__(
         self,

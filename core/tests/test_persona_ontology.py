@@ -12,6 +12,31 @@ from engine.persona_ontology import (
 
 
 def test_persona_profiles_creation():
+    solo_profile = PersonaOntologyEngine.create_persona_profile(
+        counterpart_name="",
+        role_title="",
+        power_axis=PowerAxis.SOLO
+    )
+    assert solo_profile.power_axis == PowerAxis.SOLO
+    assert "Clarity of Thought & Cohesive Structure" in [d.name for d in solo_profile.rubric_dimensions]
+    assert "SOLO SELF-PRACTICE" in solo_profile.strategic_focus
+
+    casual_profile = PersonaOntologyEngine.create_persona_profile(
+        counterpart_name="Alex",
+        role_title="Friend / Colleague",
+        power_axis=PowerAxis.CASUAL
+    )
+    assert casual_profile.power_axis == PowerAxis.CASUAL
+    assert "Conversational Warmth & Relatability" in [d.name for d in casual_profile.rubric_dimensions]
+
+    conflict_profile = PersonaOntologyEngine.create_persona_profile(
+        counterpart_name="Vendor Lead",
+        role_title="Negotiation Counterpart",
+        power_axis=PowerAxis.CONFLICT
+    )
+    assert conflict_profile.power_axis == PowerAxis.CONFLICT
+    assert "Emotional De-escalation & Neutral Objectivity" in [d.name for d in conflict_profile.rubric_dimensions]
+
     upward_profile = PersonaOntologyEngine.create_persona_profile(
         counterpart_name="Engineering Director",
         role_title="Senior Director",
@@ -48,3 +73,4 @@ def test_system_instruction_generation():
     assert "VP of Engineering" in prompt
     assert "EXACTLY 3 Top Strengths" in prompt
     assert "presence_score" in prompt
+

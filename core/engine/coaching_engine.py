@@ -22,11 +22,11 @@ class ExecutiveCoachingEngine:
     def evaluate_session(
         self,
         session: ConversationSession,
-        top_n: int = 3,
+        top_n: Optional[int] = None,
         use_llm: bool = False
     ) -> ExecutiveCoachingEvaluation:
         """
-        Executes on-device coaching evaluation.
+        Executes on-device coaching evaluation with dynamic, conversation-adaptive feedback item count.
         """
         return self.local_synthesizer.synthesize(
             session=session,

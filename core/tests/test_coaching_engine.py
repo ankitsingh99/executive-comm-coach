@@ -61,21 +61,21 @@ def test_schema_constraints_and_bounds():
     assert len(improvement.coached_phrasing) <= 250
 
 
-def test_coaching_engine_exact_top_n(sample_session):
+def test_coaching_engine_dynamic_and_capped_items(sample_session):
     engine = ExecutiveCoachingEngine()
     
-    # Test N = 2
-    eval_2 = engine.evaluate_session(sample_session, top_n=2, use_llm=False)
-    assert len(eval_2.top_strengths) == 2
-    assert len(eval_2.areas_for_improvement) == 2
-    assert 0 <= eval_2.metrics.presence_score <= 100
-    assert 0 <= eval_2.metrics.assertiveness_score <= 100
-    assert 0 <= eval_2.metrics.active_listening_score <= 100
+    # Test dynamic / unconstrained count
+    eval_dynamic = engine.evaluate_session(sample_session, top_n=None, use_llm=False)
+    assert len(eval_dynamic.top_strengths) >= 1
+    assert len(eval_dynamic.areas_for_improvement) >= 1
+    assert 0 <= eval_dynamic.metrics.presence_score <= 100
+    assert 0 <= eval_dynamic.metrics.assertiveness_score <= 100
+    assert 0 <= eval_dynamic.metrics.active_listening_score <= 100
 
-    # Test N = 3
-    eval_3 = engine.evaluate_session(sample_session, top_n=3, use_llm=False)
-    assert len(eval_3.top_strengths) == 3
-    assert len(eval_3.areas_for_improvement) == 3
+    # Test explicit cap top_n = 1
+    eval_1 = engine.evaluate_session(sample_session, top_n=1, use_llm=False)
+    assert len(eval_1.top_strengths) <= 1
+    assert len(eval_1.areas_for_improvement) <= 1
 
 
 def test_persona_upward_coaching_content(sample_session):
@@ -85,3 +85,20 @@ def test_persona_upward_coaching_content(sample_session):
     assert "UPWARD" in evaluation.persona_context
     assert "BLUF" in evaluation.persona_alignment_notes or "Upward" in evaluation.persona_alignment_notes
     assert any(f.token == "matlab" for f in evaluation.metrics.filler_words_detected)
+
+
+def test_phonetic_and_vocal_fillers_detection():
+    from engine.metrics_calculator import MetricsCalculator
+
+    test_speech = "Ummm, so basically I was thinking hmm, we need aaah to test aaaa our new service like right now."
+    fillers = MetricsCalculator.detect_fillers(test_speech)
+    
+    tokens = {f.token for f in fillers}
+    # Verify phonetic elongations are detected
+    assert "ummm" in tokens
+    assert "hmm" in tokens
+    assert "aaah" in tokens
+    assert "aaaa" in tokens
+    # Verify English discourse fillers are detected
+    assert "basically" in tokens
+    assert "like" in tokens

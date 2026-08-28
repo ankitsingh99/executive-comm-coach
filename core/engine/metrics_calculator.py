@@ -8,22 +8,51 @@ from typing import List, Dict, Tuple
 from .schema import Utterance, FillerWordMetric, CommunicationMetrics
 
 
-# Recognized filler words in corporate Hinglish / English dialogue
-FILLER_PATTERNS = [
-    r"\bmatlab\b",
+# Multi-word phrase fillers
+PHRASE_FILLER_PATTERNS = [
+    (r"\byou know\b", "you know"),
+    (r"\bi mean\b", "i mean"),
+    (r"\bsort of\b", "sort of"),
+    (r"\bkind of\b", "kind of"),
+    (r"\btheek hai\b", "theek hai"),
+]
+
+# Single-token word & phonetic hesitation patterns
+# Captures variations like um, umm, ummm, uh, uhh, hmm, hmmm, aaaa, aaah, ahhh, eh, er, etc.
+TOKEN_FILLER_PATTERNS = [
+    # Phonetic hesitation sounds (nasals, guttural, and vowel elongations)
+    r"\bu+m+\b",          # um, umm, ummm, ummmm...
+    r"\bu+h+m*\b",        # uh, uhh, uhhh, uhm...
+    r"\be+r+m*\b",        # er, err, erm...
+    r"\be+r+\b",          # er, err...
+    r"\bh+m+\b",          # hm, hmm, hmmm, hmmmm...
+    r"\bm+h+m*\b",        # mhm, mmhmm...
+    r"\ba+h+\b",          # ah, ahh, ahhh...
+    r"\ba{2,}\b",         # aa, aaa, aaaa, aaaaa...
+    r"\ba+a+h*\b",        # aah, aaah, aaaah...
+    r"\be+h+\b",          # eh, ehh, ehhh...
+    r"\bo+h+\b",          # oh, ohh, ohhh...
+    r"\bo{2,}h*\b",       # ooh, oohh...
+    
+    # English lexical fillers
     r"\bbasically\b",
-    r"\blike\b",
-    r"\byou know\b",
     r"\bactually\b",
+    r"\bliterally\b",
+    r"\blike\b",
+    r"\bright\b",
+    
+    # Hinglish / South Asian discourse fillers
+    r"\bmatlab\b",
     r"\byaani\b",
     r"\barre\b",
     r"\bhaina\b",
-    r"\bumm?\b",
-    r"\buhh?\b",
-    r"\bi mean\b",
-    r"\bsort of\b",
-    r"\bkind of\b",
+    r"\bhaan\b",
+    r"\bacha\b",
+    r"\btoh\b",
 ]
+
+# Consolidated filler patterns for backward compatibility and regex checks
+FILLER_PATTERNS = list(TOKEN_FILLER_PATTERNS) + [p for p, _ in PHRASE_FILLER_PATTERNS]
 
 # Self-diminishing / hedging qualifiers
 HEDGING_PATTERNS = [
@@ -78,14 +107,27 @@ class MetricsCalculator:
 
     @classmethod
     def detect_fillers(cls, text: str) -> List[FillerWordMetric]:
-        """Detects and tallies verbal filler words."""
+        """Detects and tallies verbal and phonetic filler words."""
         counts: Dict[str, int] = {}
-        for pattern in FILLER_PATTERNS:
-            token = pattern.replace(r"\b", "")
-            matches = re.findall(pattern, text, flags=re.IGNORECASE)
+        working_text = text
+
+        # 1. Match multi-word phrases first
+        for pattern, label in PHRASE_FILLER_PATTERNS:
+            matches = re.findall(pattern, working_text, flags=re.IGNORECASE)
             if matches:
-                counts[token] = len(matches)
-        
+                counts[label] = len(matches)
+                # Replace with placeholder to prevent double matching
+                working_text = re.sub(pattern, " ", working_text, flags=re.IGNORECASE)
+
+        # 2. Match single tokens and phonetic vocalizations
+        for pattern in TOKEN_FILLER_PATTERNS:
+            matches = re.findall(pattern, working_text, flags=re.IGNORECASE)
+            for m in matches:
+                token_clean = m.lower().strip()
+                counts[token_clean] = counts.get(token_clean, 0) + 1
+            if matches:
+                working_text = re.sub(pattern, " ", working_text, flags=re.IGNORECASE)
+
         # Sort by highest frequency
         sorted_fillers = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         return [FillerWordMetric(token=k, count=v) for k, v in sorted_fillers]

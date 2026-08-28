@@ -73,7 +73,7 @@ class LocalCoachingSynthesizer:
     def synthesize(
         self,
         session: ConversationSession,
-        top_n: int = 2,
+        top_n: Optional[int] = None,
         try_local_ollama: bool = True
     ) -> ExecutiveCoachingEvaluation:
         """
@@ -167,8 +167,8 @@ class LocalCoachingSynthesizer:
         top_n: int
     ) -> ExecutiveCoachingEvaluation:
         """
-        Deep semantic NLP engine.
-        Deconstructs spoken sentences by intent and constructs bespoke Executive Coaching feedback.
+        Actionable NLP coaching engine.
+        Identifies concrete communication friction points and generates concise, prescriptive advice.
         """
         user_turns = [u for u in dialogue if u.speaker.upper() == "USER"]
         raw_text = " ".join([u.transcript.strip() for u in user_turns])
@@ -179,148 +179,186 @@ class LocalCoachingSynthesizer:
 
         full_quote = raw_text.strip()
 
+        # 1. Linguistic and Friction Pattern Detection
         is_question = bool(re.search(r"\b(how|what|why|where|when|can|could|should|is it|how do i)\b", full_quote, re.IGNORECASE) or "?" in full_quote)
-        is_seeking_learning = bool(re.search(r"\b(learn|start|study|understand|explore|guide|recommend)\b", full_quote, re.IGNORECASE))
-        has_hedging = bool(re.search(r"\b(if i have to|i just think|maybe|sorry|i was wondering|kind of|sort of)\b", full_quote, re.IGNORECASE))
+        is_seeking_learning = bool(re.search(r"\b(learn|start|study|understand|explore|guide|recommend|figure out)\b", full_quote, re.IGNORECASE))
+        has_hedging = bool(re.search(r"\b(if i have to|i just think|maybe|sorry|i was wondering|kind of|sort of|not sure but)\b", full_quote, re.IGNORECASE))
         has_fillers = bool(metrics.filler_words_detected)
 
-        topic_match = re.search(r"(?:about|on|learn|evaluate|regarding|for|build|that's a|that is a)\s+([a-zA-Z0-9_\-\s]{3,30}?)(?:\?|,|\.|$|how|what)", full_quote, re.IGNORECASE)
-        extracted_topic = topic_match.group(1).strip() if topic_match else ""
-        if not extracted_topic or len(extracted_topic.split()) > 5:
-            words = [w for w in re.findall(r"\b[a-zA-Z]{4,}\b", full_quote) if w.lower() not in ["have", "that", "start", "this", "something", "could", "would", "about"]]
-            extracted_topic = " ".join(words[:2]) if words else "the initiative"
+        # 2. Precise Topic & Predicate Extraction
+        cleaned_quote = re.sub(r"\b(that was|this is|basically|um+|uh+|hm+|aaah|matlab|like|you know|so)\b", "", full_quote, flags=re.IGNORECASE).strip()
+        topic_match = re.search(r"(?:about|on|regarding|for|evaluate|explore|status of|news from|focus on)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)", full_quote, re.IGNORECASE)
+        
+        if topic_match:
+            extracted_topic = topic_match.group(1).strip()
+        else:
+            meaningful_words = [
+                w for w in re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_quote)
+                if w.lower() not in ["that", "this", "with", "have", "from", "today", "about", "what", "where", "when", "could", "should", "would", "just", "very"]
+            ]
+            extracted_topic = " ".join(meaningful_words[:3]) if meaningful_words else "the core topic"
+
+        extracted_topic = re.sub(r"\s+", " ", extracted_topic).strip()
 
         strengths: List[TopStrength] = []
         improvements: List[AreaForImprovement] = []
 
+        # 3. Concise Positive Strengths (Specific to actual delivery)
+        if not has_fillers and len(full_quote.split()) >= 4:
+            strengths.append(TopStrength(
+                observation="Zero verbal hesitation. Clean, unbroken sentence cadence.",
+                verbatim_quote=full_quote
+            ))
+        else:
+            strengths.append(TopStrength(
+                observation=f"Direct topical focus on {extracted_topic}.",
+                verbatim_quote=full_quote
+            ))
+
         if is_question:
             strengths.append(TopStrength(
-                observation=f"Demonstrated intellectual curiosity and initiated exploration into {extracted_topic}.",
+                observation="Proactive engagement. Prompted alignment with an open inquiry.",
                 verbatim_quote=full_quote
             ))
-            if not has_fillers:
-                strengths.append(TopStrength(
-                    observation="Maintained clean verbal enunciation without relying on verbal filler words.",
-                    verbatim_quote=full_quote
-                ))
-            else:
-                strengths.append(TopStrength(
-                    observation="Kept sentence concise and focused on the key subject area.",
-                    verbatim_quote=full_quote
-                ))
         else:
             strengths.append(TopStrength(
-                observation=f"Directly addressed {extracted_topic} with clear conversational focus.",
-                verbatim_quote=full_quote
-            ))
-            strengths.append(TopStrength(
-                observation="Maintained clear articulation and steady delivery pace.",
+                observation="Controlled enunciation and steady pacing.",
                 verbatim_quote=full_quote
             ))
 
-        target_counterpart = profile.counterpart_name if profile.counterpart_name != "Counterpart" else "your counterpart"
+        target_counterpart = profile.counterpart_name if profile.counterpart_name else "your audience"
+
+        # 4. Actionable Friction-Point Analysis & Coached Rephrasing
+        if has_fillers:
+            filler_summary = ", ".join([f"'{f.token}' ({f.count}x)" for f in metrics.filler_words_detected[:2]])
+            critique = f"Hesitation markers ({filler_summary}) break delivery rhythm. Action: Pause silently for 0.5s instead of vocalizing."
+            coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
+            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
 
         if is_seeking_learning and is_question:
-            if profile.power_axis == PowerAxis.UPWARD:
-                critique_1 = "Phrased as a passive question ('how do I start') rather than framing it as proactive initiative ownership."
-                coached_1 = f"I am initiating an evaluation of {extracted_topic}. What core frameworks or milestones do you recommend we prioritize?"
-                
-                critique_2 = "Hypothetical preamble ('If I have to...') softens executive gravitas when speaking upward."
-                coached_2 = f"I am developing our roadmap for {extracted_topic}. I would like to align on the key architectural requirements."
+            if profile.power_axis == PowerAxis.SOLO:
+                critique = "Framed as an open question during solo rehearsal. Action: State as a definitive thesis to test."
+                coached = f"My objective is to validate {extracted_topic} through systematic prototyping."
+            elif profile.power_axis == PowerAxis.UPWARD:
+                critique = "Open question ('how do I') shifts cognitive load upward. Action: Propose a baseline plan before asking for input."
+                coached = f"I am preparing the roadmap for {extracted_topic}. Let's align on the top two milestones."
             elif profile.power_axis == PowerAxis.LATERAL:
-                critique_1 = "Frame inquiry collaboratively around team roadmap impact rather than purely individual learning."
-                coached_1 = f"I am exploring {extracted_topic} for our team roadmap. Let's align on technical prerequisites and shared dependencies."
-                critique_2 = "Open questions to peers should propose an initial approach to invite constructive technical review."
-                coached_2 = f"I am reviewing approaches for {extracted_topic}; what tradeoffs have you seen in similar implementations?"
-            else: # DOWNWARD
-                critique_1 = "When guiding direct reports, model structured problem breakdown before asking open-ended questions."
-                coached_1 = f"As we build expertise in {extracted_topic}, what foundational concepts have you explored so far?"
-                critique_2 = "Encourage Socratic discovery by guiding them to define initial evaluation steps."
-                coached_2 = f"To start evaluating {extracted_topic}, how would you break down the initial proof of concept?"
+                critique = "Individual question. Action: Frame around shared team deliverables and technical prerequisites."
+                coached = f"Let's review prerequisites for {extracted_topic} to ensure our sprint goals align."
+            else:
+                critique = "Broad inquiry. Action: Define concrete next steps before opening for discussion."
+                coached = f"To structure {extracted_topic}, let's first evaluate the initial architectural tradeoffs."
 
-            improvements.append(AreaForImprovement(critique=critique_1, verbatim_quote=full_quote, coached_phrasing=coached_1))
-            improvements.append(AreaForImprovement(critique=critique_2, verbatim_quote=full_quote, coached_phrasing=coached_2))
+            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
 
         elif has_hedging:
-            clean_bluf = self._clean_and_reframe(full_quote, extracted_topic, profile.power_axis)
-            improvements.append(AreaForImprovement(
-                critique="Spoken delivery contained qualifiers ('just think', 'maybe') that diluted assertiveness.",
-                verbatim_quote=full_quote,
-                coached_phrasing=clean_bluf
-            ))
-            improvements.append(AreaForImprovement(
-                critique="State the decision or objective directly in the opening clause to maximize executive brevity (BLUF).",
-                verbatim_quote=full_quote,
-                coached_phrasing=f"Our priority is to execute on {extracted_topic} effectively."
-            ))
+            critique = "Hedging qualifiers ('just think', 'maybe') dilute conviction. Action: State the recommendation directly as a decision."
+            coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
+            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
+
         else:
-            clean_bluf = self._clean_and_reframe(full_quote, extracted_topic, profile.power_axis)
-            improvements.append(AreaForImprovement(
-                critique=f"When speaking to {target_counterpart}, elevate your delivery by leading with high-impact executive BLUF framing.",
-                verbatim_quote=full_quote,
-                coached_phrasing=clean_bluf
-            ))
-            improvements.append(AreaForImprovement(
-                critique="Strengthen authority by stating quantified outcomes, clear timelines, or next strategic actions.",
-                verbatim_quote=full_quote,
-                coached_phrasing=f"I recommend we focus on {extracted_topic} to drive measurable impact this cycle."
-            ))
+            # Informational / narrative statement without decision (e.g. "That was the news from India today")
+            if profile.power_axis == PowerAxis.SOLO:
+                critique = "Observation ended without an action item. Action: Add a direct conclusion or next step."
+                coached = f"Key takeaway on {extracted_topic}: focus execution on the top deliverable first."
+            elif profile.power_axis == PowerAxis.CASUAL:
+                critique = "Statement is passive. Action: Add an open hook to invite conversational flow."
+                coached = f"That wraps up the latest on {extracted_topic}—what's your take on it?"
+            elif profile.power_axis == PowerAxis.CONFLICT:
+                critique = "Observation lacks mutual resolution criteria. Action: Propose shared objective metrics."
+                coached = f"Regarding {extracted_topic}, let's establish agreed criteria to resolve our blockers."
+            else: # UPWARD / LATERAL
+                critique = f"Statement offers context without a bottom-line decision (BLUF). Action: Lead with the recommendation."
+                coached = f"Based on the latest {extracted_topic}, I recommend we prioritize rollout readiness."
 
-        # Pad to exact top_n if top_n > 2
-        while len(strengths) < top_n:
-            idx = len(strengths)
-            quote = raw_sentences[idx % len(raw_sentences)] if raw_sentences else full_quote
-            strengths.append(TopStrength(
-                observation=f"Maintained steady conversational engagement on core agenda item {idx+1}.",
-                verbatim_quote=quote
-            ))
+            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
 
-        while len(improvements) < top_n:
-            idx = len(improvements)
-            quote = raw_sentences[idx % len(raw_sentences)] if raw_sentences else full_quote
-            improvements.append(AreaForImprovement(
-                critique="Frame delivery with definitive authority and eliminate hesitation markers.",
-                verbatim_quote=quote,
-                coached_phrasing=self._clean_and_reframe(quote, extracted_topic, profile.power_axis)
-            ))
+        # Check for unquantified narrative if relevant
+        if len(improvements) == 1 and not has_hedging and not is_question:
+            critique_2 = "Statement lacks quantified outcomes. Action: Add measurable metrics, timelines, or next steps."
+            coached_2 = self._generate_crisp_action_plan(extracted_topic, profile.power_axis)
+            improvements.append(AreaForImprovement(critique=critique_2, verbatim_quote=full_quote, coached_phrasing=coached_2))
 
-        if is_question and profile.power_axis == PowerAxis.UPWARD:
-            summary = (
-                f"When consulting {target_counterpart}, reframe open questions ('how do I start') "
-                "into structured proposals with clear ownership. Leadership responds best to proactive roadmaps rather than open-ended inquiries."
-            )
-        elif is_question and profile.power_axis == PowerAxis.LATERAL:
-            summary = (
-                f"Your inquiry on {extracted_topic} with {target_counterpart} establishes alignment. "
-                "Pair questions with concrete collaborative milestones to drive joint momentum."
-            )
+        # Apply top_n cap only if caller explicitly requested a maximum limit
+        final_strengths = strengths[:top_n] if top_n and top_n > 0 else strengths
+        final_improvements = improvements[:top_n] if top_n and top_n > 0 else improvements
+
+        # 5. Crisp, Actionable Summary
+        if profile.power_axis == PowerAxis.SOLO:
+            summary = f"Good topic focus on {extracted_topic}. Action: Eliminate trailing statements by concluding each point with an actionable next step."
+        elif profile.power_axis == PowerAxis.UPWARD:
+            summary = f"Clear topic grounding on {extracted_topic}. Action: Front-load the recommendation (BLUF) in your first sentence to maximize executive brevity."
+        elif profile.power_axis == PowerAxis.LATERAL:
+            summary = f"Constructive sync on {extracted_topic}. Action: Anchor proposals to shared milestones and explicit team dependencies."
+        elif profile.power_axis == PowerAxis.CONFLICT:
+            summary = f"Tense discussion around {extracted_topic}. Action: Keep framing strictly objective and centered on shared criteria."
         else:
-            summary = (
-                f"Your communication with {target_counterpart} effectively highlighted {extracted_topic}. "
-                "Ensure your first sentence delivers the core takeaway (BLUF) before expanding into background details."
-            )
+            summary = f"Engaging communication regarding {extracted_topic}. Action: Lead with your core message before providing background context."
+
+        alignment_note = (
+            f"Evaluated against {profile.power_axis.value} (BLUF) executive communication rubric."
+            if profile.power_axis == PowerAxis.UPWARD
+            else f"Evaluated against {profile.power_axis.value} communication rubric."
+        )
 
         return ExecutiveCoachingEvaluation(
             persona_context=profile.strategic_focus,
             metrics=metrics,
-            top_strengths=strengths[:top_n],
-            areas_for_improvement=improvements[:top_n],
+            top_strengths=final_strengths,
+            areas_for_improvement=final_improvements,
             longitudinal_summary=summary,
-            persona_alignment_notes=f"Evaluated against {profile.power_axis.value} (BLUF) executive communication standards."
+            persona_alignment_notes=alignment_note
         )
 
+    def _generate_crisp_bluf(self, text: str, topic: str, power_axis: PowerAxis) -> str:
+        """Generates a punchy, highly natural BLUF sentence tailored to register."""
+        if power_axis == PowerAxis.SOLO:
+            return f"The priority for {topic} is executing the core milestones on schedule."
+        elif power_axis == PowerAxis.CASUAL:
+            return f"I've been following {topic} closely—looks like we're in great shape!"
+        elif power_axis == PowerAxis.CONFLICT:
+            return f"I understand the constraints on {topic}. Let's agree on concrete next steps."
+        elif power_axis == PowerAxis.UPWARD:
+            return f"I recommend we proceed with {topic} to keep our roadmap on track."
+        elif power_axis == PowerAxis.LATERAL:
+            return f"Let's align on {topic} so we can unblock the upcoming sprint."
+        else:
+            return f"To advance {topic}, what initial tradeoffs have you identified?"
+
+    def _generate_crisp_action_plan(self, topic: str, power_axis: PowerAxis) -> str:
+        """Generates a quantified, concrete action plan alternative."""
+        if power_axis == PowerAxis.SOLO:
+            return f"I will complete the initial benchmark for {topic} by end of week."
+        elif power_axis == PowerAxis.UPWARD:
+            return f"I recommend deploying {topic} by next sprint to reduce delivery risk by 20%."
+        elif power_axis == PowerAxis.LATERAL:
+            return f"Let's schedule a 15-minute sync tomorrow to finalize the API contract for {topic}."
+        elif power_axis == PowerAxis.CONFLICT:
+            return f"Let's review the objective test data for {topic} to settle the technical direction."
+        else:
+            return f"Let's target delivering the {topic} prototype within the next two weeks."
+
     def _clean_and_reframe(self, text: str, topic: str, power_axis: PowerAxis) -> str:
-        """Transforms a sentence into an executive BLUF statement."""
+        """Transforms a sentence into an appropriately framed coaching statement."""
         cleaned = text
         for pat in [
             r"\bbasically\b", r"\bmatlab\b", r"\blike\b", r"\byou know\b",
+            r"\bactually\b", r"\bliterally\b", r"\bi mean\b",
+            r"\bu+m+\b", r"\bu+h+m*\b", r"\bh+m+\b", r"\bm+h+m*\b",
+            r"\ba+h+\b", r"\ba{2,}\b", r"\ba+a+h*\b", r"\be+h+\b", r"\be+r+m*\b",
             r"\bi just think\b", r"\bmaybe we could\b", r"\bsorry to bother\b",
             r"\bif i have to\b", r"\bhow do i start\b"
         ]:
             cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
 
-        if power_axis == PowerAxis.UPWARD:
+        if power_axis == PowerAxis.SOLO:
+            return f"The key takeaway regarding {topic} is structured execution and continuous iteration."
+        elif power_axis == PowerAxis.CASUAL:
+            return f"I've been exploring {topic} lately, and it's looking really promising!"
+        elif power_axis == PowerAxis.CONFLICT:
+            return f"I understand the concerns regarding {topic}. Let's agree on the key milestones to move forward."
+        elif power_axis == PowerAxis.UPWARD:
             return f"I am leading the evaluation of {topic}. What key benchmarks should we prioritize?"
         elif power_axis == PowerAxis.LATERAL:
             return f"Let's collaborate on {topic} and align our technical milestones for this sprint."
@@ -330,11 +368,11 @@ class LocalCoachingSynthesizer:
     def _enforce_strict_constraints(
         self,
         evaluation: ExecutiveCoachingEvaluation,
-        top_n: int
+        top_n: Optional[int] = None
     ) -> ExecutiveCoachingEvaluation:
-        """Enforces length <= 250, score bounds, and Top-N count."""
-        strengths = evaluation.top_strengths[:top_n]
-        improvements = evaluation.areas_for_improvement[:top_n]
+        """Enforces length <= 250 and score bounds."""
+        strengths = evaluation.top_strengths[:top_n] if top_n and top_n > 0 else evaluation.top_strengths
+        improvements = evaluation.areas_for_improvement[:top_n] if top_n and top_n > 0 else evaluation.areas_for_improvement
 
         for s in strengths:
             s.observation = s.observation[:250].strip()
