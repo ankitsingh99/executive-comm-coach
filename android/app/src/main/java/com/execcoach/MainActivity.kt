@@ -18,8 +18,10 @@ import com.execcoach.service.AmbientAudioService
 import com.execcoach.ui.dashboard.DashboardScreen
 import com.execcoach.ui.session.FeedbackBottomSheet
 import com.execcoach.ui.theme.ExecCoachTheme
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val database by lazy { CoachingDatabase.getInstance(applicationContext) }
