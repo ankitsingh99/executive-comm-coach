@@ -29,12 +29,12 @@ class ExecutiveCoachingEngine:
         self,
         session: ConversationSession,
         top_n: Optional[int] = None,
-        use_llm: bool = False
+        use_llm: bool = True
     ) -> ExecutiveCoachingEvaluation:
         """
         Executes coaching evaluation via Gemini when available, falling back to on-device NLP.
         """
-        if not self.use_local_only and self.gemini_synthesizer.is_available():
+        if not self.use_local_only and use_llm and self.gemini_synthesizer.is_available():
             gemini_eval = self.gemini_synthesizer.synthesize(session=session, top_n=top_n)
             if gemini_eval is not None:
                 return gemini_eval

@@ -6,7 +6,13 @@ diarization, phonetic hesitation preservation, and vocal tone analysis.
 
 import os
 import json
+import logging
+import warnings
 from typing import List, Tuple, Optional, Dict, Any
+
+# Suppress GenAI automatic function calling warning
+logging.getLogger("google.genai").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", message=".*automatic function calling.*")
 
 try:
     from ..engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
@@ -69,7 +75,7 @@ class GeminiAudioEngine:
                 mime_type="audio/wav"
             )
 
-            prompt = """Analyze this audio recording with high precision.
+            prompt = """Analyze this audio recording with high precision for speech-to-text, speaker diarization, and acoustic tone.
 
 Return pure JSON with the following structure:
 {
@@ -77,36 +83,60 @@ Return pure JSON with the following structure:
     {
       "speaker": "USER",
       "start_time": 0.0,
-      "end_time": 4.5,
-      "transcript": "Exact verbatim spoken text here, including any hesitation sounds like ummm, hmm, aaah, basically, etc."
+      "end_time": 3.5,
+      "transcript": "Exact verbatim spoken words here, including fillers like um, ah, basically, etc."
+    },
+    {
+      "speaker": "COUNTERPART",
+      "start_time": 3.6,
+      "end_time": 7.0,
+      "transcript": "Exact verbatim reply from the second speaker."
     }
   ],
-  "speaker_count": 1,
+  "speaker_count": 2,
   "overall_tone": "Calm & Measured",
   "speakers": [
     {
-      "speaker_id": "SPEAKER_01",
+      "speaker_id": "USER",
       "tone_label": "Calm & Measured",
       "pitch_hz": 150.0,
-      "talk_time_percentage": 100.0,
+      "talk_time_percentage": 60.0,
       "confidence_score": 0.95
+    },
+    {
+      "speaker_id": "COUNTERPART",
+      "tone_label": "Assertive & Decisive",
+      "pitch_hz": 180.0,
+      "talk_time_percentage": 40.0,
+      "confidence_score": 0.92
     }
   ]
 }
 
 Instructions:
-1. Capture every spoken word VERBATIM. Do NOT omit filler vocalizations (um, umm, uh, hmm, aaah, matlab, etc.).
-2. If multiple distinct voices speak, segment them into separate speaker turns (e.g. SPEAKER_01, SPEAKER_02).
-3. Classify vocal tone (e.g. "Assertive & Decisive", "Calm & Measured", "Dynamic & Expressive", "Tense / Rushed", "Monotone", "Hesitant / Subdued").
+1. Capture every spoken word VERBATIM. Do NOT omit filler vocalizations (um, umm, uh, hmm, aaah, matlab, yaani, etc.).
+2. SPEAKER DIARIZATION (MANDATORY):
+   - You MUST accurately tag which person said what for every single utterance.
+   - If only 1 person speaks in the audio, label their speaker as "USER".
+   - If multiple distinct voices/people speak:
+     * Label the main speaker (or first speaker) as "USER".
+     * Label other interlocutors as "COUNTERPART" (or "SPEAKER_02", "SPEAKER_03" if 3+ people).
+     * Split every change in speaker into a separate turn in "transcription".
+   - NEVER combine different speakers' speech into one utterance.
+3. For each detected speaker, provide their tone_label, estimated pitch_hz, and talk_time_percentage.
 4. Return ONLY valid JSON without markdown wrapping.
 """
+
+            config_kwargs = {"response_mime_type": "application/json"}
+            try:
+                config_kwargs["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(disable=True)
+            except Exception:
+                pass
 
             response = client.models.generate_content(
                 model=self.model,
                 contents=[audio_part, prompt],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                )
+                config=types.GenerateContentConfig(**config_kwargs)
             )
 
             raw_text = response.text.strip()
@@ -115,10 +145,18 @@ Instructions:
 
             data = json.loads(raw_text)
 
-            # Parse Utterances
+            # Parse Utterances with speaker normalization
             utterances: List[Utterance] = []
             for item in data.get("transcription", []):
-                spk = item.get("speaker", speaker_id)
+                raw_spk = str(item.get("speaker", speaker_id)).strip()
+                # Normalize speaker tags
+                if raw_spk.upper() in ["USER", "SPEAKER_0", "SPEAKER_01", "SPEAKER 1", "SELF"]:
+                    spk = "USER"
+                elif raw_spk.upper() in ["COUNTERPART", "SPEAKER_1", "SPEAKER_02", "SPEAKER 2", "OTHER"]:
+                    spk = "COUNTERPART"
+                else:
+                    spk = raw_spk.upper()
+
                 start = float(item.get("start_time", 0.0))
                 end = float(item.get("end_time", 0.0))
                 text = item.get("transcript", "").strip()

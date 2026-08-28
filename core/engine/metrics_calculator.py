@@ -8,30 +8,33 @@ from typing import List, Dict, Tuple
 from .schema import Utterance, FillerWordMetric, CommunicationMetrics
 
 
-# Multi-word phrase fillers
+# Multi-word phrase fillers (English + Hinglish)
 PHRASE_FILLER_PATTERNS = [
     (r"\byou know\b", "you know"),
     (r"\bi mean\b", "i mean"),
     (r"\bsort of\b", "sort of"),
     (r"\bkind of\b", "kind of"),
     (r"\btheek hai\b", "theek hai"),
+    (r"\bsamajh gaya\b", "samajh gaya"),
+    (r"\bmatlab ki\b", "matlab ki"),
+    (r"\baisa hai ki\b", "aisa hai ki"),
+    (r"\bdekha jaye toh\b", "dekha jaye toh"),
 ]
 
 # Single-token word & phonetic hesitation patterns
-# Captures variations like um, umm, ummm, uh, uhh, hmm, hmmm, aaaa, aaah, ahhh, eh, er, etc.
 TOKEN_FILLER_PATTERNS = [
-    # Phonetic hesitation sounds (nasals, guttural, and vowel elongations)
-    r"\bu+m+\b",          # um, umm, ummm, ummmm...
-    r"\bu+h+m*\b",        # uh, uhh, uhhh, uhm...
+    # Phonetic hesitation sounds
+    r"\bu+m+\b",          # um, umm, ummm...
+    r"\bu+h+m*\b",        # uh, uhh, uhhh...
     r"\be+r+m*\b",        # er, err, erm...
     r"\be+r+\b",          # er, err...
-    r"\bh+m+\b",          # hm, hmm, hmmm, hmmmm...
+    r"\bh+m+\b",          # hm, hmm, hmmm...
     r"\bm+h+m*\b",        # mhm, mmhmm...
     r"\ba+h+\b",          # ah, ahh, ahhh...
-    r"\ba{2,}\b",         # aa, aaa, aaaa, aaaaa...
-    r"\ba+a+h*\b",        # aah, aaah, aaaah...
-    r"\be+h+\b",          # eh, ehh, ehhh...
-    r"\bo+h+\b",          # oh, ohh, ohhh...
+    r"\ba{2,}\b",         # aa, aaa...
+    r"\ba+a+h*\b",        # aah, aaah...
+    r"\be+h+\b",          # eh, ehh...
+    r"\bo+h+\b",          # oh, ohh...
     r"\bo{2,}h*\b",       # ooh, oohh...
     
     # English lexical fillers
@@ -41,7 +44,7 @@ TOKEN_FILLER_PATTERNS = [
     r"\blike\b",
     r"\bright\b",
     
-    # Hinglish / South Asian discourse fillers
+    # Hinglish & South Asian discourse fillers
     r"\bmatlab\b",
     r"\byaani\b",
     r"\barre\b",
@@ -49,13 +52,17 @@ TOKEN_FILLER_PATTERNS = [
     r"\bhaan\b",
     r"\bacha\b",
     r"\btoh\b",
+    r"\byaar\b",
+    r"\bbhai\b",
+    r"\bwaise\b",
 ]
 
-# Consolidated filler patterns for backward compatibility and regex checks
+# Consolidated filler patterns
 FILLER_PATTERNS = list(TOKEN_FILLER_PATTERNS) + [p for p, _ in PHRASE_FILLER_PATTERNS]
 
-# Self-diminishing / hedging qualifiers
+# Self-diminishing / hedging qualifiers (English + Hinglish)
 HEDGING_PATTERNS = [
+    # English
     r"\bi just think\b",
     r"\bi just wanted to\b",
     r"\bmaybe we could possibly\b",
@@ -68,10 +75,26 @@ HEDGING_PATTERNS = [
     r"\bif you don't mind\b",
     r"\bperhaps maybe\b",
     r"\bi was just wondering\b",
+    r"\bmaybe\b",
+    
+    # Hinglish
+    r"\bmujhe\s+(?:bhi\s+)?lagta\s+hai\b",
+    r"\blag\s+raha\s+hai(?:\s+ki)?\b",
+    r"\bshayad\b",
+    r"\bagar\s+possible\s+ho\s+toh\b",
+    r"\bagar\s+ho\s+sake\s+toh\b",
+    r"\bthoda\s+(?:sa\s+)?doubt\s+hai\b",
+    r"\bthoda\s+confusion\s+hai\b",
+    r"\bmain\s+sure\s+nahi\s+hu\b",
+    r"\bpata\s+nahi\s+but\b",
+    r"\bmere\s+khayal\s+se\b",
+    r"\baisa\s+lag\s+raha\s+tha\b",
+    r"\bthoda\s+time\s+lag\s+sakta\s+hai\b",
 ]
 
-# Strong definitive assertion markers
+# Strong definitive assertion markers (English + Hinglish)
 ASSERTIVE_PATTERNS = [
+    # English
     r"\bour data demonstrates\b",
     r"\bi recommend\b",
     r"\bwe have decided\b",
@@ -83,10 +106,27 @@ ASSERTIVE_PATTERNS = [
     r"\bwe will achieve\b",
     r"\bthe blocker is\b",
     r"\bour analysis shows\b",
+    r"\bwe will ship\b",
+    r"\bwe will deploy\b",
+    
+    # Hinglish
+    r"\bhumne\s+decide\s+kiya\s+hai\b",
+    r"\bpakka\s+(?:hum\s+)?kar\s+denge\b",
+    r"\bmera\s+recommendation\s+hai\b",
+    r"\bhumara\s+recommendation\s+hai\b",
+    r"\bdata\s+dikhata\s+hai\b",
+    r"\bnumbers\s+clear\s+hai\b",
+    r"\bfinal\s+decision\s+ye\s+hai\b",
+    r"\bhum\s+ship\s+karenge\b",
+    r"\bhum\s+deploy\s+karenge\b",
+    r"\bpriority\s+ye\s+honi\s+chahiye\b",
+    r"\bblocker\s+ye\s+hai\b",
+    r"\bhum\s+achieve\s+karenge\b",
 ]
 
-# Active listening & validation markers
+# Active listening & validation markers (English + Hinglish)
 ACTIVE_LISTENING_PATTERNS = [
+    # English
     r"\bbuilding on what you said\b",
     r"\bto confirm\b",
     r"\bif i understand correctly\b",
@@ -94,11 +134,22 @@ ACTIVE_LISTENING_PATTERNS = [
     r"\bunderstood\b",
     r"\bthat makes sense\b",
     r"\bgood point\b",
-    r"\bsahi point hai\b",
     r"\bi see your point\b",
     r"\bwhat do you think about\b",
     r"\bhow do you see this\b",
     r"\bwhat are your thoughts\b",
+    
+    # Hinglish
+    r"\bsahi\s+point\s+hai\b",
+    r"\bsahi\s+baat\s+hai\b",
+    r"\baapka\s+point\s+samajh\s+aaya\b",
+    r"\baapka\s+point\s+clear\s+hai\b",
+    r"\bbilkul\s+sahi\b",
+    r"\btheek\s+baat\s+hai\b",
+    r"\baapka\s+kya\s+kehna\s+hai\b",
+    r"\baapko\s+kya\s+lagta\s+hai\b",
+    r"\baap\s+bataiye\b",
+    r"\bkya\s+lagta\s+hai\s+aapko\b",
 ]
 
 

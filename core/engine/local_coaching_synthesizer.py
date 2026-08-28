@@ -20,6 +20,7 @@ try:
         CommunicationMetrics,
         TopStrength,
         AreaForImprovement,
+        ActionItem,
         FillerWordMetric
     )
     from .persona_ontology import (
@@ -34,6 +35,7 @@ try:
         ASSERTIVE_PATTERNS,
         ACTIVE_LISTENING_PATTERNS
     )
+    from .action_item_extractor import ActionItemExtractor
     from ..privacy.pii_redactor import PIIRedactor
 except (ImportError, ValueError):
     from engine.schema import (
@@ -43,6 +45,7 @@ except (ImportError, ValueError):
         CommunicationMetrics,
         TopStrength,
         AreaForImprovement,
+        ActionItem,
         FillerWordMetric
     )
     from engine.persona_ontology import (
@@ -57,6 +60,7 @@ except (ImportError, ValueError):
         ASSERTIVE_PATTERNS,
         ACTIVE_LISTENING_PATTERNS
     )
+    from engine.action_item_extractor import ActionItemExtractor
     from privacy.pii_redactor import PIIRedactor
 
 
@@ -179,24 +183,34 @@ class LocalCoachingSynthesizer:
 
         full_quote = raw_text.strip()
 
-        # 1. Linguistic and Friction Pattern Detection
-        is_question = bool(re.search(r"\b(how|what|why|where|when|can|could|should|is it|how do i)\b", full_quote, re.IGNORECASE) or "?" in full_quote)
-        is_seeking_learning = bool(re.search(r"\b(learn|start|study|understand|explore|guide|recommend|figure out)\b", full_quote, re.IGNORECASE))
-        has_hedging = bool(re.search(r"\b(if i have to|i just think|maybe|sorry|i was wondering|kind of|sort of|not sure but)\b", full_quote, re.IGNORECASE))
+        # 1. Linguistic and Friction Pattern Detection (English + Hinglish)
+        is_question = bool(re.search(r"\b(how|what|why|where|when|can|could|should|is it|how do i|kya|kyun|kaise|kab|kahan|batao)\b", full_quote, re.IGNORECASE) or "?" in full_quote)
+        is_seeking_learning = bool(re.search(r"\b(learn|start|study|understand|explore|guide|recommend|figure out|seekhna|samajhna|shuru)\b", full_quote, re.IGNORECASE))
+        has_hedging = any(bool(re.search(pat, full_quote, re.IGNORECASE)) for pat in HEDGING_PATTERNS)
+        has_assertive = any(bool(re.search(pat, full_quote, re.IGNORECASE)) for pat in ASSERTIVE_PATTERNS)
         has_fillers = bool(metrics.filler_words_detected)
 
-        # 2. Precise Topic & Predicate Extraction
-        cleaned_quote = re.sub(r"\b(that was|this is|basically|um+|uh+|hm+|aaah|matlab|like|you know|so)\b", "", full_quote, flags=re.IGNORECASE).strip()
-        topic_match = re.search(r"(?:about|on|regarding|for|evaluate|explore|status of|news from|focus on)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)", full_quote, re.IGNORECASE)
+        # 2. Precise Topic & Predicate Extraction (Multilingual)
+        cleaned_quote = re.sub(
+            r"\b(that was|this is|basically|um+|uh+|hm+|aaah|matlab|like|you know|so|mujhe lagta hai|shayad|lag raha hai|dekho|bhai|yaar|actually|literally)\b",
+            "",
+            full_quote,
+            flags=re.IGNORECASE
+        ).strip()
+        
+        topic_match = re.search(r"(?:about|on|regarding|for|evaluate|explore|status of|news from|focus on|ke bare mein|par|ka status)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)", full_quote, re.IGNORECASE)
         
         if topic_match:
             extracted_topic = topic_match.group(1).strip()
         else:
             meaningful_words = [
                 w for w in re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_quote)
-                if w.lower() not in ["that", "this", "with", "have", "from", "today", "about", "what", "where", "when", "could", "should", "would", "just", "very"]
+                if w.lower() not in [
+                    "that", "this", "with", "have", "from", "today", "about", "what", "where", "when", "could", "should", "would", "just", "very",
+                    "hume", "mujhe", "karna", "hoga", "karenge", "chahiye", "lagta", "raha", "gaya", "wala", "vali", "bhi", "par", "aur", "lekin", "kyunki", "isiliye", "dekho", "apna", "apne", "unka", "unke", "hain", "kare"
+                ]
             ]
-            extracted_topic = " ".join(meaningful_words[:3]) if meaningful_words else "the core topic"
+            extracted_topic = " ".join(meaningful_words[:3]) if meaningful_words else "the core deliverable"
 
         extracted_topic = re.sub(r"\s+", " ", extracted_topic).strip()
 
@@ -204,7 +218,12 @@ class LocalCoachingSynthesizer:
         improvements: List[AreaForImprovement] = []
 
         # 3. Concise Positive Strengths (Specific to actual delivery)
-        if not has_fillers and len(full_quote.split()) >= 4:
+        if has_assertive:
+            strengths.append(TopStrength(
+                observation="Decisive ownership and assertive delivery commitment.",
+                verbatim_quote=full_quote
+            ))
+        elif not has_fillers and len(full_quote.split()) >= 4:
             strengths.append(TopStrength(
                 observation="Zero verbal hesitation. Clean, unbroken sentence cadence.",
                 verbatim_quote=full_quote
@@ -240,10 +259,10 @@ class LocalCoachingSynthesizer:
                 critique = "Framed as an open question during solo rehearsal. Action: State as a definitive thesis to test."
                 coached = f"My objective is to validate {extracted_topic} through systematic prototyping."
             elif profile.power_axis == PowerAxis.UPWARD:
-                critique = "Open question ('how do I') shifts cognitive load upward. Action: Propose a baseline plan before asking for input."
-                coached = f"I am preparing the roadmap for {extracted_topic}. Let's align on the top two milestones."
+                critique = "Open question shifts cognitive load upward. Action: Propose a baseline plan before asking for input."
+                coached = f"I am leading the roadmap for {extracted_topic}. Let's align on the top two milestones."
             elif profile.power_axis == PowerAxis.LATERAL:
-                critique = "Individual question. Action: Frame around shared team deliverables and technical prerequisites."
+                critique = "Broad question. Action: Frame around shared team deliverables and technical prerequisites."
                 coached = f"Let's review prerequisites for {extracted_topic} to ensure our sprint goals align."
             else:
                 critique = "Broad inquiry. Action: Define concrete next steps before opening for discussion."
@@ -252,7 +271,7 @@ class LocalCoachingSynthesizer:
             improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
 
         elif has_hedging:
-            critique = "Hedging qualifiers ('just think', 'maybe') dilute conviction. Action: State the recommendation directly as a decision."
+            critique = "Hedging qualifiers ('just think', 'maybe', 'mujhe lagta hai') dilute conviction. Action: State the recommendation directly as a decision."
             coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
             improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
 
@@ -301,11 +320,14 @@ class LocalCoachingSynthesizer:
             else f"Evaluated against {profile.power_axis.value} communication rubric."
         )
 
+        action_items = ActionItemExtractor.extract_from_dialogue(dialogue)
+
         return ExecutiveCoachingEvaluation(
             persona_context=profile.strategic_focus,
             metrics=metrics,
             top_strengths=final_strengths,
             areas_for_improvement=final_improvements,
+            action_items=action_items,
             longitudinal_summary=summary,
             persona_alignment_notes=alignment_note
         )
@@ -337,6 +359,26 @@ class LocalCoachingSynthesizer:
             return f"Let's review the objective test data for {topic} to settle the technical direction."
         else:
             return f"Let's target delivering the {topic} prototype within the next two weeks."
+
+    def _extract_core_topic(self, text: str) -> str:
+        words = [w for w in re.findall(r"\b[A-Za-z0-9_-]+\b", text) if len(w) > 3 and w.lower() not in ["basically", "matlab", "think", "maybe", "could", "would", "should", "there", "their", "about", "which"]]
+        if len(words) >= 2:
+            return f"{words[0]} {words[1]}"
+        elif len(words) == 1:
+            return words[0]
+        return "the core topic"
+
+    def _generate_strategic_summary(self, text: str, power_axis: PowerAxis, topic: str) -> str:
+        if power_axis == PowerAxis.UPWARD:
+            return f"Clear topic grounding on {topic}. Action: Front-load the recommendation (BLUF) in your first sentence to maximize executive brevity."
+        elif power_axis == PowerAxis.LATERAL:
+            return f"Constructive sync on {topic}. Action: Anchor proposals to shared milestones and explicit team dependencies."
+        elif power_axis == PowerAxis.DOWNWARD:
+            return f"Engaging communication regarding {topic}. Action: Lead with your core message before providing background context."
+        elif power_axis == PowerAxis.SOLO:
+            return f"Well-structured rehearsal on {topic}. Action: Practice deliberate pausing at key transition points."
+        else:
+            return f"Clear delivery on {topic}. Action: Maintain concise framing to drive decisive outcomes."
 
     def _clean_and_reframe(self, text: str, topic: str, power_axis: PowerAxis) -> str:
         """Transforms a sentence into an appropriately framed coaching statement."""
@@ -385,6 +427,7 @@ class LocalCoachingSynthesizer:
             metrics=evaluation.metrics,
             top_strengths=strengths,
             areas_for_improvement=improvements,
+            action_items=evaluation.action_items,
             longitudinal_summary=evaluation.longitudinal_summary,
             persona_alignment_notes=evaluation.persona_alignment_notes
         )

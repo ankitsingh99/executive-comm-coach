@@ -192,12 +192,49 @@ class AreaForImprovement(BaseModel):
         self.coached_phrasing = coached_phrasing[:250]
 
 
+class ActionItem(BaseModel):
+    """Extracted action item, commitment, or scheduled follow-up from spoken dialogue."""
+    owner: str = "USER"
+    task: str = ""
+    due_time_or_date: Optional[str] = None
+    verbatim_quote: str = ""
+    category: str = "Follow-up"
+    urgency: str = "Normal"
+
+    def __init__(
+        self,
+        owner: str = "USER",
+        task: str = "",
+        due_time_or_date: Optional[str] = None,
+        verbatim_quote: str = "",
+        category: str = "Follow-up",
+        urgency: str = "Normal",
+        **kwargs
+    ):
+        super().__init__(
+            owner=owner,
+            task=task[:250],
+            due_time_or_date=due_time_or_date,
+            verbatim_quote=verbatim_quote,
+            category=category,
+            urgency=urgency,
+            **kwargs
+        )
+        self.owner = owner
+        self.task = task[:250]
+        self.due_time_or_date = due_time_or_date
+        self.verbatim_quote = verbatim_quote
+        self.category = category
+        self.urgency = urgency
+
+
 class ExecutiveCoachingEvaluation(BaseModel):
     """Complete structured coaching evaluation report constrained by Top-N parameter."""
     persona_context: str = ""
     metrics: CommunicationMetrics = None
     top_strengths: List[TopStrength] = []
     areas_for_improvement: List[AreaForImprovement] = []
+    action_items: List[ActionItem] = []
     longitudinal_summary: str = ""
     persona_alignment_notes: str = ""
 
@@ -207,6 +244,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
         metrics: Optional[CommunicationMetrics] = None,
         top_strengths: Optional[List[TopStrength]] = None,
         areas_for_improvement: Optional[List[AreaForImprovement]] = None,
+        action_items: Optional[List[ActionItem]] = None,
         longitudinal_summary: str = "",
         persona_alignment_notes: str = "",
         **kwargs
@@ -216,6 +254,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
             metrics=metrics,
             top_strengths=top_strengths or [],
             areas_for_improvement=areas_for_improvement or [],
+            action_items=action_items or [],
             longitudinal_summary=longitudinal_summary,
             persona_alignment_notes=persona_alignment_notes,
             **kwargs
@@ -224,6 +263,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
         self.metrics = metrics or CommunicationMetrics()
         self.top_strengths = top_strengths or []
         self.areas_for_improvement = areas_for_improvement or []
+        self.action_items = action_items or []
         self.longitudinal_summary = longitudinal_summary
         self.persona_alignment_notes = persona_alignment_notes
 

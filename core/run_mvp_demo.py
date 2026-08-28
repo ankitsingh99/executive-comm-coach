@@ -82,12 +82,18 @@ def run_pipeline_demo():
     print("\n[STAGE 3] Bilingual Hinglish STT & Speaker Diarization (Sarvam Saaras v3)...")
     sarvam_client = SarvamSpeechClient()
     raw_utterances = sarvam_client.transcribe_audio_chunk(audio_file_path="mock_audio.opus")
+    if not raw_utterances:
+        # Fallback realistic Hinglish conversational dialogue
+        raw_utterances = [
+            Utterance(speaker="COUNTERPART", start_time=0.0, end_time=3.5, transcript="Sandeep here. What is our current status on the core migration?"),
+            Utterance(speaker="USER", start_time=3.8, end_time=9.2, transcript="Yeah so basically, matlab we were looking at the logs and I just think maybe we could finish by Friday, but there were some database blockers."),
+            Utterance(speaker="COUNTERPART", start_time=9.5, end_time=13.0, transcript="What is the quantitative impact on our API latency?"),
+            Utterance(speaker="USER", start_time=13.4, end_time=21.0, transcript="Understood. Our data demonstrates that the P99 latency dropped by 42ms across all regional clusters. We have decided to ship the release branch tomorrow at 10 AM, and project budget is Rs. 35 lakh.")
+        ]
     aligned_dialogue = DiarizationEngine.assign_roles(raw_utterances, user_speaker_id="USER")
 
     print("\n  --- Captured Diarized Hinglish Dialogue ---")
-    formatted_md = DiarizationEngine.format_dialogue_markdown(aligned_dialogue)
-    for line in formatted_md.split("\n\n"):
-        print(f"  {line}")
+    print(DiarizationEngine.format_dialogue_cli(aligned_dialogue))
 
     # -------------------------------------------------------------------------
     # Stage 4: Local Privacy-Preserving PII Redaction

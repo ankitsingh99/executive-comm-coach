@@ -30,14 +30,16 @@ COUNTERPART: Hey, let's review the quarterly infrastructure costs. Are we still 
 USER: Yeah so basically, matlab we were looking at the logs and I just think maybe we could reduce AWS spend by 15%, but there were some team blockers.
 COUNTERPART: Can you give me the exact numbers and the timeline for completion?
 USER: Understood. Our data demonstrates that caching reduced database load by 35%. We have decided to deploy the cost-saving policy on Thursday morning.
+COUNTERPART: Perfect, I will call you on 31 aug at 10 am to review the cost savings.
 """
 
     stt_engine = LocalSTTEngine()
     utterances = stt_engine.process_local_transcript(sample_dialogue)
 
-    print("--- Dialogue Transcript ---")
-    for u in utterances:
-        print(f"  [{u.start_time}s - {u.end_time}s] {u.speaker}: {u.transcript}")
+    from asr_diarization.diarizer import DiarizationEngine
+
+    print("--- Transcribed Dialogue & Speaker Attribution ---")
+    print(DiarizationEngine.format_dialogue_cli(utterances))
     print("-" * 80)
 
     counterparts = [
@@ -77,6 +79,13 @@ USER: Understood. Our data demonstrates that caching reduced database load by 35
         for idx, a in enumerate(evaluation.areas_for_improvement, 1):
             print(f"      {idx}. Critique: {a.critique}")
             print(f"         Coached:  \"{a.coached_phrasing}\"")
+
+        if evaluation.action_items:
+            print("   Detected Action Items & Commitments:")
+            for idx, ai in enumerate(evaluation.action_items, 1):
+                due_info = f" | Due: {ai.due_time_or_date}" if ai.due_time_or_date else ""
+                print(f"      📌 {idx}. [{ai.owner}] {ai.category}{due_info}: {ai.task}")
+                print(f"         Quote: \"{ai.verbatim_quote}\"")
 
     print("\n" + "=" * 80)
     print(" Local processing and parsing completed successfully on your device.")

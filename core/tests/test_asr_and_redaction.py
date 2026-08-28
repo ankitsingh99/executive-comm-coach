@@ -34,6 +34,70 @@ def test_diarization_engine_role_assignment():
     assert aligned[0].speaker == "USER"
     assert aligned[1].speaker == "COUNTERPART"
 
+    cli_formatted = DiarizationEngine.format_dialogue_cli(aligned)
+    assert "[USER / YOU]" in cli_formatted
+    assert "[COUNTERPART]" in cli_formatted
+
+
+def test_verbal_self_introduction_extraction():
+    # Test individual phrase extractions
+    assert DiarizationEngine.extract_speaker_name_from_text("hey i am rahul and today we will discuss the project") == "Rahul"
+    assert DiarizationEngine.extract_speaker_name_from_text("Vikram here. Can you give me an update?") == "Vikram"
+    assert DiarizationEngine.extract_speaker_name_from_text("Hi, this is Priya Sharma from product") == "Priya Sharma"
+    assert DiarizationEngine.extract_speaker_name_from_text("I am thinking we should finish by Friday") is None
+
+    # Test dialogue auto-tagging (Counterpart introduction)
+    dialogue = [
+        Utterance(speaker="COUNTERPART", start_time=0.0, end_time=3.0, transcript="Hey I am Rahul and today I want to sync on our goals."),
+        Utterance(speaker="USER", start_time=3.2, end_time=6.0, transcript="Hi Rahul, sounds great."),
+        Utterance(speaker="COUNTERPART", start_time=6.2, end_time=9.0, transcript="Let us begin with the timeline.")
+    ]
+    updated, counterpart_name, user_name = DiarizationEngine.detect_and_apply_verbal_introductions(dialogue, user_speaker_id="USER")
+    assert counterpart_name == "Rahul"
+    assert updated[0].speaker == "Rahul"
+    assert updated[1].speaker == "USER"
+    assert updated[2].speaker == "Rahul"
+
+    # Test solo user monologue auto-tagging
+    solo_dialogue = [
+        Utterance(speaker="USER", start_time=0.0, end_time=5.0, transcript="Hey I am Ashish and today I will present the architecture.")
+    ]
+    updated_solo, c_name, u_name = DiarizationEngine.detect_and_apply_verbal_introductions(solo_dialogue, user_speaker_id="USER")
+    assert u_name == "Ashish"
+    assert updated_solo[0].speaker == "Ashish"
+
+    solo_cli = DiarizationEngine.format_dialogue_cli(updated_solo, user_name="Ashish")
+    assert "[ASHISH (Solo)]" in solo_cli
+
+
+def test_sarvam_client_diarization_parsing():
+    client = SarvamSpeechClient(api_key="mock_key")
+    mock_payload = {
+        "transcript": "Hello Vikram, here is the update.",
+        "diarized_transcript": {
+            "entries": [
+                {
+                    "speaker_id": "speaker_0",
+                    "start_time_seconds": 0.0,
+                    "end_time_seconds": 2.5,
+                    "transcript": "Hello Vikram, here is the status."
+                },
+                {
+                    "speaker_id": "speaker_1",
+                    "start_time_seconds": 2.6,
+                    "end_time_seconds": 5.0,
+                    "transcript": "Thanks, what is the latency?"
+                }
+            ]
+        }
+    }
+    utterances = client._parse_sarvam_response(mock_payload)
+    assert len(utterances) == 2
+    assert utterances[0].speaker == "USER"
+    assert utterances[0].transcript == "Hello Vikram, here is the status."
+    assert utterances[1].speaker == "COUNTERPART"
+    assert utterances[1].transcript == "Thanks, what is the latency?"
+
 
 def test_pii_redactor_all_categories():
     raw_text = (

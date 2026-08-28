@@ -4,6 +4,7 @@ from .schema import (
     CommunicationMetrics,
     TopStrength,
     AreaForImprovement,
+    ActionItem,
     ExecutiveCoachingEvaluation,
     Utterance,
     ConversationSession
@@ -18,6 +19,7 @@ from .persona_ontology import (
     DOWNWARD_RUBRIC
 )
 from .metrics_calculator import MetricsCalculator
+from .action_item_extractor import ActionItemExtractor
 from .coaching_engine import ExecutiveCoachingEngine
 from .gemini_coaching_engine import GeminiCoachingSynthesizer
 
@@ -26,6 +28,7 @@ __all__ = [
     "CommunicationMetrics",
     "TopStrength",
     "AreaForImprovement",
+    "ActionItem",
     "ExecutiveCoachingEvaluation",
     "Utterance",
     "ConversationSession",
@@ -37,6 +40,7 @@ __all__ = [
     "LATERAL_RUBRIC",
     "DOWNWARD_RUBRIC",
     "MetricsCalculator",
+    "ActionItemExtractor",
     "ExecutiveCoachingEngine",
     "GeminiCoachingSynthesizer"
 ]
