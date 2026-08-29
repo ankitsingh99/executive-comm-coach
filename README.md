@@ -37,16 +37,18 @@ An on-device, privacy-first AI communication intelligence system and Android ser
 
 ---
 
-## 2. Key Features
-
-- **NVIDIA Parakeet Speech-to-Text**: High-accuracy, low-latency 600M Conformer-CTC acoustic transcription model running locally on Apple Silicon MPS / CPU.
-- **Dynamic Semantic Intent & BLUF Coaching**: Automatically decomposes spoken inquiries and transforms passive, hypothetical statements into decisive, proactive Bottom-Line-Up-Front (BLUF) executive assertions.
+- **Interactive Web & Mobile App Emulator**: Glassmorphic real-time coaching interface with live browser microphone capture, speech recognition, waveform visualizer, comprehensive feedback insights drawer, and interactive voice vault.
+- **NVIDIA Parakeet & Google Gemini STT**: Multimodal audio transcription and tone sensing running locally or via Gemini Live APIs.
+- **Dynamic Semantic Intent & BLUF Coaching**: Automatically transforms passive, hypothetical statements into decisive, proactive Bottom-Line-Up-Front (BLUF) executive assertions.
+- **🇮🇳 Multilingual & Hinglish Support**: Code-mixed Hindi/English comprehension, hesitation markers (*matlab*, *yaani*, *haina*), hedging detection, and action item temporal parsing (*"kal 10 baje"*, *"shaam tak"*).
+- **Automated Commitments & Action Items Engine**: Automatically captures promises, follow-up calls, deadlines, and deliverables from spoken conversations.
+- **Persistent Biometric Voiceprints**: On-device voiceprint memory vault recognizing speakers across conversations with DPDP-compliant consent prompts.
 - **Relational Persona Ontology**: Calibrated against three organizational power axes:
   - **Upward (Executive / Leadership)**: BLUF synthesis, quantified business impact, decisive recommendations.
   - **Lateral (Peer / Product)**: Collaborative framing, mutual benefit, shared dependency alignment.
   - **Downward (Direct Report / Mentee)**: Psychological safety, Socratic questioning, developmental inquiry.
 - **DPDP Act 2023 Compliance**: Privacy-by-design architecture featuring statutory audible chime notifications, automated PII scrubbing (PAN, Aadhaar, secrets, financial figures), and Section 12 Right-to-Erasure purging.
-- **Android Native Architecture**: Android 14/15/16 Foreground Service with ONNX Runtime Mobile Silero VAD, 16kHz ring buffer, AES-256 Opus encryption, and encrypted Room/SQLCipher storage.
+- **Android Native Architecture**: Android 14/15/16 Foreground Service with ONNX Runtime Mobile Silero VAD, 16kHz ring buffer, AES-256 Opus encryption, Room/SQLCipher encrypted storage, and Dagger Hilt.
 
 ---
 
@@ -59,7 +61,7 @@ An on-device, privacy-first AI communication intelligence system and Android ser
 ### Setup Environment
 ```bash
 # Clone the repository
-git clone <repository_url>
+git clone https://github.com/ankitsingh99/executive-comm-coach.git
 cd executive-comm-coach
 
 # Create and activate virtual environment
@@ -70,9 +72,18 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Run Live Microphone Coaching
+### Launch Interactive App Emulator (Web & Mobile)
 ```bash
-# Run live microphone coaching (records 8s from hardware microphone):
+# Start local emulator server on port 8080:
+python core/server.py 8080
+
+# Open in browser:
+open http://localhost:8080
+```
+
+### Run Live Terminal Microphone Coaching
+```bash
+# Run live microphone coaching (records from hardware microphone):
 ./record.sh 8
 
 # Specify custom duration and power axis:
@@ -81,9 +92,9 @@ pip install -r requirements.txt
 ./record.sh 10 --axis DOWNWARD --counterpart "Team Member" --role "Associate Engineer"
 ```
 
-### Run Automated Tests
+### Run Automated Unit Tests
 ```bash
-./venv/bin/pytest
+./venv/bin/pytest -v
 ```
 
 ---
@@ -93,31 +104,33 @@ pip install -r requirements.txt
 ```
 executive-comm-coach/
 ├── core/
+│   ├── server.py                     # HTTP server powering the interactive app emulator
 │   ├── asr_diarization/
-│   │   ├── live_mic_recorder.py      # CoreAudio / sounddevice 16kHz PCM audio capture
-│   │   ├── nvidia_parakeet_engine.py # NVIDIA Parakeet CTC STT inference engine
-│   │   ├── local_stt_engine.py       # Speech recognition dispatcher (Parakeet + Whisper)
+│   │   ├── diarizer.py               # Diarization & verbal self-introduction extraction
+│   │   ├── speaker_voiceprint_registry.py # Persistent acoustic biometric vault
+│   │   ├── live_mic_recorder.py      # CoreAudio / sounddevice 16kHz PCM capture
+│   │   ├── gemini_audio_engine.py    # Google Gemini audio & tone sensing
+│   │   ├── nvidia_parakeet_engine.py # NVIDIA Parakeet CTC STT inference
+│   │   ├── local_stt_engine.py       # Speech recognition dispatcher
 │   │   ├── vad_gater.py              # Silero VAD acoustic filter
-│   │   ├── sarvam_client.py          # Indic bilingual Hinglish diarization client
-│   │   └── diarizer.py               # Speaker turn segmentation
+│   │   ├── acoustic_speaker_detector.py # Pitch & vocal cadence detection
+│   │   └── sarvam_client.py          # Multilingual diarization adapter
 │   ├── engine/
-│   │   ├── schema.py                 # Pydantic & dataclass schema models
-│   │   ├── persona_ontology.py       # Relational power axis rubrics (Upward/Lateral/Downward)
-│   │   ├── metrics_calculator.py     # Presence, Assertiveness, and Filler calculations
-│   │   ├── local_coaching_synthesizer.py # Dynamic semantic intent & BLUF synthesizer
-│   │   └── coaching_engine.py        # Evaluation facade
+│   │   ├── action_item_extractor.py  # Commitment, deadline & action items extractor
+│   │   ├── coaching_engine.py        # Master executive coaching pipeline
+│   │   ├── local_coaching_synthesizer.py # Local deterministic BLUF synthesizer
+│   │   ├── gemini_coaching_engine.py # Gemini GenAI coaching synthesizer
+│   │   ├── metrics_calculator.py     # Presence, assertiveness, Hinglish fillers
+│   │   ├── persona_ontology.py       # Upward/Lateral/Downward persona models
+│   │   └── schema.py                 # Structured dataclasses and JSON models
 │   ├── privacy/
-│   │   ├── pii_redactor.py           # Regex PII and secrets scrubber
-│   │   └── dpdp_compliance.py        # DPDP Section 12 Right-to-Erasure & consent logging
-│   ├── tests/                        # Unit test suite
-│   ├── config.py                     # Processing configurations
-│   └── record_live_coach.py          # Interactive hardware microphone CLI
-├── android/                          # Native Android Jetpack Compose & Service subsystem
-├── record.sh                         # Executable launcher script
-├── requirements.txt                  # Python dependencies
-├── pytest.ini                        # Pytest configuration
-├── LICENSE                           # Apache 2.0 License
-└── README.md                         # Project documentation
+│   │   ├── dpdp_compliance.py        # DPDP consent & right-to-erasure
+│   │   └── pii_redactor.py           # Aadhaar, PAN, email, phone scrubbing
+│   └── tests/                        # 30 automated unit tests (100% passing)
+├── emulator/
+│   └── index.html                    # Glassmorphic interactive mobile app emulator
+└── android/                          # Native Android 15/16 Jetpack Compose project
+    ├── app/src/main/                 # Kotlin Compose UI, Foreground Service & Room DB
 ```
 
 ---
