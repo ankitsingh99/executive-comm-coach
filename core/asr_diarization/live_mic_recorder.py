@@ -148,6 +148,21 @@ class LiveMicRecorder:
         return output_wav_path
 
 
+    @staticmethod
+    def send_shell_desktop_notification(title: str = "🎙️ Executive Coach", message: str = "Spoken dialogue detected! Starting coaching capture...", subtitle: str = "Ambient Speech Nudge"):
+        """
+        Triggers macOS system desktop notification, terminal bell, and alert chime.
+        """
+        import sys
+        import subprocess
+        try:
+            sys.stdout.write('\a')
+            sys.stdout.flush()
+            script = f'display notification "{message}" with title "{title}" subtitle "{subtitle}" sound name "Glass"'
+            subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
     def listen_for_speech_and_nudge(
         self,
         poll_interval_sec: float = 1.0,
@@ -177,7 +192,7 @@ class LiveMicRecorder:
                 print("\n  [AMBIENT TIMEOUT] No speech detected within window.")
                 return False
 
-            print(f"  {spinners[spin_idx % len(spinners)]} Waiting for speech onset... (Speak when ready)", end="\r", flush=True)
+            print(f"  {spinners[spin_idx % len(spinners)]} Ambient Ear Active... (Waiting for dialogue to start)", end="\r", flush=True)
             spin_idx += 1
 
             temp_chunk_path = os.path.join(tempfile.gettempdir(), f"vad_sample_{int(time.time() * 1000)}.wav")
@@ -213,9 +228,21 @@ class LiveMicRecorder:
                         pass
 
                     if is_triggered or speech_prob >= speech_prob_threshold:
-                        print("\n\n" + "=" * 68)
-                        print(f"  🎙️  [SPOKEN DIALOGUE DETECTED] Person started speaking! (Confidence: {int(speech_prob * 100)}%)")
-                        print("=" * 68)
+                        # Send macOS shell/desktop notification
+                        conf_pct = int(speech_prob * 100)
+                        self.send_shell_desktop_notification(
+                            title="🎙️ Executive Communication Coach",
+                            message=f"Spoken dialogue detected ({conf_pct}% confidence). Capturing conversation...",
+                            subtitle="Ambient Auto-Nudge Triggered"
+                        )
+
+                        print("\n\n" + "\033[1;36m┌" + "─" * 72 + "┐\033[0m")
+                        print(f"\033[1;36m│\033[0m \033[1;32m🎙️  [CONVERSATION DETECTED]\033[0m Spoken dialogue observed in room!            \033[1;36m│\033[0m")
+                        print(f"\033[1;36m│\033[0m     Speech Confidence: \033[1;33m{conf_pct}%\033[0m • Ambient Low-Power Acoustic Gating Passed   \033[1;36m│\033[0m")
+                        print(f"\033[1;36m│\033[0m                                                                        \033[1;36m│\033[0m")
+                        print(f"\033[1;36m│\033[0m 👉  \033[1;37mStarting continuous recording for coaching & action items...\033[0m       \033[1;36m│\033[0m")
+                        print(f"\033[1;36m│\033[0m     \033[0;36m(Will automatically conclude when pause/silence is detected)\033[0m       \033[1;36m│\033[0m")
+                        print("\033[1;36m└" + "─" * 72 + "┘\033[0m\n")
                         
                         if on_speech_detected_callback:
                             return on_speech_detected_callback(speech_prob)
@@ -230,3 +257,4 @@ class LiveMicRecorder:
                     except OSError:
                         pass
             time.sleep(0.05)
+
