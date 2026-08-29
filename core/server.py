@@ -19,7 +19,7 @@ from engine.schema import ConversationSession, Utterance
 from engine.coaching_engine import ExecutiveCoachingEngine
 from engine.action_item_extractor import ActionItemExtractor
 from asr_diarization.diarizer import DiarizationEngine
-from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry
+from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry, SpeakerVoiceprint
 from asr_diarization.local_stt_engine import LocalSTTEngine
 
 
@@ -36,11 +36,11 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             speakers = registry.list_enrolled_speakers()
             data = [
                 {
-                    "speaker_name": s.speaker_name,
-                    "role": s.role,
-                    "power_axis": s.power_axis,
-                    "enrolled_at_utc": s.enrolled_at_utc,
-                    "mean_pitch_hz": s.mean_pitch_hz
+                    "speaker_name": s.get("name", "") if isinstance(s, dict) else getattr(s, "speaker_name", ""),
+                    "role": s.get("role", "Colleague") if isinstance(s, dict) else getattr(s, "role", "Colleague"),
+                    "power_axis": s.get("power_axis", "LATERAL") if isinstance(s, dict) else getattr(s, "power_axis", "LATERAL"),
+                    "enrolled_at_utc": s.get("enrolled_at_utc", "") if isinstance(s, dict) else getattr(s, "enrolled_at_utc", ""),
+                    "mean_pitch_hz": s.get("mean_pitch_hz", 150.0) if isinstance(s, dict) else getattr(s, "mean_pitch_hz", 150.0)
                 }
                 for s in speakers
             ]
@@ -83,19 +83,21 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                 # Auto-enroll in registry if self-intro detected
                 registry = SpeakerVoiceprintRegistry()
                 if intro_counterpart and intro_counterpart not in registry.voiceprints:
-                    registry.enroll_speaker(
+                    registry.voiceprints[intro_counterpart] = SpeakerVoiceprint(
                         speaker_name=intro_counterpart,
                         role="Collaborator",
                         power_axis="LATERAL",
                         mean_pitch_hz=138.0
                     )
+                    registry.save_to_disk()
                 if intro_user and intro_user not in registry.voiceprints:
-                    registry.enroll_speaker(
+                    registry.voiceprints[intro_user] = SpeakerVoiceprint(
                         speaker_name=intro_user,
                         role="Solo Speaker",
                         power_axis="SOLO",
                         mean_pitch_hz=126.0
                     )
+                    registry.save_to_disk()
 
                 session = ConversationSession(
                     session_id="emu_session",
@@ -149,14 +151,14 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "recognized_sub": f"Voiceprint Profile Synced • {power_axis} Mode",
                     "power_axis": power_axis,
                     "tone": "Calm & Measured (132 Hz)",
-                    "presence": evaluation.metrics.presence_score,
-                    "assertiveness": evaluation.metrics.assertiveness_score,
-                    "listening": evaluation.metrics.active_listening_score,
-                    "speech_rate_wpm": evaluation.metrics.speech_rate_wpm,
-                    "fillers_detected": [{"token": f.token, "count": f.count} for f in evaluation.metrics.filler_words_detected],
-                    "hedging_count": evaluation.metrics.hedging_qualifiers_count,
-                    "assertive_count": evaluation.metrics.assertive_markers_count,
-                    "active_listening_count": evaluation.metrics.active_listening_markers_count,
+                    "presence": getattr(evaluation.metrics, "presence_score", 75),
+                    "assertiveness": getattr(evaluation.metrics, "assertiveness_score", 78),
+                    "listening": getattr(evaluation.metrics, "active_listening_score", 80),
+                    "speech_rate_wpm": getattr(evaluation.metrics, "speech_rate_wpm", 140),
+                    "fillers_detected": [{"token": f.token, "count": f.count} for f in getattr(evaluation.metrics, "filler_words_detected", [])],
+                    "hedging_count": getattr(evaluation.metrics, "hedging_qualifiers_count", 0),
+                    "assertive_count": getattr(evaluation.metrics, "assertive_markers_count", 1),
+                    "active_listening_count": getattr(evaluation.metrics, "active_listening_markers_count", 1),
                     "longitudinal_summary": evaluation.longitudinal_summary,
                     "top_strengths": top_strengths,
                     "areas_for_improvement": areas_for_improvement,
@@ -201,18 +203,20 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             pitch = float(payload.get("mean_pitch_hz", 135.0))
             
             registry = SpeakerVoiceprintRegistry()
-            vp = registry.enroll_speaker(
+            vp = SpeakerVoiceprint(
                 speaker_name=name,
                 role=role,
                 power_axis=power_axis,
                 mean_pitch_hz=pitch
             )
+            registry.voiceprints[name] = vp
+            registry.save_to_disk()
             self._send_json({"status": "success", "enrolled": vp.to_dict()})
 
         elif url_path == "/api/erase_voiceprint":
             name = payload.get("speaker_name", "").strip()
             registry = SpeakerVoiceprintRegistry()
-            success = registry.delete_speaker(name)
+            success = registry.delete_voiceprint(name)
             self._send_json({"status": "success" if success else "not_found", "speaker_name": name})
 
         elif url_path == "/api/detect_actions":
@@ -260,8 +264,12 @@ class EmulatorHandler(BaseHTTPRequestHandler):
         return
 
 
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
+
 def run_server(port: int = 8080):
-    server = HTTPServer(("127.0.0.1", port), EmulatorHandler)
+    server = ReusableHTTPServer(("127.0.0.1", port), EmulatorHandler)
     print(f"🚀 [EMULATOR SERVER] Running at http://127.0.0.1:{port}")
     try:
         server.serve_forever()
