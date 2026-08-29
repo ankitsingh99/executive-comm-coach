@@ -1385,6 +1385,8 @@
       rec.interimResults = true;
       rec.lang = 'en-IN'; // Optimized for English, Indian English, and Hinglish
 
+      let silenceTimeout = null;
+
       rec.onresult = (event) => {
         let interim = '';
         let final = '';
@@ -1400,6 +1402,17 @@
         }
         const currentText = (liveTranscript + (interim ? `[speaking: ${interim}]` : '')).trim();
         document.getElementById('custom-speech-input').value = currentText;
+
+        // Reset silence timer on active speech
+        if (silenceTimeout) clearTimeout(silenceTimeout);
+        if (isRecording && (final || interim)) {
+          silenceTimeout = setTimeout(() => {
+            if (isRecording && liveTranscript.trim().length > 3) {
+              console.log("Silence detected after speech (2.5s). Auto-concluding recording.");
+              toggleMic();
+            }
+          }, 2500);
+        }
       };
 
       rec.onerror = (err) => {

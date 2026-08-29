@@ -29,7 +29,9 @@ from config import DATA_DIR, get_gemini_api_key, GEMINI_MODEL
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Live Microphone Universal Communication Coach")
-    parser.add_argument("duration", type=int, nargs="?", default=8, help="Recording duration in seconds (default: 8)")
+    parser.add_argument("duration", type=int, nargs="?", default=None, help="Optional maximum recording duration in seconds (default: dynamic until silence)")
+    parser.add_argument("--silence-sec", type=float, default=2.2, help="Silence pause duration in seconds after last word to conclude conversation (default: 2.2s)")
+    parser.add_argument("--fixed-duration", action="store_true", help="Force fixed duration recording without waiting for silence")
     parser.add_argument("--axis", type=str, default=None, choices=["SOLO", "CASUAL", "LATERAL", "UPWARD", "DOWNWARD", "CONFLICT"], help="Power Axis / Communication Mode")
     parser.add_argument("--counterpart", type=str, default=None, help="Counterpart Name / Title")
     parser.add_argument("--role", type=str, default=None, help="Counterpart Role")
@@ -164,7 +166,8 @@ def main():
  +------------------------------------------------------------------------------+
 """)
 
-    duration = args.duration
+    silence_threshold = getattr(args, "silence_sec", 2.2)
+    max_duration = args.duration if (args.duration and args.duration > 0) else 180
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     recorder = LiveMicRecorder()
 
@@ -176,7 +179,7 @@ def main():
         
         def on_nudge_callback(prob):
             print(f"\n  ✨ [NUDGE] We detected you started speaking! (Confidence: {int(prob * 100)}%)")
-            print(f"     Starting {duration}s recording for executive coaching & action items...")
+            print(f"     Recording will continue until conversation finishes (>{silence_threshold}s pause after speech)...")
             return True
 
         # Passively listen until conversation start is detected
@@ -189,11 +192,15 @@ def main():
     print(f" {chime}")
     compliance_mgr.log_session_consent(session_id, counterpart_notified=True)
 
-    # Step 2: Live Microphone Recording
-    print(f"\n [MICROPHONE INGESTION] Recording {duration}s from your microphone...")
-    print(" >> Speak now naturally into your microphone...\n")
-    
-    wav_path = recorder.record_to_wav(duration_seconds=duration)
+    # Step 2: Live Dynamic Microphone Recording (until silence after last word)
+    if getattr(args, "fixed_duration", False) and args.duration:
+        print(f"\n [MICROPHONE INGESTION] Recording fixed {args.duration}s from your microphone...")
+        wav_path = recorder.record_to_wav(duration_seconds=args.duration)
+    else:
+        wav_path = recorder.record_until_silence(
+            silence_threshold_sec=silence_threshold,
+            max_duration_sec=max_duration
+        )
 
     # Step 3: Transcription & Acoustic Voice Analysis
     utterances = []

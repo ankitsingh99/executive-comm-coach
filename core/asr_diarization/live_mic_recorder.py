@@ -17,10 +17,110 @@ class LiveMicRecorder:
     def __init__(self, sample_rate: int = 16000):
         self.sample_rate = sample_rate
 
+    def record_until_silence(
+        self,
+        silence_threshold_sec: float = 2.2,
+        min_speech_duration_sec: float = 1.5,
+        max_duration_sec: int = 180,
+        chunk_duration_sec: float = 1.0,
+        speech_prob_threshold: float = 0.50,
+        output_wav_path: Optional[str] = None
+    ) -> str:
+        """
+        Dynamically records microphone audio until the conversation end is detected
+        by analyzing silence after the last spoken word.
+        """
+        import numpy as np
+        import wave
+        import subprocess
+        from .vad_gater import AmbientVadGate
+
+        if output_wav_path is None:
+            temp_dir = tempfile.gettempdir()
+            output_wav_path = os.path.join(temp_dir, f"mic_session_{int(time.time())}.wav")
+
+        print(f"\n  🎙️  [DYNAMIC DIALOGUE CAPTURE ACTIVE]")
+        print(f"      Recording will continue until conversation conclusion is detected (>{silence_threshold_sec}s pause after speech).")
+        print("      >> Speak now naturally... (Take pauses as needed)\n")
+
+        gate = AmbientVadGate(speech_prob_threshold=speech_prob_threshold)
+        audio_chunks = []
+        has_spoken = False
+        silence_elapsed = 0.0
+        total_recorded_sec = 0.0
+        start_time = time.time()
+        temp_chunk_files = []
+
+        try:
+            while total_recorded_sec < max_duration_sec:
+                chunk_file = os.path.join(tempfile.gettempdir(), f"dyn_chunk_{int(time.time() * 1000)}_{len(audio_chunks)}.wav")
+                temp_chunk_files.append(chunk_file)
+
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-f", "avfoundation",
+                    "-i", ":0",
+                    "-t", str(chunk_duration_sec),
+                    "-ar", str(self.sample_rate),
+                    "-ac", "1",
+                    chunk_file
+                ]
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=chunk_duration_sec + 2)
+
+                if os.path.exists(chunk_file) and os.path.getsize(chunk_file) > 500:
+                    with wave.open(chunk_file, "rb") as wf:
+                        n_frames = wf.getnframes()
+                        raw_bytes = wf.readframes(n_frames)
+                        chunk_samples = np.frombuffer(raw_bytes, dtype=np.int16)
+
+                    audio_chunks.append(chunk_samples)
+                    total_recorded_sec += chunk_duration_sec
+                    speech_prob = gate.calculate_speech_probability(chunk_samples)
+
+                    if speech_prob >= speech_prob_threshold:
+                        has_spoken = True
+                        silence_elapsed = 0.0
+                        print(f"  🎙️  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%)    ", end="\r", flush=True)
+                    else:
+                        if has_spoken:
+                            silence_elapsed += chunk_duration_sec
+                            print(f"  ⏳  [SILENCE AFTER SPEECH] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s   ", end="\r", flush=True)
+                            
+                            if silence_elapsed >= silence_threshold_sec and total_recorded_sec >= min_speech_duration_sec:
+                                print(f"\n\n  ✅  [CONVERSATION CONCLUDED] End of conversation detected ({silence_threshold_sec}s silence after speech).")
+                                break
+                        else:
+                            print(f"  ⠋  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin...          ", end="\r", flush=True)
+
+                time.sleep(0.02)
+
+        finally:
+            # Clean up temp chunk files
+            for cf in temp_chunk_files:
+                if os.path.exists(cf):
+                    try:
+                        os.remove(cf)
+                    except OSError:
+                        pass
+
+        if not audio_chunks:
+            # Fallback to standard 6s capture if chunk streaming failed
+            return self.record_to_wav(duration_seconds=6, output_wav_path=output_wav_path)
+
+        # Concatenate all recorded chunks into single WAV file
+        full_audio = np.concatenate(audio_chunks)
+        with wave.open(output_wav_path, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(self.sample_rate)
+            wf.writeframes(full_audio.tobytes())
+
+        print(f"  📁  [AUDIO STORED] Full conversation ({len(full_audio)/self.sample_rate:.1f}s) captured successfully.")
+        return output_wav_path
+
     def record_to_wav(self, duration_seconds: int = 8, output_wav_path: Optional[str] = None) -> str:
         """
-        Records live microphone audio for the specified duration (in seconds).
-        Returns the path to the recorded 16kHz WAV file.
+        Records live microphone audio for a fixed duration (in seconds).
         """
         if output_wav_path is None:
             temp_dir = tempfile.gettempdir()
@@ -28,46 +128,25 @@ class LiveMicRecorder:
 
         print(f"  [MICROPHONE ACTIVE] Recording {duration_seconds}s directly from your microphone...")
 
-        # Preferred recording method: sounddevice + scipy
-        try:
-            import sounddevice as sd
-            import scipy.io.wavfile as wav
-            import numpy as np
+        # Fallback to ffmpeg avfoundation
+        import subprocess
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "avfoundation",
+            "-i", ":0",
+            "-t", str(duration_seconds),
+            "-ar", str(self.sample_rate),
+            "-ac", "1",
+            output_wav_path
+        ]
+        process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for remaining in range(duration_seconds, 0, -1):
+            print(f"  [SPEAK NOW] {remaining}s remaining...", end="\r", flush=True)
+            time.sleep(1)
+        process.wait()
+        print("\n  [CAPTURE COMPLETE] Audio successfully recorded via AVFoundation.")
+        return output_wav_path
 
-            # Record mono 16kHz audio
-            recording = sd.rec(
-                int(duration_seconds * self.sample_rate),
-                samplerate=self.sample_rate,
-                channels=1,
-                dtype="int16"
-            )
-            for remaining in range(duration_seconds, 0, -1):
-                print(f"  [SPEAK NOW] {remaining}s remaining...", end="\r", flush=True)
-                time.sleep(1)
-            sd.wait()
-            wav.write(output_wav_path, self.sample_rate, recording)
-            print("\n  [CAPTURE COMPLETE] Audio successfully recorded from microphone.")
-            return output_wav_path
-
-        except Exception as e:
-            # Fallback to ffmpeg avfoundation
-            import subprocess
-            cmd = [
-                "ffmpeg", "-y",
-                "-f", "avfoundation",
-                "-i", ":0",
-                "-t", str(duration_seconds),
-                "-ar", str(self.sample_rate),
-                "-ac", "1",
-                output_wav_path
-            ]
-            process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            for remaining in range(duration_seconds, 0, -1):
-                print(f"  [SPEAK NOW] {remaining}s remaining...", end="\r", flush=True)
-                time.sleep(1)
-            process.wait()
-            print("\n  [CAPTURE COMPLETE] Audio successfully recorded via AVFoundation.")
-            return output_wav_path
 
     def listen_for_speech_and_nudge(
         self,
