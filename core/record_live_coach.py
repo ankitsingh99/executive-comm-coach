@@ -36,7 +36,8 @@ def parse_args():
     parser.add_argument("--gemini-key", type=str, default=None, help="Gemini API Key (optional)")
     parser.add_argument("--local-only", action="store_true", help="Force local on-device models only")
     parser.add_argument("--non-interactive", action="store_true", help="Skip post-transcription interactive context prompt")
-    parser.add_argument("--ambient", "--listen", action="store_true", help="Passively monitor ambient audio and nudge user when speech begins")
+    parser.add_argument("--direct", "--now", action="store_true", help="Record immediately without waiting for speech detection")
+    parser.add_argument("--ambient", "--listen", action="store_true", help="Explicit ambient monitoring mode")
     parser.add_argument("--list-voices", action="store_true", help="List enrolled voiceprints in local registry")
     parser.add_argument("--delete-voice", type=str, default=None, help="Delete an enrolled voiceprint by name")
     return parser.parse_args()
@@ -167,34 +168,23 @@ def main():
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     recorder = LiveMicRecorder()
 
-    # Ambient Sensing & Auto-Nudge Trigger
-    if getattr(args, "ambient", False):
-        print(" [AMBIENT GATING] Mode Active: Passively monitoring for conversation onset...")
-        print(" System is idling at < 2.5% CPU/battery. Speak whenever ready.")
+    # Step 0: Ambient Conversation Auto-Detection & Nudge (Default)
+    if not getattr(args, "direct", False):
+        print(" 👂 [AMBIENT CONVERSATION DETECTOR ACTIVE]")
+        print("    Passively monitoring microphone for conversation onset (< 2.5% CPU)...")
+        print("    👉 Speak naturally when your conversation starts.\n")
         
         def on_nudge_callback(prob):
-            print("\n  👉 [NUDGE] We detected you started speaking! (Confidence: {:.0f}%)".format(prob * 100))
-            if sys.stdin.isatty():
-                try:
-                    ans = input("     Start recording for executive coaching analysis? [Y/n]: ").strip().lower()
-                    if ans in ["n", "no"]:
-                        print("     [DISMISSED] Resuming ambient acoustic sensing...")
-                        return False
-                except (EOFError, KeyboardInterrupt):
-                    pass
-            print("     [CONSENT CONFIRMED] Launching coaching session capture!\n")
+            print(f"\n  ✨ [NUDGE] We detected you started speaking! (Confidence: {int(prob * 100)}%)")
+            print(f"     Starting {duration}s recording for executive coaching & action items...")
             return True
 
-        # Loop until user consents to a detected conversation
-        while True:
-            detected = recorder.listen_for_speech_and_nudge(on_speech_detected_callback=on_nudge_callback)
-            if detected:
-                break
-            time.sleep(0.5)
+        # Passively listen until conversation start is detected
+        recorder.listen_for_speech_and_nudge(on_speech_detected_callback=on_nudge_callback)
 
     # Step 1: DPDP Chime & Consent
     session_id = f"live_mic_{int(time.time())}"
-    print(" [DPDP NOTICE] Playing statutory recording chime...")
+    print("\n [DPDP NOTICE] Playing statutory recording chime...")
     chime = compliance_mgr.trigger_audible_chime()
     print(f" {chime}")
     compliance_mgr.log_session_consent(session_id, counterpart_notified=True)

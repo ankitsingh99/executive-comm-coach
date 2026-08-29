@@ -86,19 +86,24 @@ class LiveMicRecorder:
         from .vad_gater import AmbientVadGate
 
         print("\n  [AMBIENT SENSING ACTIVE] Passively listening for spoken dialogue...")
-        print("  (Privacy protected: Audio is evaluated in-RAM and immediately purged if no speech is detected)")
+        print("  (Privacy protected: Audio evaluated in memory & purged immediately if below threshold)")
 
         start_time = time.time()
         gate = AmbientVadGate(speech_prob_threshold=speech_prob_threshold)
+        spinners = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        spin_idx = 0
 
         while True:
             if max_wait_seconds and (time.time() - start_time) > max_wait_seconds:
-                print("  [AMBIENT TIMEOUT] No speech detected within window.")
+                print("\n  [AMBIENT TIMEOUT] No speech detected within window.")
                 return False
+
+            print(f"  {spinners[spin_idx % len(spinners)]} Waiting for speech onset... (Speak when ready)", end="\r", flush=True)
+            spin_idx += 1
 
             temp_chunk_path = os.path.join(tempfile.gettempdir(), f"vad_sample_{int(time.time() * 1000)}.wav")
             try:
-                # Capture a short 1.0s probe chunk via ffmpeg avfoundation
+                # Capture a short probe chunk via ffmpeg avfoundation
                 cmd = [
                     "ffmpeg", "-y",
                     "-f", "avfoundation",
@@ -108,9 +113,9 @@ class LiveMicRecorder:
                     "-ac", "1",
                     temp_chunk_path
                 ]
-                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=poll_interval_sec + 3)
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=poll_interval_sec + 2)
 
-                if os.path.exists(temp_chunk_path) and os.path.getsize(temp_chunk_path) > 1000:
+                if os.path.exists(temp_chunk_path) and os.path.getsize(temp_chunk_path) > 800:
                     import wave
                     with wave.open(temp_chunk_path, "rb") as wf:
                         n_frames = wf.getnframes()
@@ -129,10 +134,9 @@ class LiveMicRecorder:
                         pass
 
                     if is_triggered or speech_prob >= speech_prob_threshold:
-                        print("\n" + "=" * 66)
-                        print("  🎙️  [SPOKEN DIALOGUE DETECTED] Person started speaking!")
-                        print(f"      Speech Confidence: {int(speech_prob * 100)}% | Ambient VAD Gating Passed")
-                        print("=" * 66)
+                        print("\n\n" + "=" * 68)
+                        print(f"  🎙️  [SPOKEN DIALOGUE DETECTED] Person started speaking! (Confidence: {int(speech_prob * 100)}%)")
+                        print("=" * 68)
                         
                         if on_speech_detected_callback:
                             return on_speech_detected_callback(speech_prob)
@@ -146,5 +150,4 @@ class LiveMicRecorder:
                         os.remove(temp_chunk_path)
                     except OSError:
                         pass
-
-            time.sleep(0.1)
+            time.sleep(0.05)
