@@ -193,6 +193,7 @@ def main():
             time.sleep(0.5)
 
     # Step 1: DPDP Chime & Consent
+    session_id = f"live_mic_{int(time.time())}"
     print(" [DPDP NOTICE] Playing statutory recording chime...")
     chime = compliance_mgr.trigger_audible_chime()
     print(f" {chime}")
