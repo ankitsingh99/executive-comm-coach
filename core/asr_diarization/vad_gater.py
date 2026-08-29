@@ -46,6 +46,37 @@ class AmbientVadGate:
         self.purge_window_ms = purge_window_ms
         self.frame_history: List[VadFrameResult] = []
 
+    @staticmethod
+    def calculate_speech_probability(audio_chunk_16k: "np.ndarray") -> float:
+        """
+        Computes on-device speech probability using energy RMS and zero-crossing dynamics.
+        """
+        import numpy as np
+        if len(audio_chunk_16k) == 0:
+            return 0.0
+        
+        # Normalize if int16
+        if audio_chunk_16k.dtype == np.int16:
+            samples = audio_chunk_16k.astype(np.float32) / 32768.0
+        else:
+            samples = audio_chunk_16k.astype(np.float32)
+            
+        rms = float(np.sqrt(np.mean(samples ** 2)))
+        
+        # Compute zero-crossing rate
+        zero_crossings = np.nonzero(np.diff(samples > 0))[0]
+        zcr = float(len(zero_crossings) / max(1, len(samples)))
+        
+        # Human speech typical RMS (> 0.015) and ZCR (0.02 - 0.35)
+        if rms < 0.008:
+            return 0.05
+        
+        energy_score = min(1.0, (rms - 0.008) / 0.04)
+        zcr_score = 1.0 if (0.02 <= zcr <= 0.38) else 0.4
+        
+        prob = (0.7 * energy_score) + (0.3 * zcr_score)
+        return float(np.clip(prob, 0.0, 1.0))
+
     def evaluate_frame(self, timestamp_ms: float, speech_prob: float) -> Tuple[bool, str]:
         """
         Evaluates a 32ms audio frame score (tau).
@@ -82,3 +113,4 @@ class AmbientVadGate:
             return False, "Acoustic gate: Inactive frame purged from ring buffer (<3s retention)."
 
         return False, "Acoustic gate: Low-energy sound; downstream models remain idle."
+

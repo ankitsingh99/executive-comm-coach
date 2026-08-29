@@ -253,6 +253,107 @@
       animation: fadeIn 0.25s ease-out;
     }
 
+    /* Ambient Speech Detection Nudge Banner */
+    .ambient-nudge-banner {
+      position: absolute;
+      top: 24px;
+      left: 12px;
+      right: 12px;
+      background: rgba(11, 15, 29, 0.96);
+      border: 1.5px solid var(--emerald);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 24px rgba(16, 185, 129, 0.3);
+      backdrop-filter: blur(20px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .nudge-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nudge-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--emerald);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .nudge-pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 10px var(--emerald);
+      animation: pulse 1s infinite;
+    }
+    .nudge-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0 0.2rem;
+    }
+    .nudge-close-btn:hover { color: #fff; }
+    .nudge-desc {
+      font-size: 0.74rem;
+      color: #f1f5f9;
+      line-height: 1.35;
+      font-weight: 500;
+    }
+    .nudge-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.15rem;
+    }
+    .nudge-btn-confirm {
+      flex: 1;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.48rem;
+      font-size: 0.73rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      transition: all 0.2s;
+    }
+    .nudge-btn-confirm:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .nudge-btn-dismiss {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 8px;
+      padding: 0.48rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .nudge-btn-dismiss:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+
     .spinner-ring {
       width: 54px;
       height: 54px;
@@ -422,6 +523,27 @@
         </div>
       </div>
 
+      <!-- Ambient Acoustic Sensing & Auto-Nudge Gate -->
+      <div class="card" style="border-left: 3px solid var(--emerald);">
+        <div class="card-title">
+          <span style="display: flex; align-items: center; gap: 0.4rem;">
+            <span>👂 Ambient Ear & Auto-Nudge</span>
+          </span>
+          <span class="badge" id="ambient-status-badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.62rem; padding: 0.15rem 0.45rem; border-radius: 999px;">PASSIVE SENSING</span>
+        </div>
+        <p style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 0.6rem;">
+          Simulates the on-device Silero VAD acoustic gate (&lt; 2.5% battery). Detects when a person starts speaking and nudges the user to start recording for coaching &amp; action item capture.
+        </p>
+        <div class="btn-row">
+          <button class="chip-btn" id="btn-toggle-ambient" onclick="toggleAmbientEar()" style="flex: 1; padding: 0.45rem 0.6rem; font-size: 0.72rem; font-weight: 600; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #a7f3d0;">
+            <span id="ambient-btn-icon">⚡</span> <span id="ambient-btn-text">Enable Ambient Mic Ear</span>
+          </button>
+          <button class="chip-btn" onclick="triggerSimulatedSpeechNudge()" style="padding: 0.45rem 0.6rem; font-size: 0.72rem; font-weight: 600; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.35); color: #c7d2fe;" title="Test speech detection nudge">
+            🎙️ Simulate Speech Onset
+          </button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-title">
           <span>📝 Live Microphone & Custom Speech</span>
@@ -453,6 +575,28 @@
         <div class="phone-notch"></div>
         
         <div class="phone-screen">
+          <!-- Floating Ambient Consent & Speech Detection Nudge Banner -->
+          <div class="ambient-nudge-banner" id="ambient-nudge-banner" style="display: none;">
+            <div class="nudge-header">
+              <div class="nudge-tag">
+                <div class="nudge-pulse-dot"></div>
+                <span>🎙️ Spoken Dialogue Detected</span>
+              </div>
+              <button class="nudge-close-btn" onclick="dismissNudge()" title="Dismiss nudge">✕</button>
+            </div>
+            <div class="nudge-desc" id="nudge-desc-text">
+              We detected that you started speaking! Would you like to start recording for communication coaching &amp; action item analysis?
+            </div>
+            <div class="nudge-actions">
+              <button class="nudge-btn-confirm" onclick="acceptNudgeAndRecord()">
+                <span>🟢 Start Recording &amp; Analysis</span>
+              </button>
+              <button class="nudge-btn-dismiss" onclick="dismissNudge()">
+                Dismiss
+              </button>
+            </div>
+          </div>
+
           <!-- Glassmorphic AI Processing Overlay -->
           <div class="processing-overlay" id="loading-overlay" style="display: none;">
             <div class="spinner-ring"></div>
@@ -1329,10 +1473,139 @@
           runAnalysis();
         } else {
           document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip (e.g. 💬 Rahul's 31 Aug)...";
-          alert("No speech transcribed. Tip: Click any of the quick prompt chips above (e.g. '💬 Rahul's 31 Aug' or '💬 Hinglish Sync') to analyze instantly!");
         }
       }
     }
+
+    // Ambient Audio Ear & Speech Detection Auto-Nudge Engine
+    let isAmbientListening = false;
+    let ambientAudioContext = null;
+    let ambientAnalyser = null;
+    let ambientStream = null;
+    let ambientInterval = null;
+    let nudgeActive = false;
+
+    function playExecutiveChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.18); // A5
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.36);
+      } catch (e) {}
+    }
+
+    function showAmbientSpeechNudge(customText) {
+      if (isRecording || nudgeActive) return;
+      nudgeActive = true;
+      const banner = document.getElementById('ambient-nudge-banner');
+      const desc = document.getElementById('nudge-desc-text');
+      if (customText && desc) {
+        desc.innerHTML = `Spoken dialogue detected: <em>"${customText}"</em><br>Would you like to start recording for communication coaching &amp; action item capture?`;
+      } else if (desc) {
+        desc.innerHTML = "We detected that you started speaking! Would you like to start recording for communication coaching &amp; action item analysis?";
+      }
+      if (banner) banner.style.display = 'flex';
+      playExecutiveChime();
+    }
+
+    function dismissNudge() {
+      nudgeActive = false;
+      const banner = document.getElementById('ambient-nudge-banner');
+      if (banner) banner.style.display = 'none';
+    }
+
+    function acceptNudgeAndRecord() {
+      dismissNudge();
+      if (!isRecording) {
+        toggleMic();
+      }
+    }
+
+    function triggerSimulatedSpeechNudge() {
+      const samplePhrases = [
+        "Hey everyone, let's review the deployment schedule for Q3...",
+        "Basically mujhe lagta hai ki hume latency benchmark check karni chahiye...",
+        "I wanted to discuss the product roadmap commitments by Friday EOD..."
+      ];
+      const picked = samplePhrases[Math.floor(Math.random() * samplePhrases.length)];
+      document.getElementById('custom-speech-input').value = picked;
+      showAmbientSpeechNudge(picked);
+    }
+
+    async function toggleAmbientEar() {
+      const badge = document.getElementById('ambient-status-badge');
+      const btnText = document.getElementById('ambient-btn-text');
+      const btnIcon = document.getElementById('ambient-btn-icon');
+
+      if (!isAmbientListening) {
+        try {
+          ambientStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          ambientAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const src = ambientAudioContext.createMediaStreamSource(ambientStream);
+          ambientAnalyser = ambientAudioContext.createAnalyser();
+          ambientAnalyser.fftSize = 256;
+          src.connect(ambientAnalyser);
+
+          const buffer = new Uint8Array(ambientAnalyser.frequencyBinCount);
+          isAmbientListening = true;
+
+          if (badge) {
+            badge.innerText = "EAR ACTIVE (LISTENING)";
+            badge.style.background = "rgba(6, 182, 212, 0.2)";
+            badge.style.color = "#67e8f9";
+            badge.style.borderColor = "rgba(6, 182, 212, 0.5)";
+          }
+          if (btnText) btnText.innerText = "Disable Ambient Ear";
+          if (btnIcon) btnIcon.innerText = "⏹️";
+
+          // Evaluate ambient energy every 400ms (< 1% CPU)
+          ambientInterval = setInterval(() => {
+            if (!isAmbientListening || isRecording || nudgeActive) return;
+            ambientAnalyser.getByteFrequencyData(buffer);
+            let sum = 0;
+            for (let i = 0; i < buffer.length; i++) sum += buffer[i];
+            const avg = sum / buffer.length;
+
+            // Sustained speech threshold
+            if (avg > 18) {
+              showAmbientSpeechNudge();
+            }
+          }, 400);
+
+        } catch (e) {
+          console.error("Ambient ear permission error:", e);
+          alert("Microphone permission needed to enable ambient speech detection.");
+        }
+      } else {
+        isAmbientListening = false;
+        clearInterval(ambientInterval);
+        if (ambientStream) {
+          ambientStream.getTracks().forEach(t => t.stop());
+          ambientStream = null;
+        }
+        if (ambientAudioContext) {
+          ambientAudioContext.close();
+          ambientAudioContext = null;
+        }
+        if (badge) {
+          badge.innerText = "PASSIVE SENSING";
+          badge.style.background = "rgba(16, 185, 129, 0.15)";
+          badge.style.color = "#6ee7b7";
+          badge.style.borderColor = "rgba(16, 185, 129, 0.4)";
+        }
+        if (btnText) btnText.innerText = "Enable Ambient Mic Ear";
+        if (btnIcon) btnIcon.innerText = "⚡";
+      }
+    }
+
 
     function eraseVoiceProfile(name) {
       if (confirm(`Right to Erasure (DPDP Act Sec 12): Delete enrolled voiceprint profile for '${name}'?`)) {

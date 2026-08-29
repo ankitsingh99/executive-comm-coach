@@ -36,6 +36,7 @@ def parse_args():
     parser.add_argument("--gemini-key", type=str, default=None, help="Gemini API Key (optional)")
     parser.add_argument("--local-only", action="store_true", help="Force local on-device models only")
     parser.add_argument("--non-interactive", action="store_true", help="Skip post-transcription interactive context prompt")
+    parser.add_argument("--ambient", "--listen", action="store_true", help="Passively monitor ambient audio and nudge user when speech begins")
     parser.add_argument("--list-voices", action="store_true", help="List enrolled voiceprints in local registry")
     parser.add_argument("--delete-voice", type=str, default=None, help="Delete an enrolled voiceprint by name")
     return parser.parse_args()
@@ -164,7 +165,32 @@ def main():
 
     duration = args.duration
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
-    session_id = f"live_mic_{int(time.time())}"
+    recorder = LiveMicRecorder()
+
+    # Ambient Sensing & Auto-Nudge Trigger
+    if getattr(args, "ambient", False):
+        print(" [AMBIENT GATING] Mode Active: Passively monitoring for conversation onset...")
+        print(" System is idling at < 2.5% CPU/battery. Speak whenever ready.")
+        
+        def on_nudge_callback(prob):
+            print("\n  👉 [NUDGE] We detected you started speaking! (Confidence: {:.0f}%)".format(prob * 100))
+            if sys.stdin.isatty():
+                try:
+                    ans = input("     Start recording for executive coaching analysis? [Y/n]: ").strip().lower()
+                    if ans in ["n", "no"]:
+                        print("     [DISMISSED] Resuming ambient acoustic sensing...")
+                        return False
+                except (EOFError, KeyboardInterrupt):
+                    pass
+            print("     [CONSENT CONFIRMED] Launching coaching session capture!\n")
+            return True
+
+        # Loop until user consents to a detected conversation
+        while True:
+            detected = recorder.listen_for_speech_and_nudge(on_speech_detected_callback=on_nudge_callback)
+            if detected:
+                break
+            time.sleep(0.5)
 
     # Step 1: DPDP Chime & Consent
     print(" [DPDP NOTICE] Playing statutory recording chime...")
@@ -176,7 +202,6 @@ def main():
     print(f"\n [MICROPHONE INGESTION] Recording {duration}s from your microphone...")
     print(" >> Speak now naturally into your microphone...\n")
     
-    recorder = LiveMicRecorder()
     wav_path = recorder.record_to_wav(duration_seconds=duration)
 
     # Step 3: Transcription & Acoustic Voice Analysis

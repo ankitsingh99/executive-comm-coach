@@ -4,9 +4,16 @@ Executes NVIDIA's Parakeet CTC/TDT Conformer model for fast, high-accuracy acous
 """
 
 import os
-import torch
-import librosa
 from typing import List, Optional
+
+try:
+    import torch
+    import librosa
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    librosa = None
+    TORCH_AVAILABLE = False
 
 try:
     from ..engine.schema import Utterance
@@ -22,7 +29,10 @@ class NvidiaParakeetEngine:
 
     def __init__(self, model_id: str = "nvidia/parakeet-ctc-0.6b"):
         self.model_id = model_id
-        self.device = "mps" if torch.backends.mps.is_available() else "cpu"
+        if TORCH_AVAILABLE and torch is not None:
+            self.device = "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu"
+        else:
+            self.device = "cpu"
         self._processor = None
         self._model = None
 
