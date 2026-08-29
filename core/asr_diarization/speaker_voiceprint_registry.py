@@ -33,6 +33,12 @@ class SpeakerVoiceprint:
     enrolled_at_utc: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     sample_count: int = 1
 
+    def __post_init__(self):
+        if not self.embedding_vector or len(self.embedding_vector) != 32:
+            self.embedding_vector = SpeakerVoiceprintRegistry.synthesize_fallback_embedding(
+                self.mean_pitch_hz, self.spectral_centroid_hz
+            ).tolist()
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -56,6 +62,31 @@ class SpeakerVoiceprintRegistry:
     On-device persistent voiceprint memory database.
     Stores and matches voice acoustic embeddings using cosine similarity.
     """
+
+    @staticmethod
+    def synthesize_fallback_embedding(pitch_hz: float = 150.0, centroid_hz: float = 1800.0) -> np.ndarray:
+        """Generates a 32-dim normalized synthetic embedding when enrolled without raw audio."""
+        vec = np.zeros(32, dtype=np.float32)
+        # First 16 dims: harmonic energy decay based on fundamental pitch
+        for i in range(16):
+            harmonic_freq = (i + 1) * pitch_hz
+            decay = np.exp(-harmonic_freq / 2500.0)
+            vec[i] = float(decay)
+        # Next 8 dims: spectral distribution around centroid
+        for j in range(8):
+            freq_center = (j + 1) * (centroid_hz / 4.0)
+            dist = np.exp(-((freq_center - centroid_hz) ** 2) / (2 * (600.0 ** 2)))
+            vec[16 + j] = float(dist)
+        # Remaining 8 dims: pitch range and pacing moments
+        vec[24] = float(pitch_hz / 300.0)
+        vec[25] = float(centroid_hz / 4000.0)
+        for k in range(26, 32):
+            vec[k] = float(np.sin((k + 1) * pitch_hz / 100.0) * 0.1)
+        
+        norm = float(np.linalg.norm(vec))
+        if norm > 0:
+            vec = vec / norm
+        return vec
 
     def __init__(self, storage_dir: Optional[str] = None):
         self.storage_dir = storage_dir or os.path.join(DATA_DIR, "speaker_vault")
@@ -246,6 +277,8 @@ class SpeakerVoiceprintRegistry:
             existing = self.voiceprints[key]
             n = existing.sample_count
             old_vec = np.array(existing.embedding_vector, dtype=np.float32)
+            if old_vec.ndim != 1 or old_vec.shape[0] != 32 or np.linalg.norm(old_vec) == 0:
+                old_vec = self.synthesize_fallback_embedding(existing.mean_pitch_hz, existing.spectral_centroid_hz)
             new_vec = np.array(embedding, dtype=np.float32)
             merged_vec = (old_vec * n + new_vec) / (n + 1)
             merged_vec = (merged_vec / (np.linalg.norm(merged_vec) + 1e-6)).tolist()
@@ -312,7 +345,13 @@ class SpeakerVoiceprintRegistry:
 
         for spk in self.voiceprints.values():
             ref_arr = np.array(spk.embedding_vector, dtype=np.float32)
-            cosine_sim = float(np.dot(q_arr, ref_arr) / (np.linalg.norm(q_arr) * np.linalg.norm(ref_arr) + 1e-6))
+            if ref_arr.ndim != 1 or ref_arr.shape[0] != q_arr.shape[0] or np.linalg.norm(ref_arr) == 0:
+                ref_arr = self.synthesize_fallback_embedding(spk.mean_pitch_hz, spk.spectral_centroid_hz)
+                spk.embedding_vector = ref_arr.tolist()
+
+            norm_q = float(np.linalg.norm(q_arr) + 1e-6)
+            norm_ref = float(np.linalg.norm(ref_arr) + 1e-6)
+            cosine_sim = float(np.dot(q_arr, ref_arr) / (norm_q * norm_ref))
 
             # Pitch compatibility penalty: if fundamental pitch differs by > 75 Hz, apply soft penalty
             pitch_diff = abs(query_pitch - spk.mean_pitch_hz)
