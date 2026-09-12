@@ -11,8 +11,10 @@ class PIIRedactor:
     """Local regex and entity redaction scanner for sensitive workplace dialogue."""
 
     # Patterns for sensitive Indian identifiers, financials, and credentials
-    PHONE_PATTERN = r"\b(?:\+?91[-.\s]?)?[6789]\d{9}\b"
+    PHONE_PATTERN = r"\b(?:\+?91[\s-]?)?[6789]\d{4}[\s-]?\d{5}\b|\b(?:\+?91[\s-]?)?[6789]\d{9}\b"
     EMAIL_PATTERN = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
+    UPI_PATTERN = r"\b[a-zA-Z0-9.\-_]{2,64}@(okaxis|okhdfcbank|okicici|oksbi|paytm|ybl|ibl|axl|upi|apl|barodampay|postbank|jupiteraxis|federal|kotak)\b"
+    GSTIN_PATTERN = r"\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b"
     PAN_PATTERN = r"\b[A-Z]{5}[0-9]{4}[A-Z]\b"
     AADHAAR_PATTERN = r"\b\d{4}\s\d{4}\s\d{4}\b"
     FINANCIAL_PATTERN = r"(?:(?:Rs\.?|₹|INR|\$|USD)\s*\d+(?:,\d+)*(?:\.\d+)?(?:\s*(?:lakh|crore|k|million|bn))?|\b\d+\s*(?:lakh|crore|k|million|billion)\s*(?:rupees|inr|dollars)?)"
@@ -28,6 +30,8 @@ class PIIRedactor:
         counts: Dict[str, int] = {
             "PHONE": 0,
             "EMAIL": 0,
+            "UPI": 0,
+            "GSTIN": 0,
             "PAN": 0,
             "AADHAAR": 0,
             "FINANCIAL": 0,
@@ -40,15 +44,20 @@ class PIIRedactor:
         counts["INTERNAL_URL"] = len(urls)
         redacted = re.sub(cls.INTERNAL_URL_PATTERN, "[REDACTED_INTERNAL_URL]", redacted, flags=re.IGNORECASE)
 
+        # UPI Handles (processed before generic emails)
+        upis = re.findall(cls.UPI_PATTERN, redacted, flags=re.IGNORECASE)
+        counts["UPI"] = len(upis)
+        redacted = re.sub(cls.UPI_PATTERN, "[REDACTED_UPI]", redacted, flags=re.IGNORECASE)
+
         # Email
         emails = re.findall(cls.EMAIL_PATTERN, redacted, flags=re.IGNORECASE)
         counts["EMAIL"] = len(emails)
         redacted = re.sub(cls.EMAIL_PATTERN, "[REDACTED_EMAIL]", redacted, flags=re.IGNORECASE)
 
-        # Phone
-        phones = re.findall(cls.PHONE_PATTERN, redacted)
-        counts["PHONE"] = len(phones)
-        redacted = re.sub(cls.PHONE_PATTERN, "[REDACTED_PHONE]", redacted)
+        # GSTIN (processed before PAN to avoid partial match of embedded PAN)
+        gstins = re.findall(cls.GSTIN_PATTERN, redacted)
+        counts["GSTIN"] = len(gstins)
+        redacted = re.sub(cls.GSTIN_PATTERN, "[REDACTED_GSTIN]", redacted)
 
         # PAN
         pans = re.findall(cls.PAN_PATTERN, redacted)
@@ -59,6 +68,11 @@ class PIIRedactor:
         aadhaar = re.findall(cls.AADHAAR_PATTERN, redacted)
         counts["AADHAAR"] = len(aadhaar)
         redacted = re.sub(cls.AADHAAR_PATTERN, "[REDACTED_AADHAAR]", redacted)
+
+        # Phone
+        phones = re.findall(cls.PHONE_PATTERN, redacted)
+        counts["PHONE"] = len(phones)
+        redacted = re.sub(cls.PHONE_PATTERN, "[REDACTED_PHONE]", redacted)
 
         # Financial values (salary, deals, budgets)
         financials = re.findall(cls.FINANCIAL_PATTERN, redacted, flags=re.IGNORECASE)

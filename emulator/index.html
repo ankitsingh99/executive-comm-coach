@@ -1048,7 +1048,7 @@
         }
       }
 
-      // 5. Action Items
+      // 5. Action Items & Highlights
       const actList = document.getElementById('list-actions');
       actList.innerHTML = '';
       if (!data.actions || data.actions.length === 0) {
@@ -1057,10 +1057,15 @@
         data.actions.forEach((a, i) => {
           const el = document.createElement('div');
           el.className = 'action-card';
+          const ampmPill = a.inferred_ampm ? `<span class="action-due-pill" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">⏰ Inferred ${a.inferred_ampm}</span>` : '';
+          const dueText = a.due || 'Upcoming';
           el.innerHTML = `
             <div class="action-header">
               <span class="action-badge">📌 [${a.owner}] • ${a.category}</span>
-              <span class="action-due-pill">Due: ${a.due}</span>
+              <div style="display: flex; gap: 0.3rem; align-items: center;">
+                <span class="action-due-pill">Due: ${dueText}</span>
+                ${ampmPill}
+              </div>
             </div>
             <div class="action-desc">${a.task}</div>
             <div class="action-quote-txt">"${a.quote}"</div>

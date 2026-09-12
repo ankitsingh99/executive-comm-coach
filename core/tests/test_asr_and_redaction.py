@@ -101,20 +101,24 @@ def test_sarvam_client_diarization_parsing():
 
 def test_pii_redactor_all_categories():
     raw_text = (
-        "Call me at +919876543210 or email me at priya@corp.internal. "
-        "My PAN is ABCDE1234F, Aadhaar is 1234 5678 9012. "
+        "Call me at +91 98765 43210 or email me at priya@corp.internal or send UPI to rahul@okhdfcbank. "
+        "Our company GSTIN is 29ABCDE1234F1Z5, PAN is ABCDE1234F, Aadhaar is 1234 5678 9012. "
         "The project budget is ₹25 lakh and the API token secret: my_secret_token_123."
     )
     redacted, counts = PIIRedactor.redact_text(raw_text)
 
     assert "[REDACTED_PHONE]" in redacted
     assert "[REDACTED_EMAIL]" in redacted
+    assert "[REDACTED_UPI]" in redacted
+    assert "[REDACTED_GSTIN]" in redacted
     assert "[REDACTED_PAN]" in redacted
     assert "[REDACTED_AADHAAR]" in redacted
     assert "[REDACTED_FINANCIAL]" in redacted
     assert "[REDACTED_SECRET]" in redacted
     assert counts["PHONE"] == 1
     assert counts["EMAIL"] == 1
+    assert counts["UPI"] == 1
+    assert counts["GSTIN"] == 1
     assert counts["PAN"] == 1
     assert counts["AADHAAR"] == 1
     assert counts["FINANCIAL"] == 1

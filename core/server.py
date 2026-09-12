@@ -15,9 +15,10 @@ PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 
-from engine.schema import ConversationSession, Utterance
+from engine.schema import ConversationSession, Utterance, KeyHighlight, ActionItem
 from engine.coaching_engine import ExecutiveCoachingEngine
 from engine.action_item_extractor import ActionItemExtractor
+from engine.transcription_analyzer import TranscriptionAnalyzer
 from asr_diarization.diarizer import DiarizationEngine
 from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry, SpeakerVoiceprint
 from asr_diarization.local_stt_engine import LocalSTTEngine
@@ -118,10 +119,25 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                         "owner": ai.owner,
                         "category": ai.category,
                         "due": ai.due_time_or_date or "Upcoming",
+                        "resolved_datetime": ai.resolved_datetime,
+                        "inferred_ampm": ai.target_time_inferred_ampm,
                         "task": ai.task,
-                        "quote": ai.verbatim_quote
+                        "quote": ai.verbatim_quote,
+                        "urgency": ai.urgency
                     }
                     for ai in evaluation.action_items
+                ]
+
+                key_highlights = [
+                    {
+                        "headline": kh.headline,
+                        "takeaway": kh.takeaway,
+                        "speaker": kh.speaker,
+                        "category": kh.category,
+                        "importance": kh.importance,
+                        "quote": kh.verbatim_quote
+                    }
+                    for kh in getattr(evaluation, "key_highlights", [])
                 ]
 
                 top_strengths = [
@@ -162,6 +178,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "longitudinal_summary": evaluation.longitudinal_summary,
                     "top_strengths": top_strengths,
                     "areas_for_improvement": areas_for_improvement,
+                    "key_highlights": key_highlights,
                     "action_items": action_items,
                     "rephrasing": {
                         "critique": critique,
@@ -189,6 +206,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "longitudinal_summary": "Delivery structured with clear communication intent.",
                     "top_strengths": [{"observation": "Clear topical focus and delivery flow.", "verbatim_quote": payload.get("dialogue_text", "")[:50]}],
                     "areas_for_improvement": [{"critique": "Ensure bottom-line recommendation is stated upfront.", "verbatim_quote": payload.get("dialogue_text", "")[:50], "coached_phrasing": "Let's prioritize the key action item."}],
+                    "key_highlights": [],
                     "action_items": [],
                     "rephrasing": {
                         "critique": "Observation processed. Ensure bottom-line recommendation is stated upfront.",
@@ -229,12 +247,49 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "owner": ai.owner,
                     "category": ai.category,
                     "due": ai.due_time_or_date,
+                    "resolved_datetime": ai.resolved_datetime,
+                    "inferred_ampm": ai.target_time_inferred_ampm,
                     "task": ai.task,
                     "quote": ai.verbatim_quote,
                     "urgency": ai.urgency
                 }
                 for ai in items
             ]
+            self._send_json(data)
+
+        elif url_path == "/api/transcription_analysis":
+            dialogue_text = payload.get("dialogue_text", "")
+            analyzer = TranscriptionAnalyzer()
+            analysis = analyzer.analyze(dialogue_text, use_gemini=False)
+            data = {
+                "summary": analysis.summary,
+                "topics": analysis.topics_discussed,
+                "tone": analysis.sentiment_tone,
+                "highlights": [
+                    {
+                        "headline": kh.headline,
+                        "takeaway": kh.takeaway,
+                        "speaker": kh.speaker,
+                        "category": kh.category,
+                        "importance": kh.importance,
+                        "quote": kh.verbatim_quote
+                    }
+                    for kh in analysis.key_highlights
+                ],
+                "tasks": [
+                    {
+                        "owner": t.owner,
+                        "task": t.task,
+                        "category": t.category,
+                        "due": t.due_time_or_date,
+                        "resolved_datetime": t.resolved_datetime,
+                        "inferred_ampm": t.target_time_inferred_ampm,
+                        "quote": t.verbatim_quote,
+                        "urgency": t.urgency
+                    }
+                    for t in analysis.potential_tasks
+                ]
+            }
             self._send_json(data)
         else:
             self.send_error(404, "Unknown API Route")

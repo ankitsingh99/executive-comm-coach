@@ -21,6 +21,7 @@ try:
         TopStrength,
         AreaForImprovement,
         ActionItem,
+        KeyHighlight,
         FillerWordMetric
     )
     from .persona_ontology import (
@@ -36,6 +37,7 @@ try:
         ACTIVE_LISTENING_PATTERNS
     )
     from .action_item_extractor import ActionItemExtractor
+    from .transcription_analyzer import TranscriptionAnalyzer
     from ..privacy.pii_redactor import PIIRedactor
 except (ImportError, ValueError):
     from engine.schema import (
@@ -46,6 +48,7 @@ except (ImportError, ValueError):
         TopStrength,
         AreaForImprovement,
         ActionItem,
+        KeyHighlight,
         FillerWordMetric
     )
     from engine.persona_ontology import (
@@ -61,6 +64,7 @@ except (ImportError, ValueError):
         ACTIVE_LISTENING_PATTERNS
     )
     from engine.action_item_extractor import ActionItemExtractor
+    from engine.transcription_analyzer import TranscriptionAnalyzer
     from privacy.pii_redactor import PIIRedactor
 
 
@@ -320,7 +324,9 @@ class LocalCoachingSynthesizer:
             else f"Evaluated against {profile.power_axis.value} communication rubric."
         )
 
-        action_items = ActionItemExtractor.extract_from_dialogue(dialogue)
+        analyzer = TranscriptionAnalyzer()
+        action_items = analyzer.extract_potential_tasks(dialogue)
+        key_highlights = analyzer.extract_key_highlights(dialogue)
 
         return ExecutiveCoachingEvaluation(
             persona_context=profile.strategic_focus,
@@ -328,6 +334,7 @@ class LocalCoachingSynthesizer:
             top_strengths=final_strengths,
             areas_for_improvement=final_improvements,
             action_items=action_items,
+            key_highlights=key_highlights,
             longitudinal_summary=summary,
             persona_alignment_notes=alignment_note
         )
@@ -428,6 +435,7 @@ class LocalCoachingSynthesizer:
             top_strengths=strengths,
             areas_for_improvement=improvements,
             action_items=evaluation.action_items,
+            key_highlights=getattr(evaluation, "key_highlights", []),
             longitudinal_summary=evaluation.longitudinal_summary,
             persona_alignment_notes=evaluation.persona_alignment_notes
         )

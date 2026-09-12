@@ -5,6 +5,9 @@ from .schema import (
     TopStrength,
     AreaForImprovement,
     ActionItem,
+    KeyHighlight,
+    PotentialTask,
+    TranscriptionAnalysisResult,
     ExecutiveCoachingEvaluation,
     Utterance,
     ConversationSession
@@ -19,7 +22,9 @@ from .persona_ontology import (
     DOWNWARD_RUBRIC
 )
 from .metrics_calculator import MetricsCalculator
+from .temporal_resolver import TemporalResolver, TemporalResolution
 from .action_item_extractor import ActionItemExtractor
+from .transcription_analyzer import TranscriptionAnalyzer
 from .coaching_engine import ExecutiveCoachingEngine
 from .gemini_coaching_engine import GeminiCoachingSynthesizer
 
@@ -29,6 +34,9 @@ __all__ = [
     "TopStrength",
     "AreaForImprovement",
     "ActionItem",
+    "KeyHighlight",
+    "PotentialTask",
+    "TranscriptionAnalysisResult",
     "ExecutiveCoachingEvaluation",
     "Utterance",
     "ConversationSession",
@@ -40,7 +48,10 @@ __all__ = [
     "LATERAL_RUBRIC",
     "DOWNWARD_RUBRIC",
     "MetricsCalculator",
+    "TemporalResolver",
+    "TemporalResolution",
     "ActionItemExtractor",
+    "TranscriptionAnalyzer",
     "ExecutiveCoachingEngine",
     "GeminiCoachingSynthesizer"
 ]

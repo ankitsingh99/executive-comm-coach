@@ -392,6 +392,18 @@ def main():
         print(f"       {rephrase_label}  \"{a.coached_phrasing}\"")
 
     print(f"\n  +--------------------------------------------------------------+")
+    print(f"  |                    KEY HIGHLIGHTS & TAKEAWAYS                |")
+    print(f"  +--------------------------------------------------------------+")
+    if not getattr(evaluation, "key_highlights", []):
+        print("    • (No explicit strategic milestones or decisions detected in this turn)")
+    else:
+        for idx, kh in enumerate(evaluation.key_highlights, 1):
+            imp_tag = " [High Priority]" if kh.importance == "High" else ""
+            print(f"    ⭐ {idx}. [{kh.category.upper()}]{imp_tag} {kh.headline}")
+            print(f"       • Takeaway: {kh.takeaway}")
+            print(f"       • Speaker:  {kh.speaker} (Quote: \"{kh.verbatim_quote}\")")
+
+    print(f"\n  +--------------------------------------------------------------+")
     print(f"  |               DETECTED ACTION ITEMS & COMMITMENTS            |")
     print(f"  +--------------------------------------------------------------+")
     if not evaluation.action_items:
@@ -400,8 +412,9 @@ def main():
         for idx, item in enumerate(evaluation.action_items, 1):
             owner_tag = f"[{item.owner.upper()}]" if item.owner != "USER" else "[USER / YOU]"
             due_str = f" | Due: {item.due_time_or_date}" if item.due_time_or_date else ""
+            ampm_str = f" ({item.target_time_inferred_ampm})" if item.target_time_inferred_ampm else ""
             urgency_str = f" [{item.urgency} Urgency]" if item.urgency == "High" else ""
-            print(f"    📌 {idx}. {owner_tag} {item.category}{due_str}{urgency_str}")
+            print(f"    📌 {idx}. {owner_tag} {item.category}{due_str}{ampm_str}{urgency_str}")
             print(f"       • Task:  {item.task}")
             print(f"       • Quote: \"{item.verbatim_quote}\"")
     print(f"  +--------------------------------------------------------------+\n")

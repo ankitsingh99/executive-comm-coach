@@ -9,8 +9,10 @@ from typing import List, Optional, Tuple, Dict, Any
 
 try:
     from .schema import Utterance, ActionItem
+    from .temporal_resolver import TemporalResolver, TemporalResolution
 except (ImportError, ValueError):
     from engine.schema import Utterance, ActionItem
+    from engine.temporal_resolver import TemporalResolver, TemporalResolution
 
 
 # Regex for temporal dates, days, times, and deadlines (English + Hinglish)
@@ -30,8 +32,9 @@ TIME_PATTERNS = [
         r"(?:\s+(?:at|by|around|ko|mein)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)?)?\b",
         re.IGNORECASE
     ),
-    # "at 10 AM", "at 3:30 PM", "by 5 PM", "10 baje", "shaam 5 baje"
-    re.compile(r"\b(?:at|by|around|shaam|subah|dopahar|raat)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)\b", re.IGNORECASE)
+    # "at 10 AM", "at 3:30 PM", "by 5 PM", "10 baje", "shaam 5 baje", "at 9"
+    re.compile(r"\b(?:at|by|around|shaam|subah|dopahar|raat)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)\b", re.IGNORECASE),
+    re.compile(r"\b(?:at|by|around)\s+\d{1,2}(?::\d{2})?\b", re.IGNORECASE)
 ]
 
 # Action & Commitment Intent Patterns (English + Hinglish)
@@ -62,16 +65,21 @@ INTENT_PATTERNS = [
 class ActionItemExtractor:
     """
     On-device heuristic and semantic extractor for commitments and action items.
+    Equipped with next-occurrence AM/PM temporal resolution.
     """
 
     @classmethod
     def extract_temporal_anchor(cls, text: str) -> Optional[str]:
         """Extracts dates, days, times, and deadlines from text."""
+        # Try smart resolver first
+        resolution = TemporalResolver.resolve_time_expression(text)
+        if resolution:
+            return resolution.raw_match
+
         for pattern in TIME_PATTERNS:
             match = pattern.search(text)
             if match:
                 candidate = match.group(0).strip()
-                # Clean up leading 'at', 'on', 'by' if isolated
                 cleaned = re.sub(r"^(?:at|on|by)\s+", "", candidate, flags=re.IGNORECASE).strip()
                 if len(cleaned) >= 2:
                     return candidate.strip()
@@ -89,8 +97,12 @@ class ActionItemExtractor:
         return cleaned
 
     @classmethod
-    def extract_from_utterance(cls, utterance: Utterance) -> List[ActionItem]:
-        """Analyzes a single utterance and extracts action items if present."""
+    def extract_from_utterance(
+        cls,
+        utterance: Utterance,
+        ref_dt: Optional[Any] = None
+    ) -> List[ActionItem]:
+        """Analyzes a single utterance and extracts action items with resolved times if present."""
         action_items: List[ActionItem] = []
         text = utterance.transcript.strip()
         if not text or len(text) < 8:
@@ -108,22 +120,34 @@ class ActionItemExtractor:
                     detected_category = cat_label
                     break
 
-            # If an explicit intent was found, or if a strong temporal anchor with action verb exists
-            time_anchor = cls.extract_temporal_anchor(sentence)
+            # Smart temporal resolution
+            temp_res = TemporalResolver.resolve_time_expression(sentence, ref_dt=ref_dt)
+            time_anchor = temp_res.raw_match if temp_res else cls.extract_temporal_anchor(sentence)
 
-            if detected_category or (time_anchor and re.search(r"\b(?:will|shall|can|commit|going\s+to|schedule|target)\b", sentence, re.IGNORECASE)):
+            if detected_category or (time_anchor and re.search(r"\b(?:will|shall|can|commit|going\s+to|schedule|target|call|meet|sync|ring|send|deliver|deploy)\b", sentence, re.IGNORECASE)):
                 category = detected_category or "Task Commitment"
                 task_summary = cls.extract_task_description(sentence, category)
                 
                 # Determine urgency
-                urgency = "High" if (time_anchor and any(k in time_anchor.lower() for k in ["today", "tomorrow", "tonight", "asap", "morning"])) else "Normal"
+                if temp_res:
+                    urgency = temp_res.urgency
+                    resolved_iso = temp_res.resolved_datetime
+                    inferred_ampm = temp_res.inferred_ampm
+                    display_due = time_anchor
+                else:
+                    urgency = "High" if (time_anchor and any(k in time_anchor.lower() for k in ["today", "tomorrow", "tonight", "asap", "morning"])) else "Normal"
+                    resolved_iso = None
+                    inferred_ampm = None
+                    display_due = time_anchor
 
                 owner = utterance.speaker
                 action_items.append(
                     ActionItem(
                         owner=owner,
                         task=task_summary,
-                        due_time_or_date=time_anchor,
+                        due_time_or_date=display_due,
+                        resolved_datetime=resolved_iso,
+                        target_time_inferred_ampm=inferred_ampm,
                         verbatim_quote=sentence,
                         category=category,
                         urgency=urgency
@@ -133,13 +157,17 @@ class ActionItemExtractor:
         return action_items
 
     @classmethod
-    def extract_from_dialogue(cls, utterances: List[Utterance]) -> List[ActionItem]:
+    def extract_from_dialogue(
+        cls,
+        utterances: List[Utterance],
+        ref_dt: Optional[Any] = None
+    ) -> List[ActionItem]:
         """Scans all dialogue turns and returns deduplicated action items."""
         all_items: List[ActionItem] = []
         seen_quotes = set()
 
         for u in utterances:
-            items = cls.extract_from_utterance(u)
+            items = cls.extract_from_utterance(u, ref_dt=ref_dt)
             for item in items:
                 quote_key = item.verbatim_quote.lower().strip()
                 if quote_key not in seen_quotes:

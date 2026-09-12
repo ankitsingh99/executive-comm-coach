@@ -98,6 +98,23 @@ def test_coaching_engine_populates_action_items():
     evaluation = engine.evaluate_session(session)
 
     assert len(evaluation.action_items) >= 2
+    assert hasattr(evaluation, "key_highlights")
+    assert len(evaluation.key_highlights) >= 1
     owners = [ai.owner for ai in evaluation.action_items]
     assert "Rahul" in owners
     assert "USER" in owners
+
+
+def test_action_item_ambiguous_time_resolution():
+    from datetime import datetime
+    ref_dt = datetime(2026, 9, 12, 11, 0, 0)
+    utterance = Utterance(
+        speaker="Ankit",
+        start_time=0.0,
+        end_time=3.0,
+        transcript="I will call Rahul at 9."
+    )
+    items = ActionItemExtractor.extract_from_utterance(utterance, ref_dt=ref_dt)
+    assert len(items) == 1
+    assert items[0].target_time_inferred_ampm == "PM"
+    assert "2026-09-12T21:00:00" in items[0].resolved_datetime

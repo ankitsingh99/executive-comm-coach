@@ -22,12 +22,14 @@ try:
         TopStrength,
         AreaForImprovement,
         ActionItem,
+        KeyHighlight,
         FillerWordMetric,
         Utterance
     )
     from .persona_ontology import PersonaOntologyEngine, PowerAxis, PersonaProfile
     from .metrics_calculator import MetricsCalculator
     from .action_item_extractor import ActionItemExtractor
+    from .transcription_analyzer import TranscriptionAnalyzer
     from ..privacy.pii_redactor import PIIRedactor
     from ..config import get_gemini_api_key, GEMINI_MODEL
 except (ImportError, ValueError):
@@ -38,12 +40,14 @@ except (ImportError, ValueError):
         TopStrength,
         AreaForImprovement,
         ActionItem,
+        KeyHighlight,
         FillerWordMetric,
         Utterance
     )
     from engine.persona_ontology import PersonaOntologyEngine, PowerAxis, PersonaProfile
     from engine.metrics_calculator import MetricsCalculator
     from engine.action_item_extractor import ActionItemExtractor
+    from engine.transcription_analyzer import TranscriptionAnalyzer
     from privacy.pii_redactor import PIIRedactor
     from config import get_gemini_api_key, GEMINI_MODEL
 
@@ -144,11 +148,23 @@ Return pure JSON matching this exact structure:
       "coached_phrasing": "Natural, high-impact rephrasing tailored to {power_axis.value} mode"
     }}
   ],
+  "key_highlights": [
+    {{
+      "headline": "Punchy title of key highlight (maximum 100 chars)",
+      "takeaway": "Direct takeaway context and strategic impact",
+      "speaker": "Speaker name",
+      "verbatim_quote": "Exact quote from transcript",
+      "category": "Decision | Strategy | Milestone | Key Insight | Key Discussion Point",
+      "importance": "High | Normal"
+    }}
+  ],
   "action_items": [
     {{
       "owner": "Speaker name (e.g. Rahul or USER)",
       "task": "Concrete summary of committed task or meeting follow-up",
-      "due_time_or_date": "Extracted date/time anchor (e.g. 31 Aug at 10 AM, Tomorrow EOD, Friday) or null",
+      "due_time_or_date": "Extracted date/time anchor (e.g. Today at 9:00 PM, 31 Aug at 10 AM, Tomorrow EOD, Friday) or null",
+      "resolved_datetime": "ISO 8601 timestamp string if resolvable, or null",
+      "target_time_inferred_ampm": "AM | PM | null",
       "verbatim_quote": "Exact spoken sentence containing the commitment or scheduling promise",
       "category": "Follow-up Call / Meeting | Deliverable / Commitment | Review / Investigation | Assigned Request",
       "urgency": "High | Medium | Normal"
@@ -161,10 +177,11 @@ Return pure JSON matching this exact structure:
 Guidelines:
 1. Multilingual & Hinglish Fluency: The transcript may contain English, Hindi, Hinglish (code-mixed Hindi-English), or South Asian corporate idioms (e.g. 'matlab hume ye kal ship karna hai', 'mujhe lagta hai ki latency badh sakti hai', 'aap please update bhej dena', 'theek hai'). You MUST fluently comprehend Hinglish dialogue turns, identify real communication friction points, extract all commitments/action items, and provide polished executive coached phrasing with high conviction.
 2. Deliver genuine strengths and genuine improvement areas without artificial padding.
-3. Detect ALL commitments, scheduling promises, follow-up calls (e.g. 'I will call you on 31 aug at 10 am', 'main kal 10 baje call karunga'), deliverables, and assigned tasks into 'action_items'.
-4. Every critique must include a direct 'Action:' directive.
-5. Every coached_phrasing must be natural, polished, and directly rephrase what was actually said.
-6. Return ONLY valid JSON without markdown wrapping.
+3. Detect ALL commitments, scheduling promises, follow-up calls (e.g. 'I will call you on 31 aug at 10 am', 'main kal 10 baje call karunga'), deliverables, and assigned tasks into 'action_items'. If a clock time like 'at 9' is mentioned without AM/PM, resolve to the next upcoming 9 o'clock.
+4. Extract key highlights covering major decisions and critical takeaways into 'key_highlights'.
+5. Every critique must include a direct 'Action:' directive.
+6. Every coached_phrasing must be natural, polished, and directly rephrase what was actually said.
+7. Return ONLY valid JSON without markdown wrapping.
 """
 
         try:
@@ -205,11 +222,25 @@ Guidelines:
                 for a in data.get("areas_for_improvement", [])
             ]
 
+            highlights = [
+                KeyHighlight(
+                    headline=h.get("headline", "")[:250],
+                    takeaway=h.get("takeaway", "")[:300],
+                    speaker=h.get("speaker", "SPEAKER"),
+                    verbatim_quote=h.get("verbatim_quote", ""),
+                    category=h.get("category", "Key Takeaway"),
+                    importance=h.get("importance", "Normal")
+                )
+                for h in data.get("key_highlights", [])
+            ]
+
             action_items = [
                 ActionItem(
                     owner=ai.get("owner", "USER"),
                     task=ai.get("task", ""),
                     due_time_or_date=ai.get("due_time_or_date"),
+                    resolved_datetime=ai.get("resolved_datetime"),
+                    target_time_inferred_ampm=ai.get("target_time_inferred_ampm"),
                     verbatim_quote=ai.get("verbatim_quote", ""),
                     category=ai.get("category", "Follow-up"),
                     urgency=ai.get("urgency", "Normal")
@@ -221,6 +252,10 @@ Guidelines:
             if not action_items:
                 action_items = ActionItemExtractor.extract_from_dialogue(redacted_dialogue)
 
+            if not highlights:
+                analyzer = TranscriptionAnalyzer()
+                highlights = analyzer.extract_key_highlights(redacted_dialogue)
+
             final_strengths = strengths[:top_n] if top_n and top_n > 0 else strengths
             final_improvements = improvements[:top_n] if top_n and top_n > 0 else improvements
 
@@ -230,6 +265,7 @@ Guidelines:
                 top_strengths=final_strengths,
                 areas_for_improvement=final_improvements,
                 action_items=action_items,
+                key_highlights=highlights,
                 longitudinal_summary=data.get("longitudinal_summary", ""),
                 persona_alignment_notes=data.get("persona_alignment_notes", f"Evaluated against {power_axis.value} communication rubric.")
             )

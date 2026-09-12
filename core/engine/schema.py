@@ -192,11 +192,49 @@ class AreaForImprovement(BaseModel):
         self.coached_phrasing = coached_phrasing[:250]
 
 
+class KeyHighlight(BaseModel):
+    """Itemized key highlight, strategic decision, or takeaway extracted from transcription."""
+    headline: str = ""
+    takeaway: str = ""
+    speaker: str = "SPEAKER"
+    verbatim_quote: str = ""
+    category: str = "Key Takeaway"
+    importance: str = "Normal"
+
+    def __init__(
+        self,
+        headline: str = "",
+        takeaway: str = "",
+        speaker: str = "SPEAKER",
+        verbatim_quote: str = "",
+        category: str = "Key Takeaway",
+        importance: str = "Normal",
+        **kwargs
+    ):
+        super().__init__(
+            headline=headline[:250],
+            takeaway=takeaway[:300],
+            speaker=speaker,
+            verbatim_quote=verbatim_quote,
+            category=category,
+            importance=importance,
+            **kwargs
+        )
+        self.headline = headline[:250]
+        self.takeaway = takeaway[:300]
+        self.speaker = speaker
+        self.verbatim_quote = verbatim_quote
+        self.category = category
+        self.importance = importance
+
+
 class ActionItem(BaseModel):
     """Extracted action item, commitment, or scheduled follow-up from spoken dialogue."""
     owner: str = "USER"
     task: str = ""
     due_time_or_date: Optional[str] = None
+    resolved_datetime: Optional[str] = None
+    target_time_inferred_ampm: Optional[str] = None
     verbatim_quote: str = ""
     category: str = "Follow-up"
     urgency: str = "Normal"
@@ -206,6 +244,8 @@ class ActionItem(BaseModel):
         owner: str = "USER",
         task: str = "",
         due_time_or_date: Optional[str] = None,
+        resolved_datetime: Optional[str] = None,
+        target_time_inferred_ampm: Optional[str] = None,
         verbatim_quote: str = "",
         category: str = "Follow-up",
         urgency: str = "Normal",
@@ -215,6 +255,8 @@ class ActionItem(BaseModel):
             owner=owner,
             task=task[:250],
             due_time_or_date=due_time_or_date,
+            resolved_datetime=resolved_datetime,
+            target_time_inferred_ampm=target_time_inferred_ampm,
             verbatim_quote=verbatim_quote,
             category=category,
             urgency=urgency,
@@ -223,9 +265,55 @@ class ActionItem(BaseModel):
         self.owner = owner
         self.task = task[:250]
         self.due_time_or_date = due_time_or_date
+        self.resolved_datetime = resolved_datetime
+        self.target_time_inferred_ampm = target_time_inferred_ampm
         self.verbatim_quote = verbatim_quote
         self.category = category
         self.urgency = urgency
+
+
+# PotentialTask is an alias for ActionItem
+PotentialTask = ActionItem
+
+
+class TranscriptionAnalysisResult(BaseModel):
+    """Complete structured intelligence extracted from transcription."""
+    session_id: str = ""
+    timestamp_utc: str = ""
+    summary: str = ""
+    key_highlights: List[KeyHighlight] = []
+    potential_tasks: List[ActionItem] = []
+    topics_discussed: List[str] = []
+    sentiment_tone: str = "Neutral & Constructive"
+
+    def __init__(
+        self,
+        session_id: str = "",
+        timestamp_utc: str = "",
+        summary: str = "",
+        key_highlights: Optional[List[KeyHighlight]] = None,
+        potential_tasks: Optional[List[ActionItem]] = None,
+        topics_discussed: Optional[List[str]] = None,
+        sentiment_tone: str = "Neutral & Constructive",
+        **kwargs
+    ):
+        super().__init__(
+            session_id=session_id,
+            timestamp_utc=timestamp_utc,
+            summary=summary,
+            key_highlights=key_highlights or [],
+            potential_tasks=potential_tasks or [],
+            topics_discussed=topics_discussed or [],
+            sentiment_tone=sentiment_tone,
+            **kwargs
+        )
+        self.session_id = session_id
+        self.timestamp_utc = timestamp_utc
+        self.summary = summary
+        self.key_highlights = key_highlights or []
+        self.potential_tasks = potential_tasks or []
+        self.topics_discussed = topics_discussed or []
+        self.sentiment_tone = sentiment_tone
 
 
 class ExecutiveCoachingEvaluation(BaseModel):
@@ -235,6 +323,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
     top_strengths: List[TopStrength] = []
     areas_for_improvement: List[AreaForImprovement] = []
     action_items: List[ActionItem] = []
+    key_highlights: List[KeyHighlight] = []
     longitudinal_summary: str = ""
     persona_alignment_notes: str = ""
 
@@ -245,6 +334,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
         top_strengths: Optional[List[TopStrength]] = None,
         areas_for_improvement: Optional[List[AreaForImprovement]] = None,
         action_items: Optional[List[ActionItem]] = None,
+        key_highlights: Optional[List[KeyHighlight]] = None,
         longitudinal_summary: str = "",
         persona_alignment_notes: str = "",
         **kwargs
@@ -255,6 +345,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
             top_strengths=top_strengths or [],
             areas_for_improvement=areas_for_improvement or [],
             action_items=action_items or [],
+            key_highlights=key_highlights or [],
             longitudinal_summary=longitudinal_summary,
             persona_alignment_notes=persona_alignment_notes,
             **kwargs
@@ -264,6 +355,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
         self.top_strengths = top_strengths or []
         self.areas_for_improvement = areas_for_improvement or []
         self.action_items = action_items or []
+        self.key_highlights = key_highlights or []
         self.longitudinal_summary = longitudinal_summary
         self.persona_alignment_notes = persona_alignment_notes
 
