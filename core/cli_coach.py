@@ -84,7 +84,7 @@ COUNTERPART: Perfect, I will call you on 31 aug at 10 am to review the cost savi
             print("   Detected Action Items & Commitments:")
             for idx, ai in enumerate(evaluation.action_items, 1):
                 due_info = f" | Due: {ai.due_time_or_date}" if ai.due_time_or_date else ""
-                print(f"      📌 {idx}. [{ai.owner}] {ai.category}{due_info}: {ai.task}")
+                print(f"      [{idx}] [{ai.owner}] {ai.category}{due_info}: {ai.task}")
                 print(f"         Quote: \"{ai.verbatim_quote}\"")
 
     print("\n" + "=" * 80)

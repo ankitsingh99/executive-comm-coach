@@ -325,7 +325,7 @@ class ReusableHTTPServer(HTTPServer):
 
 def run_server(port: int = 8080):
     server = ReusableHTTPServer(("127.0.0.1", port), EmulatorHandler)
-    print(f"🚀 [EMULATOR SERVER] Running at http://127.0.0.1:{port}")
+    print(f"[EMULATOR SERVER] Running at http://127.0.0.1:{port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

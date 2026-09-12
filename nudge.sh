@@ -10,7 +10,7 @@ if [ ! -f "$PYTHON_BIN" ]; then
 fi
 
 echo "=========================================================================="
-echo " 👂 Executive Communication Coach: Ambient Auto-Nudge Mode Active"
+echo " [AMBIENT LISTENER] Executive Communication Coach: Auto-Nudge Mode Active"
 echo "=========================================================================="
 echo " Passively idling in background (< 2.5% CPU)."
 echo " When you or anyone starts speaking, you will get an instant macOS desktop"

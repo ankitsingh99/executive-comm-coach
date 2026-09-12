@@ -39,7 +39,7 @@ class LiveMicRecorder:
             temp_dir = tempfile.gettempdir()
             output_wav_path = os.path.join(temp_dir, f"mic_session_{int(time.time())}.wav")
 
-        print(f"\n  🎙️  [DYNAMIC DIALOGUE CAPTURE ACTIVE]")
+        print(f"\n  [DYNAMIC DIALOGUE CAPTURE ACTIVE]")
         print(f"      Recording will continue until conversation conclusion is detected (>{silence_threshold_sec}s pause after speech).")
         print("      >> Speak now naturally... (Take pauses as needed)\n")
 
@@ -80,17 +80,17 @@ class LiveMicRecorder:
                     if speech_prob >= speech_prob_threshold:
                         has_spoken = True
                         silence_elapsed = 0.0
-                        print(f"  🎙️  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%)    ", end="\r", flush=True)
+                        print(f"  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%)    ", end="\r", flush=True)
                     else:
                         if has_spoken:
                             silence_elapsed += chunk_duration_sec
-                            print(f"  ⏳  [SILENCE AFTER SPEECH] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s   ", end="\r", flush=True)
+                            print(f"  [SILENCE AFTER SPEECH] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s   ", end="\r", flush=True)
                             
                             if silence_elapsed >= silence_threshold_sec and total_recorded_sec >= min_speech_duration_sec:
-                                print(f"\n\n  ✅  [CONVERSATION CONCLUDED] End of conversation detected ({silence_threshold_sec}s silence after speech).")
+                                print(f"\n\n  [CONVERSATION CONCLUDED] End of conversation detected ({silence_threshold_sec}s silence after speech).")
                                 break
                         else:
-                            print(f"  ⠋  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin...          ", end="\r", flush=True)
+                            print(f"  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin...          ", end="\r", flush=True)
 
                 time.sleep(0.02)
 
@@ -115,7 +115,7 @@ class LiveMicRecorder:
             wf.setframerate(self.sample_rate)
             wf.writeframes(full_audio.tobytes())
 
-        print(f"  📁  [AUDIO STORED] Full conversation ({len(full_audio)/self.sample_rate:.1f}s) captured successfully.")
+        print(f"  [AUDIO STORED] Full conversation ({len(full_audio)/self.sample_rate:.1f}s) captured successfully.")
         return output_wav_path
 
     def record_to_wav(self, duration_seconds: int = 8, output_wav_path: Optional[str] = None) -> str:
@@ -149,7 +149,7 @@ class LiveMicRecorder:
 
 
     @staticmethod
-    def send_shell_desktop_notification(title: str = "🎙️ Executive Coach", message: str = "Spoken dialogue detected! Starting coaching capture...", subtitle: str = "Ambient Speech Nudge"):
+    def send_shell_desktop_notification(title: str = "Executive Coach", message: str = "Spoken dialogue detected! Starting coaching capture...", subtitle: str = "Ambient Speech Nudge"):
         """
         Triggers macOS system desktop notification, terminal bell, and alert chime.
         """
@@ -184,7 +184,7 @@ class LiveMicRecorder:
 
         start_time = time.time()
         gate = AmbientVadGate(speech_prob_threshold=speech_prob_threshold)
-        spinners = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        spinners = ["-", "\\", "|", "/"]
         spin_idx = 0
 
         while True:
@@ -231,16 +231,16 @@ class LiveMicRecorder:
                         # Send macOS shell/desktop notification
                         conf_pct = int(speech_prob * 100)
                         self.send_shell_desktop_notification(
-                            title="🎙️ Executive Communication Coach",
+                            title="Executive Communication Coach",
                             message=f"Spoken dialogue detected ({conf_pct}% confidence). Capturing conversation...",
                             subtitle="Ambient Auto-Nudge Triggered"
                         )
 
                         print("\n\n" + "\033[1;36m┌" + "─" * 72 + "┐\033[0m")
-                        print(f"\033[1;36m│\033[0m \033[1;32m🎙️  [CONVERSATION DETECTED]\033[0m Spoken dialogue observed in room!            \033[1;36m│\033[0m")
+                        print(f"\033[1;36m│\033[0m \033[1;32m[CONVERSATION DETECTED]\033[0m Spoken dialogue observed in room!                \033[1;36m│\033[0m")
                         print(f"\033[1;36m│\033[0m     Speech Confidence: \033[1;33m{conf_pct}%\033[0m • Ambient Low-Power Acoustic Gating Passed   \033[1;36m│\033[0m")
                         print(f"\033[1;36m│\033[0m                                                                        \033[1;36m│\033[0m")
-                        print(f"\033[1;36m│\033[0m 👉  \033[1;37mStarting continuous recording for coaching & action items...\033[0m       \033[1;36m│\033[0m")
+                        print(f"\033[1;36m│\033[0m >>  \033[1;37mStarting continuous recording for coaching & action items...\033[0m       \033[1;36m│\033[0m")
                         print(f"\033[1;36m│\033[0m     \033[0;36m(Will automatically conclude when pause/silence is detected)\033[0m       \033[1;36m│\033[0m")
                         print("\033[1;36m└" + "─" * 72 + "┘\033[0m\n")
                         

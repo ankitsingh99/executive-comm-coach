@@ -40,7 +40,7 @@ An on-device, privacy-first AI communication intelligence system and Android ser
 - **Interactive Web & Mobile App Emulator**: Glassmorphic real-time coaching interface with live browser microphone capture, speech recognition, waveform visualizer, comprehensive feedback insights drawer, and interactive voice vault.
 - **NVIDIA Parakeet & Google Gemini STT**: Multimodal audio transcription and tone sensing running locally or via Gemini Live APIs.
 - **Dynamic Semantic Intent & BLUF Coaching**: Automatically transforms passive, hypothetical statements into decisive, proactive Bottom-Line-Up-Front (BLUF) executive assertions.
-- **🇮🇳 Multilingual & Hinglish Support**: Code-mixed Hindi/English comprehension, hesitation markers (*matlab*, *yaani*, *haina*), hedging detection, and action item temporal parsing (*"kal 10 baje"*, *"shaam tak"*).
+- **Multilingual & Hinglish Support**: Code-mixed Hindi/English comprehension, hesitation markers (*matlab*, *yaani*, *haina*), hedging detection, and action item temporal parsing (*"kal 10 baje"*, *"shaam tak"*).
 - **Automated Commitments & Action Items Engine**: Automatically captures promises, follow-up calls, deadlines, and deliverables from spoken conversations.
 - **Persistent Biometric Voiceprints**: On-device voiceprint memory vault recognizing speakers across conversations with DPDP-compliant consent prompts.
 - **Relational Persona Ontology**: Calibrated against three organizational power axes:

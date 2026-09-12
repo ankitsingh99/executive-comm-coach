@@ -464,7 +464,7 @@
 
   <header>
     <div class="logo-area">
-      <div class="logo-badge">🎙️</div>
+      <div class="logo-badge">[MIC]</div>
       <div>
         <div class="logo-title">Executive Communication Coach</div>
         <div class="logo-sub">Interactive Mobile HUD & Studio</div>
@@ -484,13 +484,13 @@
     <div class="sidebar">
       <div class="card">
         <div class="card-title">
-          <span>⚡ Interactive Test Scenarios</span>
+          <span>[ACTIVE] Interactive Test Scenarios</span>
           <span style="font-size: 0.68rem; color: var(--cyan);">Click to Test</span>
         </div>
 
         <div class="scenario-list">
           <div class="scenario-btn active" id="btn-scen-1" onclick="applyScenario(1)">
-            <div class="scenario-icon">📞</div>
+            <div class="scenario-icon">[1]</div>
             <div class="scenario-info">
               <h4>1. Rahul's 31 Aug Call & Sync</h4>
               <p>Self-intro ("Hey I am Rahul") + Scheduled call promise ("call you on 31 aug at 10 am").</p>
@@ -498,7 +498,7 @@
           </div>
 
           <div class="scenario-btn" id="btn-scen-2" onclick="applyScenario(2)">
-            <div class="scenario-icon">🎯</div>
+            <div class="scenario-icon">[2]</div>
             <div class="scenario-info">
               <h4>2. Ashish's Solo Rehearsal</h4>
               <p>Solo presentation monologue + Fillers detection (matlab, basically) + Solo voiceprint recall.</p>
@@ -506,7 +506,7 @@
           </div>
 
           <div class="scenario-btn" id="btn-scen-3" onclick="applyScenario(3)">
-            <div class="scenario-icon">💼</div>
+            <div class="scenario-icon">[3]</div>
             <div class="scenario-info">
               <h4>3. Upward VP Review (BLUF)</h4>
               <p>Executive review with VP Sandeep + BLUF recommendation + Thursday deployment.</p>
@@ -514,7 +514,7 @@
           </div>
 
           <div class="scenario-btn" id="btn-scen-4" onclick="applyScenario(4)">
-            <div class="scenario-icon">🇮🇳</div>
+            <div class="scenario-icon">[4]</div>
             <div class="scenario-info">
               <h4>4. Hinglish Sprint Planning</h4>
               <p>Code-mixed Hindi/English ("dekho mujhe lagta hai", "kal 10 baje sync karenge").</p>
@@ -527,7 +527,7 @@
       <div class="card" style="border-left: 3px solid var(--emerald);">
         <div class="card-title">
           <span style="display: flex; align-items: center; gap: 0.4rem;">
-            <span>👂 Ambient Ear & Auto-Nudge</span>
+            <span>[EAR] Ambient Ear & Auto-Nudge</span>
           </span>
           <span class="badge" id="ambient-status-badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.62rem; padding: 0.15rem 0.45rem; border-radius: 999px;">PASSIVE SENSING</span>
         </div>
@@ -536,34 +536,34 @@
         </p>
         <div class="btn-row">
           <button class="chip-btn" id="btn-toggle-ambient" onclick="toggleAmbientEar()" style="flex: 1; padding: 0.45rem 0.6rem; font-size: 0.72rem; font-weight: 600; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #a7f3d0;">
-            <span id="ambient-btn-icon">⚡</span> <span id="ambient-btn-text">Enable Ambient Mic Ear</span>
+            <span id="ambient-btn-icon">[ACTIVE]</span> <span id="ambient-btn-text">Enable Ambient Mic Ear</span>
           </button>
           <button class="chip-btn" onclick="triggerSimulatedSpeechNudge()" style="padding: 0.45rem 0.6rem; font-size: 0.72rem; font-weight: 600; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.35); color: #c7d2fe;" title="Test speech detection nudge">
-            🎙️ Simulate Speech Onset
+            [MIC] Simulate Speech Onset
           </button>
         </div>
       </div>
 
       <div class="card">
         <div class="card-title">
-          <span>📝 Live Microphone & Custom Speech</span>
+          <span>[SPEECH] Live Microphone & Custom Speech</span>
           <span style="font-size: 0.65rem; color: var(--emerald); font-weight: 600;">LIVE INPUT</span>
         </div>
 
         <div class="quick-chips">
-          <button class="chip-btn" onclick="insertPrompt('Hey I am Rahul and I will call you on 31 aug at 10 am to review the numbers.')">💬 Rahul's 31 Aug</button>
-          <button class="chip-btn" onclick="insertPrompt('Hey I am Ashish and today basically matlab we reduced latency by 35%. I will complete the benchmark by end of week.')">💬 Ashish Solo</button>
-          <button class="chip-btn" onclick="insertPrompt('Dekho basically matlab mujhe lagta hai hume caching enable karni chahiye. Hum kal 10 baje sync karenge.')">💬 Hinglish Sync</button>
+          <button class="chip-btn" onclick="insertPrompt('Hey I am Rahul and I will call you on 31 aug at 10 am to review the numbers.')">[PROMPT] Rahul's 31 Aug</button>
+          <button class="chip-btn" onclick="insertPrompt('Hey I am Ashish and today basically matlab we reduced latency by 35%. I will complete the benchmark by end of week.')">[PROMPT] Ashish Solo</button>
+          <button class="chip-btn" onclick="insertPrompt('Dekho basically matlab mujhe lagta hai hume caching enable karni chahiye. Hum kal 10 baje sync karenge.')">[PROMPT] Hinglish Sync</button>
         </div>
 
-        <textarea class="textarea-box" id="custom-speech-input" placeholder="Click '🎤 Live Mic' to speak or type conversation..."></textarea>
+        <textarea class="textarea-box" id="custom-speech-input" placeholder="Click '[LIVE] Live Mic' to speak or type conversation..."></textarea>
         
         <div class="btn-row">
           <button class="primary-btn" id="analyze-btn" onclick="runAnalysis()">
-            <span>✨ Run Coach Analysis</span>
+            <span>[COACH] Run Coach Analysis</span>
           </button>
           <button class="mic-btn" id="mic-toggle-btn" onclick="toggleMic()">
-            <span>🎤 Live Mic</span>
+            <span>[LIVE] Live Mic</span>
           </button>
         </div>
       </div>
@@ -580,16 +580,16 @@
             <div class="nudge-header">
               <div class="nudge-tag">
                 <div class="nudge-pulse-dot"></div>
-                <span>🎙️ Spoken Dialogue Detected</span>
+                <span>[MIC] Spoken Dialogue Detected</span>
               </div>
-              <button class="nudge-close-btn" onclick="dismissNudge()" title="Dismiss nudge">✕</button>
+              <button class="nudge-close-btn" onclick="dismissNudge()" title="Dismiss nudge">X</button>
             </div>
             <div class="nudge-desc" id="nudge-desc-text">
               We detected that you started speaking! Would you like to start recording for communication coaching &amp; action item analysis?
             </div>
             <div class="nudge-actions">
               <button class="nudge-btn-confirm" onclick="acceptNudgeAndRecord()">
-                <span>🟢 Start Recording &amp; Analysis</span>
+                <span>[START] Start Recording &amp; Analysis</span>
               </button>
               <button class="nudge-btn-dismiss" onclick="dismissNudge()">
                 Dismiss
@@ -604,24 +604,24 @@
             <div class="processing-bar-wrap">
               <div class="processing-bar-fill" id="progress-bar-fill"></div>
             </div>
-            <div class="processing-step" id="txt-processing-step">🎙️ Extracting acoustic cadence & pitch...</div>
+            <div class="processing-step" id="txt-processing-step">[MIC] Extracting acoustic cadence & pitch...</div>
           </div>
 
           <!-- Top App Bar -->
           <div class="app-topbar">
             <div class="app-topbar-title">Executive Coach HUD</div>
             <div class="consent-chip">
-              <span>🛡️</span>
+              <span>[DPDP]</span>
               <span>DPDP Consent • Local</span>
             </div>
           </div>
 
           <!-- App Navigation Tabs -->
           <div class="app-nav">
-            <button class="nav-tab active" id="tab-btn-scorecard" onclick="setAppTab('scorecard')">📊 Scorecard</button>
-            <button class="nav-tab" id="tab-btn-actions" onclick="setAppTab('actions')">📌 Action Items</button>
-            <button class="nav-tab" id="tab-btn-dialogue" onclick="setAppTab('dialogue')">💬 Dialogue</button>
-            <button class="nav-tab" id="tab-btn-vault" onclick="setAppTab('vault')">🧠 Voice Vault</button>
+            <button class="nav-tab active" id="tab-btn-scorecard" onclick="setAppTab('scorecard')">[SCORECARD] Scorecard</button>
+            <button class="nav-tab" id="tab-btn-actions" onclick="setAppTab('actions')">[ACTION] Action Items</button>
+            <button class="nav-tab" id="tab-btn-dialogue" onclick="setAppTab('dialogue')">[PROMPT] Dialogue</button>
+            <button class="nav-tab" id="tab-btn-vault" onclick="setAppTab('vault')">[VAULT] Voice Vault</button>
           </div>
 
           <!-- TAB 1: Scorecard & Feedback View -->
@@ -638,14 +638,14 @@
             <!-- Speaker Recognition Banner with 1-Click Enroll Button -->
             <div class="speaker-banner" style="justify-content: space-between;">
               <div style="display: flex; align-items: center; gap: 0.6rem;">
-                <span style="font-size: 1.15rem;">✨</span>
+                <span style="font-size: 1.15rem;">[COACH]</span>
                 <div>
                   <div class="speaker-name" id="txt-speaker-name">Recognized: Rahul Sharma</div>
                   <div class="speaker-mode" id="txt-speaker-sub">Voiceprint Synced • LATERAL Mode</div>
                 </div>
               </div>
               <button class="erase-btn" id="btn-quick-enroll" onclick="enrollCurrentSpeaker()" style="border-color: var(--cyan); color: var(--cyan); font-size: 0.62rem; padding: 0.25rem 0.55rem; font-weight: 600;">
-                ➕ Enroll Voice
+                + Enroll Voice
               </button>
             </div>
 
@@ -653,17 +653,17 @@
             <div id="enrollment-nudge-card" style="display: none; background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.12)); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 12px; padding: 0.75rem 0.85rem; flex-direction: column; gap: 0.4rem; animation: fadeIn 0.3s ease-out;">
               <div style="display: flex; align-items: flex-start; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.4rem;">
-                  <span style="font-size: 1.1rem;">🧠</span>
+                  <span style="font-size: 1.1rem;">[VAULT]</span>
                   <div>
                     <div style="font-size: 0.75rem; font-weight: 700; color: #ffffff;" id="nudge-title">New Voice Recognized: Rahul</div>
                     <div style="font-size: 0.65rem; color: var(--cyan);">Would you like to enroll and remember this speaker's voiceprint?</div>
                   </div>
                 </div>
-                <button onclick="dismissEnrollNudge()" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.75rem;">✕</button>
+                <button onclick="dismissEnrollNudge()" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.75rem;">X</button>
               </div>
               <div style="display: flex; gap: 0.4rem; margin-top: 0.2rem;">
                 <button class="primary-btn" onclick="acceptEnrollNudge()" style="flex: 1; padding: 0.35rem 0.6rem; font-size: 0.68rem; background: linear-gradient(135deg, #06b6d4, #3b82f6);">
-                  <span>💾 Yes, Save Voiceprint</span>
+                  <span>[SAVE] Yes, Save Voiceprint</span>
                 </button>
                 <button class="erase-btn" onclick="dismissEnrollNudge()" style="padding: 0.35rem 0.6rem; font-size: 0.68rem; color: var(--text-muted); border-color: var(--bg-card-border);">
                   <span>Not Now</span>
@@ -690,16 +690,16 @@
             <!-- Coached Rephrasing Box -->
             <div class="coached-card" onclick="openInsightsModal()" style="cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="coached-title">✨ Coached Executive Alternative (BLUF)</div>
+                <div class="coached-title">[COACH] Coached Executive Alternative (BLUF)</div>
                 <span style="font-size: 0.62rem; color: var(--emerald);">Tap to Expand ↗</span>
               </div>
               <div class="coached-text" id="txt-coached">"Let's review the 35% load savings on Thursday so we can align our production timeline."</div>
-              <div class="critique-text" id="txt-critique">⚠️ Delivery is collaborative and aligned. Consider highlighting the bottom-line cost reduction first.</div>
+              <div class="critique-text" id="txt-critique">[CRITIQUE] Delivery is collaborative and aligned. Consider highlighting the bottom-line cost reduction first.</div>
             </div>
 
             <!-- Full Insights Action Button -->
             <button class="primary-btn" onclick="openInsightsModal()" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; padding: 0.55rem; font-size: 0.74rem;">
-              <span>🔍 View Complete Feedback Insights & Linguistics</span>
+              <span>[DETAILS] View Complete Feedback Insights & Linguistics</span>
             </button>
           </div>
 
@@ -734,7 +734,7 @@
 
             <!-- Enroll New Speaker Quick Form -->
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.4rem;">
-              <div style="font-size: 0.68rem; font-weight: 700; color: #fff;">➕ Enroll New Speaker Profile</div>
+              <div style="font-size: 0.68rem; font-weight: 700; color: #fff;">+ Enroll New Speaker Profile</div>
               <div style="display: flex; gap: 0.35rem;">
                 <input type="text" id="input-enroll-name" placeholder="Speaker Name (e.g. Vikram)" style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.7rem; color: #fff; outline: none;">
                 <select id="input-enroll-role" style="background: rgba(15,23,42,0.9); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.4rem; font-size: 0.65rem; color: #fff; outline: none;">
@@ -756,13 +756,13 @@
           <!-- DETAILED FEEDBACK INSIGHTS MODAL DRAWER -->
           <div id="insights-modal" style="display: none; position: absolute; top: 18px; left: 0; right: 0; bottom: 0; background: rgba(11, 15, 29, 0.96); backdrop-filter: blur(16px); z-index: 50; flex-direction: column; padding: 1rem; overflow-y: auto; gap: 0.85rem; animation: fadeIn 0.2s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-card-border); padding-bottom: 0.5rem;">
-              <div style="font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: #fff;">📊 Comprehensive Feedback Insights</div>
-              <button onclick="closeInsightsModal()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 0.85rem;">✕</button>
+              <div style="font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: #fff;">[SCORECARD] Comprehensive Feedback Insights</div>
+              <button onclick="closeInsightsModal()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 0.85rem;">X</button>
             </div>
 
             <!-- Longitudinal Takeaway -->
             <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 10px; padding: 0.75rem;">
-              <div style="font-size: 0.66rem; font-weight: 700; color: var(--cyan); text-transform: uppercase; margin-bottom: 0.25rem;">📝 Executive Takeaway & Synthesis</div>
+              <div style="font-size: 0.66rem; font-weight: 700; color: var(--cyan); text-transform: uppercase; margin-bottom: 0.25rem;">[SPEECH] Executive Takeaway & Synthesis</div>
               <div id="modal-longitudinal" style="font-size: 0.76rem; color: #f1f5f9; line-height: 1.4;">Delivery is concise and structured around core milestones.</div>
             </div>
 
@@ -784,7 +784,7 @@
 
             <!-- Hesitations / Fillers List -->
             <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.65rem;">
-              <div style="font-size: 0.66rem; font-weight: 700; color: #fb7185; text-transform: uppercase; margin-bottom: 0.35rem;">⚠️ Detected Hesitation & Fillers</div>
+              <div style="font-size: 0.66rem; font-weight: 700; color: #fb7185; text-transform: uppercase; margin-bottom: 0.35rem;">[CRITIQUE] Detected Hesitation & Fillers</div>
               <div id="modal-fillers-list" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
                 <span style="font-size: 0.68rem; color: var(--text-muted);">None detected. Clean pacing!</span>
               </div>
@@ -792,7 +792,7 @@
 
             <!-- Top Strengths -->
             <div>
-              <div style="font-size: 0.72rem; font-weight: 700; color: var(--emerald); text-transform: uppercase; margin-bottom: 0.35rem;">🏆 Top Strengths</div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--emerald); text-transform: uppercase; margin-bottom: 0.35rem;">[STRENGTHS] Top Strengths</div>
               <div id="modal-strengths-list" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <!-- Populated dynamically -->
               </div>
@@ -800,7 +800,7 @@
 
             <!-- Areas for Improvement & Prescriptive Coached Phrasings -->
             <div>
-              <div style="font-size: 0.72rem; font-weight: 700; color: #fca5a5; text-transform: uppercase; margin-bottom: 0.35rem;">🎯 Actionable Improvements & Coached Alternatives</div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: #fca5a5; text-transform: uppercase; margin-bottom: 0.35rem;">[2] Actionable Improvements & Coached Alternatives</div>
               <div id="modal-improvements-list" style="display: flex; flex-direction: column; gap: 0.45rem;">
                 <!-- Populated dynamically -->
               </div>
@@ -810,19 +810,19 @@
           <!-- Mobile Bottom Navigation Bar -->
           <div class="app-bottombar">
             <button class="bar-btn active" onclick="setAppTab('scorecard')">
-              <span class="bar-icon">📊</span>
+              <span class="bar-icon">[SCORECARD]</span>
               <span>Coach</span>
             </button>
             <button class="bar-btn" onclick="setAppTab('actions')">
-              <span class="bar-icon">📌</span>
+              <span class="bar-icon">[ACTION]</span>
               <span>Actions</span>
             </button>
             <button class="bar-btn" onclick="setAppTab('dialogue')">
-              <span class="bar-icon">💬</span>
+              <span class="bar-icon">[PROMPT]</span>
               <span>Dialogue</span>
             </button>
             <button class="bar-btn" onclick="setAppTab('vault')">
-              <span class="bar-icon">🧠</span>
+              <span class="bar-icon">[VAULT]</span>
               <span>Vault</span>
             </button>
           </div>
@@ -988,7 +988,7 @@
 
       // 3. Coached Alternatives
       document.getElementById('txt-coached').innerText = `"${data.coached}"`;
-      document.getElementById('txt-critique').innerText = `⚠️ ${data.critique}`;
+      document.getElementById('txt-critique').innerText = `[CRITIQUE] ${data.critique}`;
 
       // 4. Populate Insights Modal
       if (latestInsightsData) {
@@ -1001,7 +1001,7 @@
         const filList = document.getElementById('modal-fillers-list');
         filList.innerHTML = '';
         if (!latestInsightsData.fillers_detected || latestInsightsData.fillers_detected.length === 0) {
-          filList.innerHTML = '<span style="font-size: 0.68rem; color: #34d399;">✅ Zero hesitation fillers detected. Clean pacing!</span>';
+          filList.innerHTML = '<span style="font-size: 0.68rem; color: #34d399;">[OK] Zero hesitation fillers detected. Clean pacing!</span>';
         } else {
           latestInsightsData.fillers_detected.forEach(f => {
             const pill = document.createElement('span');
@@ -1021,7 +1021,7 @@
           strengths.forEach(s => {
             const item = document.createElement('div');
             item.style.cssText = 'background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.5rem 0.65rem; font-size: 0.72rem;';
-            item.innerHTML = `<div style="font-weight: 600; color: #a7f3d0;">✨ ${s.observation}</div>${s.verbatim_quote ? `<div style="font-size: 0.65rem; color: var(--text-muted); font-style: italic; margin-top: 0.2rem;">"${s.verbatim_quote}"</div>` : ''}`;
+            item.innerHTML = `<div style="font-weight: 600; color: #a7f3d0;">[COACH] ${s.observation}</div>${s.verbatim_quote ? `<div style="font-size: 0.65rem; color: var(--text-muted); font-style: italic; margin-top: 0.2rem;">"${s.verbatim_quote}"</div>` : ''}`;
             strList.appendChild(item);
           });
         }
@@ -1037,10 +1037,10 @@
             const item = document.createElement('div');
             item.style.cssText = 'background: rgba(244, 63, 94, 0.06); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 8px; padding: 0.55rem 0.65rem; display: flex; flex-direction: column; gap: 0.25rem;';
             item.innerHTML = `
-              <div style="font-size: 0.7rem; color: #fca5a5; font-weight: 600;">⚠️ ${imp.critique}</div>
+              <div style="font-size: 0.7rem; color: #fca5a5; font-weight: 600;">[CRITIQUE] ${imp.critique}</div>
               <div style="font-size: 0.65rem; color: var(--text-muted); font-style: italic;">Spoken: "${imp.verbatim_quote}"</div>
               <div style="font-size: 0.72rem; color: #6ee7b7; font-weight: 600; background: rgba(16, 185, 129, 0.12); padding: 0.35rem 0.5rem; border-radius: 6px; margin-top: 0.15rem;">
-                🎯 BLUF: "${imp.coached_phrasing}"
+                [2] BLUF: "${imp.coached_phrasing}"
               </div>
             `;
             impList.appendChild(item);
@@ -1057,11 +1057,11 @@
         data.actions.forEach((a, i) => {
           const el = document.createElement('div');
           el.className = 'action-card';
-          const ampmPill = a.inferred_ampm ? `<span class="action-due-pill" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">⏰ Inferred ${a.inferred_ampm}</span>` : '';
+          const ampmPill = a.inferred_ampm ? `<span class="action-due-pill" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">[TIME] Inferred ${a.inferred_ampm}</span>` : '';
           const dueText = a.due || 'Upcoming';
           el.innerHTML = `
             <div class="action-header">
-              <span class="action-badge">📌 [${a.owner}] • ${a.category}</span>
+              <span class="action-badge">[ACTION] [${a.owner}] • ${a.category}</span>
               <div style="display: flex; gap: 0.3rem; align-items: center;">
                 <span class="action-due-pill">Due: ${dueText}</span>
                 ${ampmPill}
@@ -1134,7 +1134,7 @@
         });
         if (resp.ok) {
           dismissEnrollNudge();
-          alert(`✅ Voiceprint profile for '${name}' enrolled successfully! Future conversations will remember this speaker automatically.`);
+          alert(`[OK] Voiceprint profile for '${name}' enrolled successfully! Future conversations will remember this speaker automatically.`);
           loadVoiceVault();
         }
       } catch (e) {
@@ -1175,7 +1175,7 @@
             row.className = 'voice-row';
             row.innerHTML = `
               <div>
-                <div style="font-weight: 600; color: #fff;">👤 ${vp.speaker_name}</div>
+                <div style="font-weight: 600; color: #fff;">[SPEAKER] ${vp.speaker_name}</div>
                 <div style="font-size: 0.62rem; color: var(--cyan);">${vp.role} • ${vp.power_axis} Mode (${Math.round(vp.mean_pitch_hz)} Hz)</div>
               </div>
               <button class="erase-btn" onclick="eraseVoiceProfile('${vp.speaker_name}')">Erase</button>
@@ -1205,7 +1205,7 @@
           })
         });
         if (resp.ok) {
-          alert(`✅ Voiceprint profile for '${name}' successfully enrolled!`);
+          alert(`[OK] Voiceprint profile for '${name}' successfully enrolled!`);
           document.getElementById('txt-speaker-name').innerText = `Recognized: ${name}`;
           document.getElementById('txt-speaker-sub').innerText = "Voiceprint Recalled & Enrolled • LATERAL Mode";
           setAppTab('vault');
@@ -1235,7 +1235,7 @@
         });
         if (resp.ok) {
           document.getElementById('input-enroll-name').value = '';
-          alert(`✅ Voiceprint profile for '${name}' enrolled successfully!`);
+          alert(`[OK] Voiceprint profile for '${name}' enrolled successfully!`);
           loadVoiceVault();
         }
       } catch (e) {
@@ -1251,7 +1251,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ speaker_name: name })
           });
-          alert(`✅ Voiceprint profile for '${name}' permanently deleted.`);
+          alert(`[OK] Voiceprint profile for '${name}' permanently deleted.`);
           loadVoiceVault();
         } catch (e) {
           alert("Erasure request failed.");
@@ -1274,7 +1274,7 @@
       document.getElementById('custom-speech-input').value = text;
 
       const btn = document.getElementById('analyze-btn');
-      btn.innerHTML = '<span>⏳ Analyzing...</span>';
+      btn.innerHTML = '<span>[ANALYZING] Analyzing...</span>';
 
       const overlay = document.getElementById('loading-overlay');
       const barFill = document.getElementById('progress-bar-fill');
@@ -1283,18 +1283,18 @@
       if (overlay) {
         overlay.style.display = 'flex';
         barFill.style.width = '25%';
-        stepTxt.innerText = '🎙️ Analyzing acoustic cadence & pitch (132 Hz)...';
+        stepTxt.innerText = '[MIC] Analyzing acoustic cadence & pitch (132 Hz)...';
       }
 
       // Smooth progress animation
       const p1 = setTimeout(() => {
         if (barFill) barFill.style.width = '65%';
-        if (stepTxt) stepTxt.innerText = '🧠 Matching voiceprint & DPDP privacy checks...';
+        if (stepTxt) stepTxt.innerText = '[VAULT] Matching voiceprint & DPDP privacy checks...';
       }, 350);
 
       const p2 = setTimeout(() => {
         if (barFill) barFill.style.width = '90%';
-        if (stepTxt) stepTxt.innerText = '⚡ Synthesizing BLUF takeaways & commitments...';
+        if (stepTxt) stepTxt.innerText = '[ACTIVE] Synthesizing BLUF takeaways & commitments...';
       }, 700);
 
       try {
@@ -1308,7 +1308,7 @@
         await new Promise(r => setTimeout(r, 700));
 
         if (barFill) barFill.style.width = '100%';
-        if (stepTxt) stepTxt.innerText = '✅ Analysis complete! Updating HUD.';
+        if (stepTxt) stepTxt.innerText = '[OK] Analysis complete! Updating HUD.';
 
         if (resp.ok) {
           const res = await resp.json();
@@ -1366,7 +1366,7 @@
         setTimeout(() => {
           if (overlay) overlay.style.display = 'none';
           setAppTab('scorecard');
-          btn.innerHTML = '<span>✨ Run Coach Analysis</span>';
+          btn.innerHTML = '<span>[COACH] Run Coach Analysis</span>';
         }, 250);
       }
     }
@@ -1463,7 +1463,7 @@
 
           isRecording = true;
           btn.classList.add('recording');
-          btn.innerHTML = '<span>🔴 Stop Recording</span>';
+          btn.innerHTML = '<span>[STOP] Stop Recording</span>';
           document.getElementById('txt-tone').innerText = "Live Mic Active (Analyzing Pitch...)";
 
         } catch (err) {
@@ -1474,7 +1474,7 @@
         // Stop Live Recording
         isRecording = false;
         btn.classList.remove('recording');
-        btn.innerHTML = '<span>🎤 Live Mic</span>';
+        btn.innerHTML = '<span>[LIVE] Live Mic</span>';
 
         if (mediaStream) {
           mediaStream.getTracks().forEach(track => track.stop());
@@ -1490,7 +1490,7 @@
         if (capturedText.length > 3) {
           runAnalysis();
         } else {
-          document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip (e.g. 💬 Rahul's 31 Aug)...";
+          document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip (e.g. [PROMPT] Rahul's 31 Aug)...";
         }
       }
     }
@@ -1582,7 +1582,7 @@
             badge.style.borderColor = "rgba(6, 182, 212, 0.5)";
           }
           if (btnText) btnText.innerText = "Disable Ambient Ear";
-          if (btnIcon) btnIcon.innerText = "⏹️";
+          if (btnIcon) btnIcon.innerText = "[STOP]";
 
           // Evaluate ambient energy every 400ms (< 1% CPU)
           ambientInterval = setInterval(() => {
@@ -1620,7 +1620,7 @@
           badge.style.borderColor = "rgba(16, 185, 129, 0.4)";
         }
         if (btnText) btnText.innerText = "Enable Ambient Mic Ear";
-        if (btnIcon) btnIcon.innerText = "⚡";
+        if (btnIcon) btnIcon.innerText = "[ACTIVE]";
       }
     }
 
@@ -1630,7 +1630,7 @@
         document.querySelectorAll('.voice-row').forEach(el => {
           if (el.innerText.includes(name)) el.remove();
         });
-        alert(`✅ Voiceprint profile for '${name}' permanently erased.`);
+        alert(`[OK] Voiceprint profile for '${name}' permanently erased.`);
       }
     }
 

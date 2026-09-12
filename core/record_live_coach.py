@@ -173,12 +173,12 @@ def main():
 
     # Step 0: Ambient Conversation Auto-Detection & Nudge (Default)
     if not getattr(args, "direct", False):
-        print(" 👂 [AMBIENT CONVERSATION DETECTOR ACTIVE]")
+        print(" [AMBIENT CONVERSATION DETECTOR ACTIVE]")
         print("    Passively monitoring microphone for conversation onset (< 2.5% CPU)...")
-        print("    👉 Speak naturally when your conversation starts.\n")
+        print("    Speak naturally when your conversation starts.\n")
         
         def on_nudge_callback(prob):
-            print(f"\n  ✨ [NUDGE] We detected you started speaking! (Confidence: {int(prob * 100)}%)")
+            print(f"\n  [NUDGE] We detected you started speaking! (Confidence: {int(prob * 100)}%)")
             print(f"     Recording will continue until conversation finishes (>{silence_threshold}s pause after speech)...")
             return True
 
@@ -251,10 +251,10 @@ def main():
     if id_res is not None:
         recognized_voice, voice_match_conf = id_res
         if recognized_voice.power_axis == "SOLO" or acoustic_result.detected_speaker_count == 1:
-            print(f"  ✨ [VOICEPRINT RECOGNIZED] Welcome back, '{recognized_voice.speaker_name}'! [Match Confidence: {int(voice_match_conf * 100)}%]")
+            print(f"  [VOICEPRINT RECOGNIZED] Welcome back, '{recognized_voice.speaker_name}'! [Match Confidence: {int(voice_match_conf * 100)}%]")
             print(f"     Auto-calibrated profile for {recognized_voice.speaker_name} (Solo Practice).\n")
         else:
-            print(f"  ✨ [VOICEPRINT RECOGNIZED] Identified Counterpart: '{recognized_voice.speaker_name}' ({recognized_voice.role}) [Match Confidence: {int(voice_match_conf * 100)}%]")
+            print(f"  [VOICEPRINT RECOGNIZED] Identified Counterpart: '{recognized_voice.speaker_name}' ({recognized_voice.role}) [Match Confidence: {int(voice_match_conf * 100)}%]")
             print(f"     Auto-calibrated relational context to {recognized_voice.power_axis} mode without manual tagging!\n")
 
     # B. Verbal Self-Introduction Check (e.g. "Hey I am Rahul and today...", "Vikram here", etc.)
@@ -264,7 +264,7 @@ def main():
     current_counterpart_name = recognized_voice.speaker_name if (recognized_voice and recognized_voice.power_axis != "SOLO") else (intro_counterpart or None)
 
     if intro_user and not (recognized_voice and recognized_voice.speaker_name == intro_user):
-        print(f"  ✨ [VERBAL INTRODUCTION DETECTED] Welcome '{intro_user}'! Identified speaker name from speech.")
+        print(f"  [VERBAL INTRODUCTION DETECTED] Welcome '{intro_user}'! Identified speaker name from speech.")
         print(f"     Enrolled voiceprint for '{intro_user}' into local memory for future solo sessions!\n")
         voice_registry.enroll_speaker(
             name=intro_user,
@@ -274,7 +274,7 @@ def main():
         )
 
     if intro_counterpart and not (recognized_voice and recognized_voice.speaker_name == intro_counterpart):
-        print(f"  ✨ [VERBAL INTRODUCTION DETECTED] Interlocutor introduced themselves: '{intro_counterpart}'")
+        print(f"  [VERBAL INTRODUCTION DETECTED] Interlocutor introduced themselves: '{intro_counterpart}'")
         print(f"     Auto-tagged speaker turns and enrolled voiceprint for '{intro_counterpart}' into voice memory!\n")
         voice_registry.enroll_speaker(
             name=intro_counterpart,
@@ -395,11 +395,11 @@ def main():
     print(f"  |                    KEY HIGHLIGHTS & TAKEAWAYS                |")
     print(f"  +--------------------------------------------------------------+")
     if not getattr(evaluation, "key_highlights", []):
-        print("    • (No explicit strategic milestones or decisions detected in this turn)")
+        print("    * (No explicit strategic milestones or decisions detected in this turn)")
     else:
         for idx, kh in enumerate(evaluation.key_highlights, 1):
             imp_tag = " [High Priority]" if kh.importance == "High" else ""
-            print(f"    ⭐ {idx}. [{kh.category.upper()}]{imp_tag} {kh.headline}")
+            print(f"    [{idx}] [{kh.category.upper()}]{imp_tag} {kh.headline}")
             print(f"       • Takeaway: {kh.takeaway}")
             print(f"       • Speaker:  {kh.speaker} (Quote: \"{kh.verbatim_quote}\")")
 
@@ -407,14 +407,14 @@ def main():
     print(f"  |               DETECTED ACTION ITEMS & COMMITMENTS            |")
     print(f"  +--------------------------------------------------------------+")
     if not evaluation.action_items:
-        print("    • No explicit action items, deadlines, or scheduling commitments detected.")
+        print("    * No explicit action items, deadlines, or scheduling commitments detected.")
     else:
         for idx, item in enumerate(evaluation.action_items, 1):
             owner_tag = f"[{item.owner.upper()}]" if item.owner != "USER" else "[USER / YOU]"
             due_str = f" | Due: {item.due_time_or_date}" if item.due_time_or_date else ""
             ampm_str = f" ({item.target_time_inferred_ampm})" if item.target_time_inferred_ampm else ""
             urgency_str = f" [{item.urgency} Urgency]" if item.urgency == "High" else ""
-            print(f"    📌 {idx}. {owner_tag} {item.category}{due_str}{ampm_str}{urgency_str}")
+            print(f"    [{idx}] {owner_tag} {item.category}{due_str}{ampm_str}{urgency_str}")
             print(f"       • Task:  {item.task}")
             print(f"       • Quote: \"{item.verbatim_quote}\"")
     print(f"  +--------------------------------------------------------------+\n")
