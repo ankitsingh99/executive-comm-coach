@@ -30,7 +30,8 @@ from config import DATA_DIR, get_gemini_api_key, GEMINI_MODEL
 def parse_args():
     parser = argparse.ArgumentParser(description="Live Microphone Universal Communication Coach")
     parser.add_argument("duration", type=int, nargs="?", default=None, help="Optional maximum recording duration in seconds (default: dynamic until silence)")
-    parser.add_argument("--silence-sec", type=float, default=2.2, help="Silence pause duration in seconds after last word to conclude conversation (default: 2.2s)")
+    default_silence = float(os.environ.get("SILENCE_SEC", 2.0))
+    parser.add_argument("--silence-sec", "--silence", "--pause", "-s", dest="silence_sec", type=float, default=default_silence, help="Silence pause duration in seconds after speech to conclude conversation (default: 2.0s)")
     parser.add_argument("--fixed-duration", action="store_true", help="Force fixed duration recording without waiting for silence")
     parser.add_argument("--sensitivity", type=str, default="high", choices=["high", "medium", "low"], help="Microphone ambient pickup sensitivity (default: high)")
     parser.add_argument("--axis", type=str, default=None, choices=["SOLO", "CASUAL", "LATERAL", "UPWARD", "DOWNWARD", "CONFLICT"], help="Power Axis / Communication Mode")
