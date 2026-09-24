@@ -6,7 +6,7 @@ and assigns rich speaker tags for both dialogue and solo speeches.
 """
 
 import re
-from typing import List, Dict, Tuple, Optional
+from typing import List, Tuple, Optional
 
 try:
     from ..engine.schema import Utterance
@@ -15,22 +15,108 @@ except (ImportError, ValueError):
 
 
 STOP_WORDS = {
-    'and', 'from', 'today', 'with', 'for', 'at', 'in', 'the', 'to', 'here',
-    'speaking', 'of', 'lead', 'who', 'will', 'leading', 'as', 'is', 'on', 'by',
-    'fine', 'good', 'thinking', 'trying', 'going', 'ready', 'sure', 'happy',
-    'excited', 'working', 'sorry', 'back', 'done', 'there', 'just', 'really',
-    'not', 'great', 'cool', 'looking', 'wondering', 'hoping', 'a', 'an', 'also',
-    'so', 'now', 'we', 'i', 'our', 'all', 'welcome', 'thanks', 'thank',
-    'thing', 'things', 'point', 'points', 'issue', 'issues', 'problem', 'problems',
-    'case', 'step', 'way', 'more', 'most', 'important', 'crucial', 'main', 'key',
-    'clear', 'right', 'over', 'out', 'up', 'down', 'first', 'second', 'time',
-    'people', 'someone', 'everyone', 'anyone', 'something', 'anything', 'nothing',
-    'fact', 'reason', 'part', 'side'
+    "and",
+    "from",
+    "today",
+    "with",
+    "for",
+    "at",
+    "in",
+    "the",
+    "to",
+    "here",
+    "speaking",
+    "of",
+    "lead",
+    "who",
+    "will",
+    "leading",
+    "as",
+    "is",
+    "on",
+    "by",
+    "fine",
+    "good",
+    "thinking",
+    "trying",
+    "going",
+    "ready",
+    "sure",
+    "happy",
+    "excited",
+    "working",
+    "sorry",
+    "back",
+    "done",
+    "there",
+    "just",
+    "really",
+    "not",
+    "great",
+    "cool",
+    "looking",
+    "wondering",
+    "hoping",
+    "a",
+    "an",
+    "also",
+    "so",
+    "now",
+    "we",
+    "i",
+    "our",
+    "all",
+    "welcome",
+    "thanks",
+    "thank",
+    "thing",
+    "things",
+    "point",
+    "points",
+    "issue",
+    "issues",
+    "problem",
+    "problems",
+    "case",
+    "step",
+    "way",
+    "more",
+    "most",
+    "important",
+    "crucial",
+    "main",
+    "key",
+    "clear",
+    "right",
+    "over",
+    "out",
+    "up",
+    "down",
+    "first",
+    "second",
+    "time",
+    "people",
+    "someone",
+    "everyone",
+    "anyone",
+    "something",
+    "anything",
+    "nothing",
+    "fact",
+    "reason",
+    "part",
+    "side",
 }
 
 SELF_INTRO_PATTERNS = [
-    re.compile(r"\b(?:hey|hi|hello|namaste|good\s+morning|good\s+afternoon|good\s+evening)?\s*(?:,\s*)?(?:i\s*am|i['’]m|this\s+is|my\s+name\s+is|myself|it['’]s)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\b", re.IGNORECASE),
-    re.compile(r"(?:^|[.?!;]\s*|\b(?:hey|hi|hello|namaste)\s+)([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:here|this\s+side|speaking)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:hey|hi|hello|namaste|good\s+morning|good\s+afternoon|good\s+evening)?\s*(?:,\s*)?(?:i\s*am|i['’]m|this\s+is|my\s+name\s+is|myself|it['’]s)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?:^|[.?!;]\s*|\b(?:hey|hi|hello|namaste)\s+)([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:here|this\s+side|speaking)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\b(?:hey|hi|hello)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+here\b", re.IGNORECASE),
 ]
 
@@ -60,9 +146,7 @@ class DiarizationEngine:
 
     @classmethod
     def detect_and_apply_verbal_introductions(
-        cls,
-        utterances: List[Utterance],
-        user_speaker_id: str = "USER"
+        cls, utterances: List[Utterance], user_speaker_id: str = "USER"
     ) -> Tuple[List[Utterance], Optional[str], Optional[str]]:
         """
         Scans utterances for verbal introductions (e.g. 'Hey I am Rahul and today...').
@@ -93,27 +177,21 @@ class DiarizationEngine:
             spk_up = u.speaker.strip().upper()
             if spk_up in user_synonyms and detected_user:
                 new_spk = detected_user
-            elif detected_counterpart and (u.speaker == target_counterpart_tag or spk_up in {"COUNTERPART", "SPEAKER_02", "SPEAKER_2", "OTHER"}):
+            elif detected_counterpart and (
+                u.speaker == target_counterpart_tag or spk_up in {"COUNTERPART", "SPEAKER_02", "SPEAKER_2", "OTHER"}
+            ):
                 new_spk = detected_counterpart
             else:
                 new_spk = u.speaker
 
             updated.append(
-                Utterance(
-                    speaker=new_spk,
-                    start_time=u.start_time,
-                    end_time=u.end_time,
-                    transcript=u.transcript
-                )
+                Utterance(speaker=new_spk, start_time=u.start_time, end_time=u.end_time, transcript=u.transcript)
             )
 
         return updated, detected_counterpart, detected_user
 
     @classmethod
-    def compute_overlapping_speech(
-        cls,
-        utterances: List[Utterance]
-    ) -> Tuple[List[Utterance], int, float, int]:
+    def compute_overlapping_speech(cls, utterances: List[Utterance]) -> Tuple[List[Utterance], int, float, int]:
         """
         Detects temporal overlaps (simultaneous speech / cross-talk) between distinct speakers.
         Identifies who interrupted whom when a speaker starts talking before the prior speaker stops.
@@ -170,7 +248,7 @@ class DiarizationEngine:
         raw_utterances: List[Utterance],
         user_speaker_id: str = "USER",
         recognized_counterpart_name: Optional[str] = None,
-        recognized_user_name: Optional[str] = None
+        recognized_user_name: Optional[str] = None,
     ) -> List[Utterance]:
         """
         Maps acoustic speaker clusters (e.g. SPEAKER_01, speaker_0, USER) to USER/Name and COUNTERPART/Name,
@@ -202,7 +280,7 @@ class DiarizationEngine:
                     transcript=u.transcript.strip(),
                     is_overlapping=getattr(u, "is_overlapping", False),
                     overlap_duration_sec=getattr(u, "overlap_duration_sec", 0.0),
-                    interrupted_speaker=getattr(u, "interrupted_speaker", None)
+                    interrupted_speaker=getattr(u, "interrupted_speaker", None),
                 )
             )
 
@@ -212,10 +290,7 @@ class DiarizationEngine:
 
     @classmethod
     def format_dialogue_cli(
-        cls,
-        utterances: List[Utterance],
-        user_name: Optional[str] = None,
-        counterpart_name: Optional[str] = None
+        cls, utterances: List[Utterance], user_name: Optional[str] = None, counterpart_name: Optional[str] = None
     ) -> str:
         """
         Formats dialogue turns into visually aligned CLI output with speaker tags, timestamps, and overlap indicators.
@@ -251,7 +326,7 @@ class DiarizationEngine:
                 else:
                     overlap_annotation = f" \033[93m⚡ [OVERLAP {u.overlap_duration_sec:.1f}s]\033[0m"
 
-            lines.append(f"    • {tag:<24} {time_tag}{overlap_annotation}: \"{u.transcript}\"")
+            lines.append(f'    • {tag:<24} {time_tag}{overlap_annotation}: "{u.transcript}"')
         return "\n".join(lines)
 
     @classmethod
@@ -268,5 +343,5 @@ class DiarizationEngine:
                     overlap_badge = f" *(⚡ Interrupted {u.interrupted_speaker})*"
                 else:
                     overlap_badge = f" *(⚡ Overlapping Speech {u.overlap_duration_sec:.1f}s)*"
-            lines.append(f"**{u.speaker}** {time_tag}{overlap_badge}: \"{u.transcript}\"")
+            lines.append(f'**{u.speaker}** {time_tag}{overlap_badge}: "{u.transcript}"')
         return "\n\n".join(lines)

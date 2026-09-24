@@ -35,31 +35,28 @@ PHRASE_FILLER_PATTERNS = [
 # Single-token word, phonetic hesitation, & non-verbal sound patterns (English + Hinglish + Devanagari)
 TOKEN_FILLER_PATTERNS = [
     # Non-verbal vocal sounds, tongue clicks, & tut-tuts
-    r"\b(?:tch|tsk|tck|tskk)(?:[- ](?:tch|tsk|tck|tskk))*\b", # tch, tsk, tch-tch, tsk-tsk...
-    r"\b(?:uff|oof|ugh|argh|ahem|pfft|pshh|shh)\b",           # sigh, exhalation, throat clearing
-    r"\b(?:huh|hunh)\b",                                       # vocal confusion / query sound
-
+    r"\b(?:tch|tsk|tck|tskk)(?:[- ](?:tch|tsk|tck|tskk))*\b",  # tch, tsk, tch-tch, tsk-tsk...
+    r"\b(?:uff|oof|ugh|argh|ahem|pfft|pshh|shh)\b",  # sigh, exhalation, throat clearing
+    r"\b(?:huh|hunh)\b",  # vocal confusion / query sound
     # Phonetic hesitation sounds & vocal elongations
-    r"\bu+m+\b",          # um, umm, ummm...
-    r"\bu+h+m*\b",        # uh, uhh, uhhh, uhm...
-    r"\be+r+m*\b",        # er, err, erm...
-    r"\be+r+\b",          # er, err...
-    r"\bh+m+\b",          # hm, hmm, hmmm...
-    r"\bm+h+m*\b",        # mhm, mmhmm...
-    r"\ba+h+\b",          # ah, ahh, ahhh...
-    r"\ba{2,}\b",         # aa, aaa, aaaa...
-    r"\ba+a+h*\b",        # aah, aaah...
-    r"\be+h+\b",          # eh, ehh...
-    r"\bo+h+\b",          # oh, ohh...
-    r"\bo{2,}h*\b",       # ooh, oohh...
-    
+    r"\bu+m+\b",  # um, umm, ummm...
+    r"\bu+h+m*\b",  # uh, uhh, uhhh, uhm...
+    r"\be+r+m*\b",  # er, err, erm...
+    r"\be+r+\b",  # er, err...
+    r"\bh+m+\b",  # hm, hmm, hmmm...
+    r"\bm+h+m*\b",  # mhm, mmhmm...
+    r"\ba+h+\b",  # ah, ahh, ahhh...
+    r"\ba{2,}\b",  # aa, aaa, aaaa...
+    r"\ba+a+h*\b",  # aah, aaah...
+    r"\be+h+\b",  # eh, ehh...
+    r"\bo+h+\b",  # oh, ohh...
+    r"\bo{2,}h*\b",  # ooh, oohh...
     # English lexical fillers
     r"\bbasically\b",
     r"\bactually\b",
     r"\bliterally\b",
     r"\blike\b",
     r"\bright\b",
-    
     # Hinglish & South Asian discourse fillers
     r"\bmatlab\b",
     r"\byaani\b",
@@ -96,7 +93,6 @@ HEDGING_PATTERNS = [
     r"\bperhaps maybe\b",
     r"\bi was just wondering\b",
     r"\bmaybe\b",
-    
     # Hinglish
     r"\bmujhe\s+(?:bhi\s+)?lagta\s+hai\b",
     r"\bmujhe\s+aisa\s+lagta\s+hai\b",
@@ -131,7 +127,6 @@ ASSERTIVE_PATTERNS = [
     r"\bour analysis shows\b",
     r"\bwe will ship\b",
     r"\bwe will deploy\b",
-    
     # Hinglish
     r"\bhumne\s+decide\s+kiya\s+hai\b",
     r"\bpakka\s+(?:hum\s+)?kar\s+denge\b",
@@ -164,7 +159,6 @@ ACTIVE_LISTENING_PATTERNS = [
     r"\bwhat do you think about\b",
     r"\bhow do you see this\b",
     r"\bwhat are your thoughts\b",
-    
     # Hinglish
     r"\bsahi\s+point\s+hai\b",
     r"\bsahi\s+baat\s+hai\b",
@@ -214,34 +208,22 @@ class MetricsCalculator:
     def calculate_hedging_vs_assertion(cls, text: str) -> Tuple[int, int]:
         """Returns (hedging_count, assertive_count)."""
         norm_text = IndicNormalizer.normalize_text(text)
-        hedging_count = sum(
-            len(re.findall(pat, norm_text, flags=re.IGNORECASE))
-            for pat in HEDGING_PATTERNS
-        )
-        assertive_count = sum(
-            len(re.findall(pat, norm_text, flags=re.IGNORECASE))
-            for pat in ASSERTIVE_PATTERNS
-        )
+        hedging_count = sum(len(re.findall(pat, norm_text, flags=re.IGNORECASE)) for pat in HEDGING_PATTERNS)
+        assertive_count = sum(len(re.findall(pat, norm_text, flags=re.IGNORECASE)) for pat in ASSERTIVE_PATTERNS)
         return hedging_count, assertive_count
 
     @classmethod
     def calculate_active_listening_signals(cls, user_text: str, counterpart_text: str) -> int:
         """Counts instances of validation, inquiry, and acknowledgment."""
         norm_user = IndicNormalizer.normalize_text(user_text)
-        return sum(
-            len(re.findall(pat, norm_user, flags=re.IGNORECASE))
-            for pat in ACTIVE_LISTENING_PATTERNS
-        )
+        return sum(len(re.findall(pat, norm_user, flags=re.IGNORECASE)) for pat in ACTIVE_LISTENING_PATTERNS)
 
     @classmethod
     def analyze_dialogue(cls, utterances: List[Utterance], target_speaker: str = "USER") -> CommunicationMetrics:
         """Computes dynamic [0-100] communication metrics across dialogue."""
         if not utterances:
             return CommunicationMetrics(
-                presence_score=75,
-                assertiveness_score=75,
-                active_listening_score=70,
-                filler_words_detected=[]
+                presence_score=75, assertiveness_score=75, active_listening_score=70, filler_words_detected=[]
             )
 
         # Identify user utterances with support for voiceprint/intro names
@@ -312,5 +294,5 @@ class MetricsCalculator:
             active_listening_score=active_listening_score,
             filler_words_detected=fillers,
             interruption_count=user_interruptions,
-            overlap_count=total_overlaps
+            overlap_count=total_overlaps,
         )

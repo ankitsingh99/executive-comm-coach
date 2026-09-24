@@ -12,7 +12,6 @@ Demonstrates:
 
 import sys
 import os
-import json
 from datetime import datetime, timezone
 
 # Ensure package is resolvable
@@ -21,21 +20,9 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, current_dir)
 sys.path.insert(0, parent_dir)
 
-from engine import (
-    ExecutiveCoachingEngine,
-    ConversationSession,
-    Utterance,
-    PowerAxis
-)
-from asr_diarization import (
-    AmbientVadGate,
-    SarvamSpeechClient,
-    DiarizationEngine
-)
-from privacy import (
-    PIIRedactor,
-    DPDPComplianceManager
-)
+from engine import ExecutiveCoachingEngine, ConversationSession, Utterance, PowerAxis
+from asr_diarization import AmbientVadGate, SarvamSpeechClient, DiarizationEngine
+from privacy import PIIRedactor, DPDPComplianceManager
 
 
 def run_pipeline_demo():
@@ -48,7 +35,7 @@ def run_pipeline_demo():
     # -------------------------------------------------------------------------
     print("\n[STAGE 1] Ambient Acoustic Gating (Silero VAD, 16kHz PCM)...")
     vad = AmbientVadGate(speech_prob_threshold=0.75, sustained_window_ms=600.0)
-    
+
     # Simulate passive non-speech noise frames
     for t_ms in [0, 100, 200]:
         triggered, msg = vad.evaluate_frame(t_ms, speech_prob=0.15)
@@ -69,10 +56,10 @@ def run_pipeline_demo():
     print("\n[STAGE 2] DPDP Act 2023 Compliance & Consent Initiation...")
     compliance_mgr = DPDPComplianceManager(storage_root="/tmp/exec_coach_storage")
     session_id = f"session_{int(datetime.now(timezone.utc).timestamp())}"
-    
+
     chime_msg = compliance_mgr.trigger_audible_chime()
     print(f"  [CHIME] {chime_msg}")
-    
+
     consent_record = compliance_mgr.log_session_consent(session_id, counterpart_notified=True)
     print(f"  [CONSENT] Statutory Consent Logged: Session ID={consent_record.session_id}, AES-256 Storage=Active")
 
@@ -85,10 +72,30 @@ def run_pipeline_demo():
     if not raw_utterances:
         # Fallback realistic Hinglish conversational dialogue
         raw_utterances = [
-            Utterance(speaker="COUNTERPART", start_time=0.0, end_time=3.5, transcript="Sandeep here. What is our current status on the core migration?"),
-            Utterance(speaker="USER", start_time=3.8, end_time=9.2, transcript="Yeah so basically, matlab we were looking at the logs and I just think maybe we could finish by Friday, but there were some database blockers."),
-            Utterance(speaker="COUNTERPART", start_time=9.5, end_time=13.0, transcript="What is the quantitative impact on our API latency?"),
-            Utterance(speaker="USER", start_time=13.4, end_time=21.0, transcript="Understood. Our data demonstrates that the P99 latency dropped by 42ms across all regional clusters. We have decided to ship the release branch tomorrow at 10 AM, and project budget is Rs. 35 lakh.")
+            Utterance(
+                speaker="COUNTERPART",
+                start_time=0.0,
+                end_time=3.5,
+                transcript="Sandeep here. What is our current status on the core migration?",
+            ),
+            Utterance(
+                speaker="USER",
+                start_time=3.8,
+                end_time=9.2,
+                transcript="Yeah so basically, matlab we were looking at the logs and I just think maybe we could finish by Friday, but there were some database blockers.",
+            ),
+            Utterance(
+                speaker="COUNTERPART",
+                start_time=9.5,
+                end_time=13.0,
+                transcript="What is the quantitative impact on our API latency?",
+            ),
+            Utterance(
+                speaker="USER",
+                start_time=13.4,
+                end_time=21.0,
+                transcript="Understood. Our data demonstrates that the P99 latency dropped by 42ms across all regional clusters. We have decided to ship the release branch tomorrow at 10 AM, and project budget is Rs. 35 lakh.",
+            ),
         ]
     aligned_dialogue = DiarizationEngine.assign_roles(raw_utterances, user_speaker_id="USER")
 
@@ -101,8 +108,8 @@ def run_pipeline_demo():
     print("\n[STAGE 4] Privacy Redaction (Local Scrubber)...")
     sample_sensitive_turn = "Hey Reshma, send the API token secret: tok_83921048 to my email ashish@enterprise.internal or call +919876543210 regarding our Rs. 45 lakh budget."
     redacted_sample, red_counts = PIIRedactor.redact_text(sample_sensitive_turn)
-    print(f"  Raw:      \"{sample_sensitive_turn}\"")
-    print(f"  Redacted: \"{redacted_sample}\"")
+    print(f'  Raw:      "{sample_sensitive_turn}"')
+    print(f'  Redacted: "{redacted_sample}"')
     print(f"  Redaction Metrics: {red_counts}")
 
     # -------------------------------------------------------------------------
@@ -129,7 +136,7 @@ def run_pipeline_demo():
             counterpart_name=name,
             counterpart_role=role,
             power_axis=axis,
-            dialogue=aligned_dialogue
+            dialogue=aligned_dialogue,
         )
 
         evaluation = engine.evaluate_session(session, top_n=2, use_llm=False)
@@ -137,27 +144,31 @@ def run_pipeline_demo():
         print(f"  Presence Score:         {evaluation.metrics.presence_score}/100")
         print(f"  Assertiveness Score:    {evaluation.metrics.assertiveness_score}/100")
         print(f"  Active Listening Score: {evaluation.metrics.active_listening_score}/100")
-        print(f"  Fillers Detected:       {[f'{f.token}: {f.count}' for f in evaluation.metrics.filler_words_detected]}")
+        print(
+            f"  Fillers Detected:       {[f'{f.token}: {f.count}' for f in evaluation.metrics.filler_words_detected]}"
+        )
         print(f"\n  Strategy Focus:\n    {evaluation.persona_context}")
         print(f"\n  Strategic Summary:\n    {evaluation.longitudinal_summary}")
 
         print("\n  Top Strengths (N=2):")
         for idx, s in enumerate(evaluation.top_strengths, 1):
             print(f"    {idx}. {s.observation}")
-            print(f"       Quote: \"{s.verbatim_quote}\"")
+            print(f'       Quote: "{s.verbatim_quote}"')
 
         print("\n  Areas for Improvement & Coached Rephrasing (N=2):")
         for idx, a in enumerate(evaluation.areas_for_improvement, 1):
             print(f"    {idx}. Critique: {a.critique}")
-            print(f"       Original Quote: \"{a.verbatim_quote}\"")
-            print(f"       Coached Alternative: \"{a.coached_phrasing}\"")
+            print(f'       Original Quote: "{a.verbatim_quote}"')
+            print(f'       Coached Alternative: "{a.coached_phrasing}"')
 
     # -------------------------------------------------------------------------
     # Stage 6: DPDP Statutory Right to Erasure Protocol
     # -------------------------------------------------------------------------
     print("\n[STAGE 6] Statutory Right to Erasure Verification...")
     erase_res = compliance_mgr.execute_statutory_erasure(session_id)
-    print(f"  [ERASED] Status={erase_res['status']}, Session={erase_res['session_id']}, Standard={erase_res['compliance_standard']}")
+    print(
+        f"  [ERASED] Status={erase_res['status']}, Session={erase_res['session_id']}, Standard={erase_res['compliance_standard']}"
+    )
 
     print("\n" + "=" * 80)
     print(" [SUCCESS] CORE MVP PIPELINE EXECUTION COMPLETED")

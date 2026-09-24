@@ -6,7 +6,7 @@ with NVIDIA Parakeet and Faster-Whisper local fallbacks.
 
 import os
 import re
-from typing import List, Dict, Any, Optional
+from typing import List
 
 try:
     from ..engine.schema import Utterance
@@ -50,6 +50,7 @@ class LocalSTTEngine:
         if self._whisper_model is None:
             try:
                 from faster_whisper import WhisperModel
+
                 self._whisper_model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
             except Exception:
                 self._whisper_model = None
@@ -78,9 +79,7 @@ class LocalSTTEngine:
         if self._sarvam_client.is_available():
             try:
                 sarvam_utterances = self._sarvam_client.transcribe_audio_chunk(
-                    audio_wav_path,
-                    language_code="hi-IN",
-                    with_diarization=True
+                    audio_wav_path, language_code="hi-IN", with_diarization=True
                 )
                 if sarvam_utterances and any(u.transcript.strip() for u in sarvam_utterances):
                     for u in sarvam_utterances:
@@ -106,11 +105,7 @@ class LocalSTTEngine:
         if whisper_model is not None:
             try:
                 initial_prompt = "English, Hindi, and Hinglish dialogue. Transcribe code-mixed words verbatim like matlab, kal, deploy, sync."
-                segments, info = whisper_model.transcribe(
-                    audio_wav_path,
-                    beam_size=3,
-                    initial_prompt=initial_prompt
-                )
+                segments, info = whisper_model.transcribe(audio_wav_path, beam_size=3, initial_prompt=initial_prompt)
                 utterances = []
                 for seg in segments:
                     text = seg.text.strip()
@@ -121,7 +116,7 @@ class LocalSTTEngine:
                                 speaker=speaker_id,
                                 start_time=round(seg.start, 2),
                                 end_time=round(seg.end, 2),
-                                transcript=norm_text
+                                transcript=norm_text,
                             )
                         )
                 if utterances:
@@ -132,10 +127,7 @@ class LocalSTTEngine:
         return []
 
     def process_local_transcript(
-        self,
-        raw_text: str,
-        user_speaker_id: str = "USER",
-        counterpart_speaker_id: str = "COUNTERPART"
+        self, raw_text: str, user_speaker_id: str = "USER", counterpart_speaker_id: str = "COUNTERPART"
     ) -> List[Utterance]:
         """
         Parses multi-line script format into timestamped Utterances with Indic normalization.
@@ -160,14 +152,8 @@ class LocalSTTEngine:
             end_time = round(current_time + duration, 1)
 
             utterances.append(
-                Utterance(
-                    speaker=speaker,
-                    start_time=current_time,
-                    end_time=end_time,
-                    transcript=clean_text
-                )
+                Utterance(speaker=speaker, start_time=current_time, end_time=end_time, transcript=clean_text)
             )
             current_time = round(end_time + 0.4, 1)
 
         return utterances
-

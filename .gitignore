@@ -1,18 +1,39 @@
-# Python
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.Python
+
+# Virtual environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
+ENV/
+
+# Testing & Coverage
 .pytest_cache/
-*.egg-info/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage/
+nosetests.xml
+.tox/
+.nox/
+
+# Distribution & Packaging
 dist/
 build/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
 
-# Audio & Temporary Data
+# Audio recordings & Scratch
 *.wav
 *.mp3
 *.opus
@@ -25,11 +46,19 @@ tmp/
 temp/
 data/
 
-# OS & IDE
+# IDE & Operating System
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
 
 # Android & Gradle
 .gradle/

@@ -11,7 +11,7 @@ from engine.schema import Utterance
 
 def test_vad_acoustic_gater_trigger():
     vad = AmbientVadGate(speech_prob_threshold=0.75, sustained_window_ms=600.0)
-    
+
     # Inactive frame should not trigger
     triggered, msg = vad.evaluate_frame(timestamp_ms=0, speech_prob=0.2)
     assert not triggered
@@ -28,7 +28,7 @@ def test_vad_acoustic_gater_trigger():
 def test_diarization_engine_role_assignment():
     raw = [
         Utterance(speaker="SPEAKER_01", start_time=0.0, end_time=2.0, transcript="Turn 1"),
-        Utterance(speaker="SPEAKER_02", start_time=2.1, end_time=4.0, transcript="Turn 2")
+        Utterance(speaker="SPEAKER_02", start_time=2.1, end_time=4.0, transcript="Turn 2"),
     ]
     aligned = DiarizationEngine.assign_roles(raw, user_speaker_id="SPEAKER_01")
     assert aligned[0].speaker == "USER"
@@ -41,18 +41,28 @@ def test_diarization_engine_role_assignment():
 
 def test_verbal_self_introduction_extraction():
     # Test individual phrase extractions
-    assert DiarizationEngine.extract_speaker_name_from_text("hey i am rahul and today we will discuss the project") == "Rahul"
+    assert (
+        DiarizationEngine.extract_speaker_name_from_text("hey i am rahul and today we will discuss the project")
+        == "Rahul"
+    )
     assert DiarizationEngine.extract_speaker_name_from_text("Vikram here. Can you give me an update?") == "Vikram"
     assert DiarizationEngine.extract_speaker_name_from_text("Hi, this is Priya Sharma from product") == "Priya Sharma"
     assert DiarizationEngine.extract_speaker_name_from_text("I am thinking we should finish by Friday") is None
 
     # Test dialogue auto-tagging (Counterpart introduction)
     dialogue = [
-        Utterance(speaker="COUNTERPART", start_time=0.0, end_time=3.0, transcript="Hey I am Rahul and today I want to sync on our goals."),
+        Utterance(
+            speaker="COUNTERPART",
+            start_time=0.0,
+            end_time=3.0,
+            transcript="Hey I am Rahul and today I want to sync on our goals.",
+        ),
         Utterance(speaker="USER", start_time=3.2, end_time=6.0, transcript="Hi Rahul, sounds great."),
-        Utterance(speaker="COUNTERPART", start_time=6.2, end_time=9.0, transcript="Let us begin with the timeline.")
+        Utterance(speaker="COUNTERPART", start_time=6.2, end_time=9.0, transcript="Let us begin with the timeline."),
     ]
-    updated, counterpart_name, user_name = DiarizationEngine.detect_and_apply_verbal_introductions(dialogue, user_speaker_id="USER")
+    updated, counterpart_name, user_name = DiarizationEngine.detect_and_apply_verbal_introductions(
+        dialogue, user_speaker_id="USER"
+    )
     assert counterpart_name == "Rahul"
     assert updated[0].speaker == "Rahul"
     assert updated[1].speaker == "USER"
@@ -60,9 +70,16 @@ def test_verbal_self_introduction_extraction():
 
     # Test solo user monologue auto-tagging
     solo_dialogue = [
-        Utterance(speaker="USER", start_time=0.0, end_time=5.0, transcript="Hey I am Ashish and today I will present the architecture.")
+        Utterance(
+            speaker="USER",
+            start_time=0.0,
+            end_time=5.0,
+            transcript="Hey I am Ashish and today I will present the architecture.",
+        )
     ]
-    updated_solo, c_name, u_name = DiarizationEngine.detect_and_apply_verbal_introductions(solo_dialogue, user_speaker_id="USER")
+    updated_solo, c_name, u_name = DiarizationEngine.detect_and_apply_verbal_introductions(
+        solo_dialogue, user_speaker_id="USER"
+    )
     assert u_name == "Ashish"
     assert updated_solo[0].speaker == "Ashish"
 
@@ -80,16 +97,16 @@ def test_sarvam_client_diarization_parsing():
                     "speaker_id": "speaker_0",
                     "start_time_seconds": 0.0,
                     "end_time_seconds": 2.5,
-                    "transcript": "Hello Vikram, here is the status."
+                    "transcript": "Hello Vikram, here is the status.",
                 },
                 {
                     "speaker_id": "speaker_1",
                     "start_time_seconds": 2.6,
                     "end_time_seconds": 5.0,
-                    "transcript": "Thanks, what is the latency?"
-                }
+                    "transcript": "Thanks, what is the latency?",
+                },
             ]
-        }
+        },
     }
     utterances = client._parse_sarvam_response(mock_payload)
     assert len(utterances) == 2

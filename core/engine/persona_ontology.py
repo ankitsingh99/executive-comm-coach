@@ -4,7 +4,7 @@ Defines dynamic evaluation strategies, power axis rubrics, and relational prompt
 """
 
 from enum import Enum
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 
 try:
     from .schema import BaseModel
@@ -13,10 +13,10 @@ except (ImportError, ValueError):
 
 
 class PowerAxis(str, Enum):
-    SOLO = "SOLO"          # Self-Practice / Monologue / Thought rehearsal / Speech
-    CASUAL = "CASUAL"      # Informal / Social banter / Coffee chat / Friends
-    LATERAL = "LATERAL"    # Peer / Cross-functional Stakeholder / PM / Tech Lead
-    UPWARD = "UPWARD"      # Manager / Director / VP / CXO
+    SOLO = "SOLO"  # Self-Practice / Monologue / Thought rehearsal / Speech
+    CASUAL = "CASUAL"  # Informal / Social banter / Coffee chat / Friends
+    LATERAL = "LATERAL"  # Peer / Cross-functional Stakeholder / PM / Tech Lead
+    UPWARD = "UPWARD"  # Manager / Director / VP / CXO
     DOWNWARD = "DOWNWARD"  # Direct Report / Intern / Mentee
     CONFLICT = "CONFLICT"  # Difficult Conversation / Negotiation / Dispute Resolution
 
@@ -35,7 +35,7 @@ class EvaluationRubricDimension(BaseModel):
         target_behavior: str = "",
         anti_pattern: str = "",
         weight: float = 1.0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             name=name,
@@ -43,7 +43,7 @@ class EvaluationRubricDimension(BaseModel):
             target_behavior=target_behavior,
             anti_pattern=anti_pattern,
             weight=weight,
-            **kwargs
+            **kwargs,
         )
         self.name = name
         self.description = description
@@ -68,7 +68,7 @@ class PersonaProfile(BaseModel):
         strategic_focus: str = "",
         rubric_dimensions: Optional[List[EvaluationRubricDimension]] = None,
         custom_guidelines: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             power_axis=power_axis,
@@ -77,7 +77,7 @@ class PersonaProfile(BaseModel):
             strategic_focus=strategic_focus,
             rubric_dimensions=rubric_dimensions or [],
             custom_guidelines=custom_guidelines or [],
-            **kwargs
+            **kwargs,
         )
         self.power_axis = power_axis
         self.role_title = role_title
@@ -93,29 +93,29 @@ SOLO_RUBRIC = [
         description="Structured self-expression with clear main thesis and logical flow.",
         target_behavior="State the core point cleanly, followed by coherent reasoning or progression.",
         anti_pattern="Disorganized stream of consciousness, loose wandering thoughts.",
-        weight=1.5
+        weight=1.5,
     ),
     EvaluationRubricDimension(
         name="Crisp Delivery & Minimal Filler Words",
         description="Clean, deliberate speech rhythm without excessive verbal fillers.",
         target_behavior="Use deliberate pauses instead of verbal crutches ('um', 'like', 'matlab').",
         anti_pattern="Frequent filler words, repetitive stammering, verbal crutches.",
-        weight=1.4
+        weight=1.4,
     ),
     EvaluationRubricDimension(
         name="Pacing, Cadence & Confident Vocal Projection",
         description="Steady, measured speaking rate with natural vocal inflection and confidence.",
         target_behavior="Maintain a balanced tempo (130-160 WPM) with confident, steady tone.",
         anti_pattern="Rushing through thoughts, trailing off at sentence endings.",
-        weight=1.2
+        weight=1.2,
     ),
     EvaluationRubricDimension(
         name="Impactful Vocabulary & Polish",
         description="Precise and expressive language choice suitable for personal practice and rehearsals.",
         target_behavior="Use clear, vivid, and precise vocabulary.",
         anti_pattern="Vague placeholders ('things and stuff', 'you know what I mean').",
-        weight=1.0
-    )
+        weight=1.0,
+    ),
 ]
 
 CASUAL_RUBRIC = [
@@ -124,29 +124,29 @@ CASUAL_RUBRIC = [
         description="Approachable, friendly tone that fosters interpersonal connection and ease.",
         target_behavior="Show enthusiasm, conversational warmth, and relatable expressions.",
         anti_pattern="Excessively stiff, robotic, or overly transactional language.",
-        weight=1.5
+        weight=1.5,
     ),
     EvaluationRubricDimension(
         name="Natural Flow & Conversational Ease",
         description="Smooth, effortless dialogue flow without awkward pauses or rigid phrasing.",
         target_behavior="Speak naturally, adapting seamlessly to the conversational vibe.",
         anti_pattern="Stilted corporate speak in an informal setting.",
-        weight=1.3
+        weight=1.3,
     ),
     EvaluationRubricDimension(
         name="Bilingual Fluency & Code-Switching Polish",
         description="Effortless, natural multilingual/Hinglish flow without awkward crutches.",
         target_behavior="Organic code-switching and clear enunciation.",
         anti_pattern="Heavy reliance on repetitive verbal crutches ('matlab', 'basically').",
-        weight=1.0
+        weight=1.0,
     ),
     EvaluationRubricDimension(
         name="Active Engagement & Reciprocity",
         description="Engaging the listener with reciprocal hooks and open, friendly presence.",
         target_behavior="Include conversational invitations and active relational warmth.",
         anti_pattern="One-sided monologue, cold indifference.",
-        weight=1.0
-    )
+        weight=1.0,
+    ),
 ]
 
 UPWARD_RUBRIC = [
@@ -155,29 +155,29 @@ UPWARD_RUBRIC = [
         description="Bottom-Line-Up-Front delivery stating core decisions, impact, or blockers first.",
         target_behavior="State the decision, recommendation, or status in the first sentence, followed by quantified metrics.",
         anti_pattern="Rambling preambles, chronological story-telling, or burying the ask/blocker.",
-        weight=1.5
+        weight=1.5,
     ),
     EvaluationRubricDimension(
         name="Authority & Definitive Assertion",
         description="Confidence and decisiveness without self-diminishing qualifiers.",
         target_behavior="Use definitive framing ('Our data indicates', 'I recommend', 'We need to').",
         anti_pattern="Excessive hedging ('I just think', 'Maybe we could possibly', 'Sorry to bother you', 'I might be wrong but').",
-        weight=1.2
+        weight=1.2,
     ),
     EvaluationRubricDimension(
         name="Quantified Strategic Impact",
         description="Framing discussions around ROI, business metrics, timelines, and risks.",
         target_behavior="Quantify metrics, latency, revenue, costs, and timeline implications clearly.",
         anti_pattern="Vague descriptions ('it works faster', 'we did a lot of things').",
-        weight=1.0
+        weight=1.0,
     ),
     EvaluationRubricDimension(
         name="Diplomatic Candor & Code-Switching Elegance",
         description="Professional Hinglish elegance and respectful deference without subservience.",
         target_behavior="Clean code-switching with natural fluency; appropriate honorifics paired with clear business clarity.",
         anti_pattern="Excessive fillers ('matlab', 'basically', 'like') or apologetic subservience.",
-        weight=1.0
-    )
+        weight=1.0,
+    ),
 ]
 
 LATERAL_RUBRIC = [
@@ -186,29 +186,29 @@ LATERAL_RUBRIC = [
         description="Structuring alignment around shared goals and win-win team objectives.",
         target_behavior="Highlight shared milestones, acknowledge peer dependencies, and propose collaborative solutions.",
         anti_pattern="Siloed demands, defensive posture, or passing blame.",
-        weight=1.4
+        weight=1.4,
     ),
     EvaluationRubricDimension(
         name="Strategic Inquiry & Active Listening",
         description="Asking open questions to unblock dependencies and actively validating counterpart points.",
         target_behavior="Mirror/summarize peer perspectives before proposing changes; ask clarifying open-ended questions.",
         anti_pattern="Steamrolling over peer inputs, interrupting, or dismissing technical constraints.",
-        weight=1.3
+        weight=1.3,
     ),
     EvaluationRubricDimension(
         name="Diplomatic Firmness",
         description="Holding ground on core priorities while remaining constructive and flexible.",
         target_behavior="Clear assertion of constraints while offering alternative pathways.",
         anti_pattern="Passive-aggressive compliance or immediate unstructured capitulation.",
-        weight=1.0
+        weight=1.0,
     ),
     EvaluationRubricDimension(
         name="Bilingual Polish & Clarity",
         description="Crisp bilingual articulation in cross-functional syncs without confusing slang.",
         target_behavior="Precise terminology, minimal filler words, high clarity.",
         anti_pattern="Muddled explanations loaded with verbal ticks ('like, you know, matlab').",
-        weight=0.8
-    )
+        weight=0.8,
+    ),
 ]
 
 DOWNWARD_RUBRIC = [
@@ -217,29 +217,29 @@ DOWNWARD_RUBRIC = [
         description="Providing crisp, unambiguous context, priority definition, and next steps.",
         target_behavior="Clearly define the goal, definition of done, and key milestones.",
         anti_pattern="Ambiguous or conflicting instructions, unstructured brain-dumps.",
-        weight=1.4
+        weight=1.4,
     ),
     EvaluationRubricDimension(
         name="Psychological Safety & Empathetic Coaching",
         description="Fostering an open environment where questions and errors are constructively addressed.",
         target_behavior="Validate effort, encourage questions, and coach through guidance rather than reprimand.",
         anti_pattern="Dismissive tone, micro-management, or shutting down questions.",
-        weight=1.5
+        weight=1.5,
     ),
     EvaluationRubricDimension(
         name="Socratic Questioning",
         description="Guiding the mentee/report to solutions through structured open-ended prompts.",
         target_behavior="Ask questions that prompt problem-solving ('What tradeoffs do you see with approach X?').",
         anti_pattern="Dictating all answers without building autonomy.",
-        weight=1.2
+        weight=1.2,
     ),
     EvaluationRubricDimension(
         name="Active Listening & Validation",
         description="Allowing the mentee to articulate their thoughts completely before intervening.",
         target_behavior="Acknowledge blockers, mirror difficulties, and provide affirmative guidance.",
         anti_pattern="Premature interruption, invalidation of difficulties.",
-        weight=1.0
-    )
+        weight=1.0,
+    ),
 ]
 
 CONFLICT_RUBRIC = [
@@ -248,29 +248,29 @@ CONFLICT_RUBRIC = [
         description="Maintaining calm poise and addressing facts rather than escalating emotional tension.",
         target_behavior="Use neutral, objective framing and calm, steady tone.",
         anti_pattern="Accusatory language ('you always', 'you failed to'), defensiveness, emotional escalation.",
-        weight=1.5
+        weight=1.5,
     ),
     EvaluationRubricDimension(
         name="Empathetic Perspective-Taking",
         description="Demonstrating genuine understanding of the counterpart's constraints before offering counterpoints.",
         target_behavior="Acknowledge counterpart's position ('I understand your concern regarding X').",
         anti_pattern="Dismissing counterpart's concerns, immediate invalidation.",
-        weight=1.4
+        weight=1.4,
     ),
     EvaluationRubricDimension(
         name="Principled Solution-Oriented Framing",
         description="Focusing on mutual interests and actionable compromises rather than fixed positions.",
         target_behavior="Propose constructive solutions and shared criteria for resolution.",
         anti_pattern="Ultimatums, rigid stonewalling, zero-sum mindset.",
-        weight=1.2
+        weight=1.2,
     ),
     EvaluationRubricDimension(
         name="Assertive & Respectful Boundaries",
         description="Holding necessary boundaries with respect without hostility.",
         target_behavior="Clearly articulate limits and constraints calmly and firmly.",
         anti_pattern="Passive aggression, sarcasm, or appeasement that harms long-term goals.",
-        weight=1.0
-    )
+        weight=1.0,
+    ),
 ]
 
 
@@ -299,10 +299,10 @@ class PersonaOntologyEngine:
         counterpart_name: str = "",
         role_title: str = "",
         power_axis: PowerAxis = PowerAxis.SOLO,
-        custom_notes: Optional[List[str]] = None
+        custom_notes: Optional[List[str]] = None,
     ) -> PersonaProfile:
         rubric = cls.get_rubric_for_power_axis(power_axis)
-        
+
         if power_axis == PowerAxis.SOLO:
             strategic_focus = (
                 "SOLO SELF-PRACTICE / MONOLOGUE: Speaking independently to structure thoughts or rehearse speech. "
@@ -322,7 +322,9 @@ class PersonaOntologyEngine:
                 "Strictly eliminate rambling intros and self-diminishing qualifiers."
             )
         elif power_axis == PowerAxis.LATERAL:
-            target = f"with peer {counterpart_name} ({role_title})" if counterpart_name else "with cross-functional peers"
+            target = (
+                f"with peer {counterpart_name} ({role_title})" if counterpart_name else "with cross-functional peers"
+            )
             strategic_focus = (
                 f"LATERAL STRATEGY: Collaborating {target}. "
                 "Prioritize Mutual Benefit framing, Strategic Inquiry, Active Listening, and Diplomatic Alignment."
@@ -348,18 +350,24 @@ class PersonaOntologyEngine:
             counterpart_name=counterpart_name,
             strategic_focus=strategic_focus,
             rubric_dimensions=rubric,
-            custom_guidelines=custom_notes or []
+            custom_guidelines=custom_notes or [],
         )
 
     @classmethod
     def generate_system_instruction(cls, profile: PersonaProfile, top_n: int = 3) -> str:
         """Generates a specialized system prompt injected with the persona ontology."""
-        dimensions_text = "\n".join([
-            f"- **{d.name}** (Weight {d.weight}x): Target: {d.target_behavior} | Anti-Pattern to flag: {d.anti_pattern}"
-            for d in profile.rubric_dimensions
-        ])
+        dimensions_text = "\n".join(
+            [
+                f"- **{d.name}** (Weight {d.weight}x): Target: {d.target_behavior} | Anti-Pattern to flag: {d.anti_pattern}"
+                for d in profile.rubric_dimensions
+            ]
+        )
 
-        target_info = f"{profile.counterpart_name} ({profile.role_title})" if profile.counterpart_name else "Self-Practice / General Context"
+        target_info = (
+            f"{profile.counterpart_name} ({profile.role_title})"
+            if profile.counterpart_name
+            else "Self-Practice / General Context"
+        )
 
         return f"""You are the Universal Conversational Intelligence & Communication Coach (Google Pixel Tensor AI Engine).
 You evaluate speech dialogue transcripts across all communication registers (formal, informal, casual, solo practice, executive, peer, and conflict resolution) to provide high-impact, actionable coaching.

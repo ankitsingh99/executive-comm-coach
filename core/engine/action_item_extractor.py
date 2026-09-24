@@ -5,15 +5,15 @@ from dialogue turns with ownership, temporal anchors, and urgency classification
 """
 
 import re
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Any
 
 try:
     from .schema import Utterance, ActionItem
-    from .temporal_resolver import TemporalResolver, TemporalResolution
+    from .temporal_resolver import TemporalResolver
     from ..asr_diarization.indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
     from engine.schema import Utterance, ActionItem
-    from engine.temporal_resolver import TemporalResolver, TemporalResolution
+    from engine.temporal_resolver import TemporalResolver
     from asr_diarization.indic_normalizer import IndicNormalizer
 
 
@@ -24,7 +24,7 @@ TIME_PATTERNS = [
         r"\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
         r"|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?)"
         r"(?:\s+(?:at|by|around|ko)?\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)?)?\b",
-        re.IGNORECASE
+        re.IGNORECASE,
     ),
     # "tomorrow at 10 AM", "Friday by 5 PM", "kal 10 baje", "kal shaam tak", "shaam tak", "is friday ko"
     re.compile(
@@ -32,35 +32,47 @@ TIME_PATTERNS = [
         r"(?:next|on|by|is)?\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|somwar|mangalwar|budhwar|guruwar|shukrawar|shanivar|ravivar|next\s+week|next\s+month|end\s+of\s+day|end\s+of\s+week|eod|agle\s+hafte|is\s+hafte))"
         r"(?:\s+(?:morning|afternoon|evening|night|eod|subah|shaam|dopahar|raat|ko|tak))*"
         r"(?:\s+(?:at|by|around|ko|mein)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)?)?\b",
-        re.IGNORECASE
+        re.IGNORECASE,
     ),
     # "at 10 AM", "at 3:30 PM", "by 5 PM", "10 baje", "shaam 5 baje", "at 9"
     re.compile(r"\b(?:at|by|around|shaam|subah|dopahar|raat)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)\b", re.IGNORECASE),
-    re.compile(r"\b(?:at|by|around)\s+\d{1,2}(?::\d{2})?\b", re.IGNORECASE)
+    re.compile(r"\b(?:at|by|around)\s+\d{1,2}(?::\d{2})?\b", re.IGNORECASE),
 ]
 
 # Action & Commitment Intent Patterns (English + Hinglish)
 INTENT_PATTERNS = [
     # Scheduling & Follow-up calls (English + Hinglish)
     (
-        re.compile(r"\b(?:i\s*will|i['’]ll|we\s*will|we['’]ll|let['’]s|let\s*us)\s+(?:call|connect|sync|ring|meet|set\s+up\s+a\s+call|schedule\s+a\s+sync|schedule\s+a\s+follow[- ]?up|have\s+a\s+chat)\b|\b(?:main|hum)\b.*?\b(?:call\s+karunga|call\s+karenge|sync\s+karenge|connect\s+karenge|baat\s+karenge|baat\s+karunga)\b", re.IGNORECASE),
-        "Follow-up Call / Meeting"
+        re.compile(
+            r"\b(?:i\s*will|i['’]ll|we\s*will|we['’]ll|let['’]s|let\s*us)\s+(?:call|connect|sync|ring|meet|set\s+up\s+a\s+call|schedule\s+a\s+sync|schedule\s+a\s+follow[- ]?up|have\s+a\s+chat)\b|\b(?:main|hum)\b.*?\b(?:call\s+karunga|call\s+karenge|sync\s+karenge|connect\s+karenge|baat\s+karenge|baat\s+karunga)\b",
+            re.IGNORECASE,
+        ),
+        "Follow-up Call / Meeting",
     ),
     # Deliverables & Shipments (English + Hinglish)
     (
-        re.compile(r"\b(?:i\s*will|i['’]ll|we\s*will|we['’]ll|we\s+have\s+decided\s+to|i\s+can|i\s+commit\s+to)\s+(?:send|share|deploy|ship|release|email|forward|publish|deliver|prepare|provide|update|submit)\b|\b(?:main|hum)\b.*?\b(?:ship\s+kar\s+denge|deploy\s+kar\s+denge|bhej\s+dunga|bhej\s+denge|share\s+kar\s+dunga|share\s+karenge|complete\s+kar\s+lenge|release\s+karenge)\b", re.IGNORECASE),
-        "Deliverable / Commitment"
+        re.compile(
+            r"\b(?:i\s*will|i['’]ll|we\s*will|we['’]ll|we\s+have\s+decided\s+to|i\s+can|i\s+commit\s+to)\s+(?:send|share|deploy|ship|release|email|forward|publish|deliver|prepare|provide|update|submit)\b|\b(?:main|hum)\b.*?\b(?:ship\s+kar\s+denge|deploy\s+kar\s+denge|bhej\s+dunga|bhej\s+denge|share\s+kar\s+dunga|share\s+karenge|complete\s+kar\s+lenge|release\s+karenge)\b",
+            re.IGNORECASE,
+        ),
+        "Deliverable / Commitment",
     ),
     # Review & Investigation (English + Hinglish)
     (
-        re.compile(r"\b(?:i\s*will|i['’]ll|we\s*will|we['’]ll)\s+(?:review|check|test|audit|investigate|look\s+into|follow\s+up\s+on|verify|debug|fix)\b|\b(?:main|hum)\b.*?\b(?:dekh\s+lunga|review\s+kar\s+lunga|check\s+kar\s+lunga|debug\s+karenge|test\s+karenge)\b", re.IGNORECASE),
-        "Review / Investigation"
+        re.compile(
+            r"\b(?:i\s*will|i['’]ll|we\s*will|we['’]ll)\s+(?:review|check|test|audit|investigate|look\s+into|follow\s+up\s+on|verify|debug|fix)\b|\b(?:main|hum)\b.*?\b(?:dekh\s+lunga|review\s+kar\s+lunga|check\s+kar\s+lunga|debug\s+karenge|test\s+karenge)\b",
+            re.IGNORECASE,
+        ),
+        "Review / Investigation",
     ),
     # Delegated action requests (English + Hinglish)
     (
-        re.compile(r"\b(?:can\s+you|could\s+you|please|make\s+sure\s+to|kindly)\s+(?:send|share|email|update|review|check|deploy|deliver|fix)\b|\b(?:aap|please|kripya)\b.*?\b(?:bhej\s+dena|share\s+kar\s+dena|update\s+kar\s+dena|dekh\s+lena|review\s+kar\s+lena)\b", re.IGNORECASE),
-        "Assigned Request"
-    )
+        re.compile(
+            r"\b(?:can\s+you|could\s+you|please|make\s+sure\s+to|kindly)\s+(?:send|share|email|update|review|check|deploy|deliver|fix)\b|\b(?:aap|please|kripya)\b.*?\b(?:bhej\s+dena|share\s+kar\s+dena|update\s+kar\s+dena|dekh\s+lena|review\s+kar\s+lena)\b",
+            re.IGNORECASE,
+        ),
+        "Assigned Request",
+    ),
 ]
 
 
@@ -92,18 +104,19 @@ class ActionItemExtractor:
         """Extracts concise task summary from the spoken sentence."""
         cleaned = text.strip().rstrip(".?!")
         # Remove conversational hedging prefixes
-        cleaned = re.sub(r"^(?:yeah|yes|okay|ok|sure|understood|alright|so|basically|matlab|actually|definitely)[,\s]+", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(
+            r"^(?:yeah|yes|okay|ok|sure|understood|alright|so|basically|matlab|actually|definitely)[,\s]+",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
         # Cap length
         if len(cleaned) > 120:
             cleaned = cleaned[:117] + "..."
         return cleaned
 
     @classmethod
-    def extract_from_utterance(
-        cls,
-        utterance: Utterance,
-        ref_dt: Optional[Any] = None
-    ) -> List[ActionItem]:
+    def extract_from_utterance(cls, utterance: Utterance, ref_dt: Optional[Any] = None) -> List[ActionItem]:
         """Analyzes a single utterance and extracts action items with resolved times if present."""
         action_items: List[ActionItem] = []
         text = IndicNormalizer.normalize_text(utterance.transcript.strip())
@@ -126,10 +139,17 @@ class ActionItemExtractor:
             temp_res = TemporalResolver.resolve_time_expression(sentence, ref_dt=ref_dt)
             time_anchor = temp_res.raw_match if temp_res else cls.extract_temporal_anchor(sentence)
 
-            if detected_category or (time_anchor and re.search(r"\b(?:will|shall|can|commit|going\s+to|schedule|target|call|meet|sync|ring|send|deliver|deploy)\b", sentence, re.IGNORECASE)):
+            if detected_category or (
+                time_anchor
+                and re.search(
+                    r"\b(?:will|shall|can|commit|going\s+to|schedule|target|call|meet|sync|ring|send|deliver|deploy)\b",
+                    sentence,
+                    re.IGNORECASE,
+                )
+            ):
                 category = detected_category or "Task Commitment"
                 task_summary = cls.extract_task_description(sentence, category)
-                
+
                 # Determine urgency
                 if temp_res:
                     urgency = temp_res.urgency
@@ -137,7 +157,16 @@ class ActionItemExtractor:
                     inferred_ampm = temp_res.inferred_ampm
                     display_due = time_anchor
                 else:
-                    urgency = "High" if (time_anchor and any(k in time_anchor.lower() for k in ["today", "tomorrow", "tonight", "asap", "morning"])) else "Normal"
+                    urgency = (
+                        "High"
+                        if (
+                            time_anchor
+                            and any(
+                                k in time_anchor.lower() for k in ["today", "tomorrow", "tonight", "asap", "morning"]
+                            )
+                        )
+                        else "Normal"
+                    )
                     resolved_iso = None
                     inferred_ampm = None
                     display_due = time_anchor
@@ -152,18 +181,14 @@ class ActionItemExtractor:
                         target_time_inferred_ampm=inferred_ampm,
                         verbatim_quote=sentence,
                         category=category,
-                        urgency=urgency
+                        urgency=urgency,
                     )
                 )
 
         return action_items
 
     @classmethod
-    def extract_from_dialogue(
-        cls,
-        utterances: List[Utterance],
-        ref_dt: Optional[Any] = None
-    ) -> List[ActionItem]:
+    def extract_from_dialogue(cls, utterances: List[Utterance], ref_dt: Optional[Any] = None) -> List[ActionItem]:
         """Scans all dialogue turns and returns deduplicated action items."""
         all_items: List[ActionItem] = []
         seen_quotes = set()

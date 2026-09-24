@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 
-from engine.schema import ConversationSession, Utterance, KeyHighlight, ActionItem
+from engine.schema import ConversationSession, Utterance
 from engine.coaching_engine import ExecutiveCoachingEngine
 from engine.action_item_extractor import ActionItemExtractor
 from engine.transcription_analyzer import TranscriptionAnalyzer
@@ -39,9 +39,15 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                 {
                     "speaker_name": s.get("name", "") if isinstance(s, dict) else getattr(s, "speaker_name", ""),
                     "role": s.get("role", "Colleague") if isinstance(s, dict) else getattr(s, "role", "Colleague"),
-                    "power_axis": s.get("power_axis", "LATERAL") if isinstance(s, dict) else getattr(s, "power_axis", "LATERAL"),
-                    "enrolled_at_utc": s.get("enrolled_at_utc", "") if isinstance(s, dict) else getattr(s, "enrolled_at_utc", ""),
-                    "mean_pitch_hz": s.get("mean_pitch_hz", 150.0) if isinstance(s, dict) else getattr(s, "mean_pitch_hz", 150.0)
+                    "power_axis": (
+                        s.get("power_axis", "LATERAL") if isinstance(s, dict) else getattr(s, "power_axis", "LATERAL")
+                    ),
+                    "enrolled_at_utc": (
+                        s.get("enrolled_at_utc", "") if isinstance(s, dict) else getattr(s, "enrolled_at_utc", "")
+                    ),
+                    "mean_pitch_hz": (
+                        s.get("mean_pitch_hz", 150.0) if isinstance(s, dict) else getattr(s, "mean_pitch_hz", 150.0)
+                    ),
                 }
                 for s in speakers
             ]
@@ -58,7 +64,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
         url_path = self.path.split("?")[0]
         content_length = int(self.headers.get("Content-Length", 0))
         raw_body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
-        
+
         try:
             payload = json.loads(raw_body)
         except Exception:
@@ -76,27 +82,27 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     utterances = [Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript=dialogue_text)]
 
                 # Check verbal self-intro
-                utterances, intro_counterpart, intro_user = DiarizationEngine.detect_and_apply_verbal_introductions(utterances)
-                
+                utterances, intro_counterpart, intro_user = DiarizationEngine.detect_and_apply_verbal_introductions(
+                    utterances
+                )
+
                 counterpart_name = intro_counterpart or payload.get("counterpart_name", "Rahul")
-                power_axis = "SOLO" if (intro_user or len(utterances) <= 1 and not intro_counterpart) else payload.get("power_axis", "LATERAL")
+                power_axis = (
+                    "SOLO"
+                    if (intro_user or len(utterances) <= 1 and not intro_counterpart)
+                    else payload.get("power_axis", "LATERAL")
+                )
 
                 # Auto-enroll in registry if self-intro detected
                 registry = SpeakerVoiceprintRegistry()
                 if intro_counterpart and intro_counterpart not in registry.voiceprints:
                     registry.voiceprints[intro_counterpart] = SpeakerVoiceprint(
-                        speaker_name=intro_counterpart,
-                        role="Collaborator",
-                        power_axis="LATERAL",
-                        mean_pitch_hz=138.0
+                        speaker_name=intro_counterpart, role="Collaborator", power_axis="LATERAL", mean_pitch_hz=138.0
                     )
                     registry.save_to_disk()
                 if intro_user and intro_user not in registry.voiceprints:
                     registry.voiceprints[intro_user] = SpeakerVoiceprint(
-                        speaker_name=intro_user,
-                        role="Solo Speaker",
-                        power_axis="SOLO",
-                        mean_pitch_hz=126.0
+                        speaker_name=intro_user, role="Solo Speaker", power_axis="SOLO", mean_pitch_hz=126.0
                     )
                     registry.save_to_disk()
 
@@ -107,7 +113,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     counterpart_name=counterpart_name,
                     counterpart_role="Collaborator",
                     power_axis=power_axis,
-                    dialogue=utterances
+                    dialogue=utterances,
                 )
 
                 engine = ExecutiveCoachingEngine(use_local_only=True)
@@ -123,7 +129,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                         "inferred_ampm": ai.target_time_inferred_ampm,
                         "task": ai.task,
                         "quote": ai.verbatim_quote,
-                        "urgency": ai.urgency
+                        "urgency": ai.urgency,
                     }
                     for ai in evaluation.action_items
                 ]
@@ -135,35 +141,41 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                         "speaker": kh.speaker,
                         "category": kh.category,
                         "importance": kh.importance,
-                        "quote": kh.verbatim_quote
+                        "quote": kh.verbatim_quote,
                     }
                     for kh in getattr(evaluation, "key_highlights", [])
                 ]
 
                 top_strengths = [
-                    {
-                        "observation": s.observation,
-                        "verbatim_quote": s.verbatim_quote
-                    }
-                    for s in evaluation.top_strengths
+                    {"observation": s.observation, "verbatim_quote": s.verbatim_quote} for s in evaluation.top_strengths
                 ]
 
                 areas_for_improvement = [
                     {
                         "critique": imp.critique,
                         "verbatim_quote": imp.verbatim_quote,
-                        "coached_phrasing": imp.coached_phrasing
+                        "coached_phrasing": imp.coached_phrasing,
                     }
                     for imp in evaluation.areas_for_improvement
                 ]
 
-                critique = areas_for_improvement[0]["critique"] if areas_for_improvement else "Delivery is clear and direct."
-                coached = areas_for_improvement[0]["coached_phrasing"] if areas_for_improvement else "Maintain this structured communication style."
+                critique = (
+                    areas_for_improvement[0]["critique"] if areas_for_improvement else "Delivery is clear and direct."
+                )
+                coached = (
+                    areas_for_improvement[0]["coached_phrasing"]
+                    if areas_for_improvement
+                    else "Maintain this structured communication style."
+                )
 
                 resp_data = {
                     "title": "Evaluated Dialogue",
                     "dialogue": dialogue_text,
-                    "recognized_speaker": intro_user if power_axis == "SOLO" and intro_user else (counterpart_name if power_axis != "SOLO" else "Speaker (Solo)"),
+                    "recognized_speaker": (
+                        intro_user
+                        if power_axis == "SOLO" and intro_user
+                        else (counterpart_name if power_axis != "SOLO" else "Speaker (Solo)")
+                    ),
                     "recognized_sub": f"Voiceprint Profile Synced • {power_axis} Mode",
                     "power_axis": power_axis,
                     "tone": "Calm & Measured (132 Hz)",
@@ -171,7 +183,10 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "assertiveness": getattr(evaluation.metrics, "assertiveness_score", 78),
                     "listening": getattr(evaluation.metrics, "active_listening_score", 80),
                     "speech_rate_wpm": getattr(evaluation.metrics, "speech_rate_wpm", 140),
-                    "fillers_detected": [{"token": f.token, "count": f.count} for f in getattr(evaluation.metrics, "filler_words_detected", [])],
+                    "fillers_detected": [
+                        {"token": f.token, "count": f.count}
+                        for f in getattr(evaluation.metrics, "filler_words_detected", [])
+                    ],
                     "hedging_count": getattr(evaluation.metrics, "hedging_qualifiers_count", 0),
                     "assertive_count": getattr(evaluation.metrics, "assertive_markers_count", 1),
                     "active_listening_count": getattr(evaluation.metrics, "active_listening_markers_count", 1),
@@ -180,53 +195,59 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "areas_for_improvement": areas_for_improvement,
                     "key_highlights": key_highlights,
                     "action_items": action_items,
-                    "rephrasing": {
-                        "critique": critique,
-                        "coached": coached
-                    }
+                    "rephrasing": {"critique": critique, "coached": coached},
                 }
                 self._send_json(resp_data)
-            except Exception as ex:
+            except Exception:
                 # Safe fallback
-                self._send_json({
-                    "title": "Evaluated Dialogue",
-                    "dialogue": payload.get("dialogue_text", ""),
-                    "recognized_speaker": "Live Speaker",
-                    "recognized_sub": "Analyzed via On-Device Engine",
-                    "power_axis": "LATERAL",
-                    "tone": "Natural Voice (128 Hz)",
-                    "presence": 75,
-                    "assertiveness": 78,
-                    "listening": 80,
-                    "speech_rate_wpm": 140,
-                    "fillers_detected": [],
-                    "hedging_count": 0,
-                    "assertive_count": 1,
-                    "active_listening_count": 1,
-                    "longitudinal_summary": "Delivery structured with clear communication intent.",
-                    "top_strengths": [{"observation": "Clear topical focus and delivery flow.", "verbatim_quote": payload.get("dialogue_text", "")[:50]}],
-                    "areas_for_improvement": [{"critique": "Ensure bottom-line recommendation is stated upfront.", "verbatim_quote": payload.get("dialogue_text", "")[:50], "coached_phrasing": "Let's prioritize the key action item."}],
-                    "key_highlights": [],
-                    "action_items": [],
-                    "rephrasing": {
-                        "critique": "Observation processed. Ensure bottom-line recommendation is stated upfront.",
-                        "coached": "Let's align on the core action item to ensure delivery readiness."
+
+                self._send_json(
+                    {
+                        "title": "Evaluated Dialogue",
+                        "dialogue": payload.get("dialogue_text", ""),
+                        "recognized_speaker": "Live Speaker",
+                        "recognized_sub": "Analyzed via On-Device Engine",
+                        "power_axis": "LATERAL",
+                        "tone": "Natural Voice (128 Hz)",
+                        "presence": 75,
+                        "assertiveness": 78,
+                        "listening": 80,
+                        "speech_rate_wpm": 140,
+                        "fillers_detected": [],
+                        "hedging_count": 0,
+                        "assertive_count": 1,
+                        "active_listening_count": 1,
+                        "longitudinal_summary": "Delivery structured with clear communication intent.",
+                        "top_strengths": [
+                            {
+                                "observation": "Clear topical focus and delivery flow.",
+                                "verbatim_quote": payload.get("dialogue_text", "")[:50],
+                            }
+                        ],
+                        "areas_for_improvement": [
+                            {
+                                "critique": "Ensure bottom-line recommendation is stated upfront.",
+                                "verbatim_quote": payload.get("dialogue_text", "")[:50],
+                                "coached_phrasing": "Let's prioritize the key action item.",
+                            }
+                        ],
+                        "key_highlights": [],
+                        "action_items": [],
+                        "rephrasing": {
+                            "critique": "Observation processed. Ensure bottom-line recommendation is stated upfront.",
+                            "coached": "Let's align on the core action item to ensure delivery readiness.",
+                        },
                     }
-                })
+                )
 
         elif url_path == "/api/enroll_voiceprint":
             name = payload.get("speaker_name", "New Speaker").strip()
             role = payload.get("role", "Collaborator")
             power_axis = payload.get("power_axis", "LATERAL")
             pitch = float(payload.get("mean_pitch_hz", 135.0))
-            
+
             registry = SpeakerVoiceprintRegistry()
-            vp = SpeakerVoiceprint(
-                speaker_name=name,
-                role=role,
-                power_axis=power_axis,
-                mean_pitch_hz=pitch
-            )
+            vp = SpeakerVoiceprint(speaker_name=name, role=role, power_axis=power_axis, mean_pitch_hz=pitch)
             registry.voiceprints[name] = vp
             registry.save_to_disk()
             self._send_json({"status": "success", "enrolled": vp.to_dict()})
@@ -251,7 +272,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "inferred_ampm": ai.target_time_inferred_ampm,
                     "task": ai.task,
                     "quote": ai.verbatim_quote,
-                    "urgency": ai.urgency
+                    "urgency": ai.urgency,
                 }
                 for ai in items
             ]
@@ -272,7 +293,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                         "speaker": kh.speaker,
                         "category": kh.category,
                         "importance": kh.importance,
-                        "quote": kh.verbatim_quote
+                        "quote": kh.verbatim_quote,
                     }
                     for kh in analysis.key_highlights
                 ],
@@ -285,10 +306,10 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                         "resolved_datetime": t.resolved_datetime,
                         "inferred_ampm": t.target_time_inferred_ampm,
                         "quote": t.verbatim_quote,
-                        "urgency": t.urgency
+                        "urgency": t.urgency,
                     }
                     for t in analysis.potential_tasks
-                ]
+                ],
             }
             self._send_json(data)
         else:
@@ -339,4 +360,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

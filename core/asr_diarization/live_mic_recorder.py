@@ -34,7 +34,7 @@ class LiveMicRecorder:
         speech_prob_threshold: float = 0.45,
         gain_boost: float = 1.8,
         idle_timeout_sec: float = 14.0,
-        output_wav_path: Optional[str] = None
+        output_wav_path: Optional[str] = None,
     ) -> str:
         """
         Dynamically records microphone audio until the conversation end is detected
@@ -47,9 +47,11 @@ class LiveMicRecorder:
             temp_dir = tempfile.gettempdir()
             output_wav_path = os.path.join(temp_dir, f"mic_session_{int(time.time())}.wav")
 
-        print(f"\n  [DYNAMIC DIALOGUE CAPTURE ACTIVE]")
-        print(f"      • Auto-stop: Concludes automatically when pause is detected (>{silence_threshold_sec:.1f}s silence after speech)")
-        print(f"      • Manual stop: Press Enter or Ctrl+C at any time to finish speaking immediately")
+        print("\n  [DYNAMIC DIALOGUE CAPTURE ACTIVE]")
+        print(
+            f"      • Auto-stop: Concludes automatically when pause is detected (>{silence_threshold_sec:.1f}s silence after speech)"
+        )
+        print("      • Manual stop: Press Enter or Ctrl+C at any time to finish speaking immediately")
         print("      >> Speak now naturally...\n")
 
         def _check_key_pressed() -> bool:
@@ -69,7 +71,6 @@ class LiveMicRecorder:
         has_spoken = False
         silence_elapsed = 0.0
         total_recorded_sec = 0.0
-        noise_floor_rms = 0.0
         block_size = int(self.sample_rate * chunk_duration_sec)
 
         def audio_callback(indata, frames, time_info, status):
@@ -79,11 +80,7 @@ class LiveMicRecorder:
 
         try:
             with sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=1,
-                dtype="int16",
-                blocksize=block_size,
-                callback=audio_callback
+                samplerate=self.sample_rate, channels=1, dtype="int16", blocksize=block_size, callback=audio_callback
             ):
                 while total_recorded_sec < max_duration_sec:
                     # Check for manual stop (Enter key)
@@ -109,29 +106,47 @@ class LiveMicRecorder:
 
                     # RMS calculation
                     float_samples = chunk_flat.astype(np.float32) / 32768.0
-                    cur_rms = float(np.sqrt(np.mean(float_samples ** 2))) if len(float_samples) > 0 else 0.0
+                    cur_rms = float(np.sqrt(np.mean(float_samples**2))) if len(float_samples) > 0 else 0.0
 
                     # Evaluate speech probability
                     speech_prob = gate.calculate_speech_probability(chunk_flat)
-                    is_voice_active = (speech_prob >= 0.32 or cur_rms >= 0.0055)
+                    is_voice_active = speech_prob >= 0.32 or cur_rms >= 0.0055
 
                     if is_voice_active:
                         has_spoken = True
                         silence_elapsed = 0.0
-                        print(f"  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%) [Press Enter to finish]    ", end="\r", flush=True)
+                        print(
+                            f"  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%) [Press Enter to finish]    ",
+                            end="\r",
+                            flush=True,
+                        )
                     else:
                         if has_spoken:
                             silence_elapsed += dur
-                            print(f"  [PAUSE/SILENCE] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s [Press Enter to finish]   ", end="\r", flush=True)
-                            
-                            if silence_elapsed >= silence_threshold_sec and total_recorded_sec >= min_speech_duration_sec:
-                                print(f"\n\n  [CONVERSATION CONCLUDED] End of conversation detected ({silence_threshold_sec:.1f}s silence after speech).")
+                            print(
+                                f"  [PAUSE/SILENCE] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s [Press Enter to finish]   ",
+                                end="\r",
+                                flush=True,
+                            )
+
+                            if (
+                                silence_elapsed >= silence_threshold_sec
+                                and total_recorded_sec >= min_speech_duration_sec
+                            ):
+                                print(
+                                    f"\n\n  [CONVERSATION CONCLUDED] End of conversation detected ({silence_threshold_sec:.1f}s silence after speech)."
+                                )
                                 break
                         else:
                             if total_recorded_sec >= 30.0:
-                                print(f"\n\n  [IDLE TIMEOUT] No speech detected after 30s. Concluding session.")
+                                print("\n\n  [IDLE TIMEOUT] No speech detected after 30s. Concluding session.")
                                 break
-                            print(f"  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin... [Press Enter to finish]          ", end="\r", flush=True)
+
+                            print(
+                                f"  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin... [Press Enter to finish]          ",
+                                end="\r",
+                                flush=True,
+                            )
 
         except KeyboardInterrupt:
             print("\n\n  [STOPPED BY USER] Concluding recording and analyzing dialogue...")
@@ -165,7 +180,7 @@ class LiveMicRecorder:
 
         total_samples = int(self.sample_rate * duration_seconds)
         recording = sd.rec(total_samples, samplerate=self.sample_rate, channels=1, dtype="int16")
-        
+
         for remaining in range(duration_seconds, 0, -1):
             print(f"  [SPEAK NOW] {remaining}s remaining...", end="\r", flush=True)
             time.sleep(1)
@@ -184,12 +199,13 @@ class LiveMicRecorder:
     def send_shell_desktop_notification(
         title: str = "Executive Coach",
         message: str = "Spoken dialogue detected! Starting coaching capture...",
-        subtitle: str = "Ambient Speech Nudge"
+        subtitle: str = "Ambient Speech Nudge",
     ):
         """
         Triggers macOS system desktop notification, terminal bell, and alert chime.
         """
         import subprocess
+
         try:
             sys.stdout.write("\a")
             sys.stdout.flush()
@@ -204,7 +220,7 @@ class LiveMicRecorder:
         speech_prob_threshold: float = 0.45,
         gain_boost: float = 1.8,
         max_wait_seconds: Optional[int] = None,
-        on_speech_detected_callback: Optional[callable] = None
+        on_speech_detected_callback: Optional[callable] = None,
     ) -> bool:
         """
         Passively monitors the ambient microphone stream with continuous in-memory sounddevice sensing.
@@ -231,18 +247,18 @@ class LiveMicRecorder:
 
         try:
             with sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=1,
-                dtype="int16",
-                blocksize=block_size,
-                callback=audio_callback
+                samplerate=self.sample_rate, channels=1, dtype="int16", blocksize=block_size, callback=audio_callback
             ):
                 while True:
                     if max_wait_seconds and (time.time() - start_time) > max_wait_seconds:
                         print("\n  [AMBIENT TIMEOUT] No speech detected within window.")
                         return False
 
-                    print(f"  {spinners[spin_idx % len(spinners)]} Ambient Ear Active... (Waiting for dialogue to start)", end="\r", flush=True)
+                    print(
+                        f"  {spinners[spin_idx % len(spinners)]} Ambient Ear Active... (Waiting for dialogue to start)",
+                        end="\r",
+                        flush=True,
+                    )
                     spin_idx += 1
 
                     try:
@@ -259,7 +275,7 @@ class LiveMicRecorder:
 
                     # RMS calculation
                     float_samples = chunk_flat.astype(np.float32) / 32768.0
-                    cur_rms = float(np.sqrt(np.mean(float_samples ** 2)))
+                    cur_rms = float(np.sqrt(np.mean(float_samples**2)))
 
                     if noise_floor_rms == 0.0:
                         noise_floor_rms = cur_rms
@@ -275,15 +291,25 @@ class LiveMicRecorder:
                         self.send_shell_desktop_notification(
                             title="Executive Communication Coach",
                             message=f"Spoken dialogue detected ({conf_pct}% confidence). Capturing conversation...",
-                            subtitle="Ambient Auto-Nudge Triggered"
+                            subtitle="Ambient Auto-Nudge Triggered",
                         )
 
                         print("\n\n" + "\033[1;36m┌" + "─" * 72 + "┐\033[0m")
-                        print(f"\033[1;36m│\033[0m \033[1;32m[CONVERSATION DETECTED]\033[0m Spoken dialogue observed in room!                \033[1;36m│\033[0m")
-                        print(f"\033[1;36m│\033[0m     Speech Confidence: \033[1;33m{conf_pct}%\033[0m • Ambient Low-Power Acoustic Gating Passed   \033[1;36m│\033[0m")
-                        print(f"\033[1;36m│\033[0m                                                                        \033[1;36m│\033[0m")
-                        print(f"\033[1;36m│\033[0m >>  \033[1;37mStarting continuous recording for coaching & action items...\033[0m       \033[1;36m│\033[0m")
-                        print(f"\033[1;36m│\033[0m     \033[0;36m(Will automatically conclude when pause/silence is detected)\033[0m       \033[1;36m│\033[0m")
+                        print(
+                            "\033[1;36m│\033[0m \033[1;32m[CONVERSATION DETECTED]\033[0m Spoken dialogue observed in room!                \033[1;36m│\033[0m"
+                        )
+                        print(
+                            f"\033[1;36m│\033[0m     Speech Confidence: \033[1;33m{conf_pct}%\033[0m • Ambient Low-Power Acoustic Gating Passed   \033[1;36m│\033[0m"
+                        )
+                        print(
+                            "\033[1;36m│\033[0m                                                                        \033[1;36m│\033[0m"
+                        )
+                        print(
+                            "\033[1;36m│\033[0m >>  \033[1;37mStarting continuous recording for coaching & action items...\033[0m       \033[1;36m│\033[0m"
+                        )
+                        print(
+                            "\033[1;36m│\033[0m     \033[0;36m(Will automatically conclude when pause/silence is detected)\033[0m       \033[1;36m│\033[0m"
+                        )
                         print("\033[1;36m└" + "─" * 72 + "┘\033[0m\n")
 
                         if on_speech_detected_callback:

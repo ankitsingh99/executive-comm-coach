@@ -18,7 +18,7 @@ def generate_synthetic_voice(
     pitch_f0: float = 140.0,
     duration_s: float = 1.0,
     sample_rate: int = 16000,
-    timbre_formants: tuple = (500.0, 1500.0, 2500.0)
+    timbre_formants: tuple = (500.0, 1500.0, 2500.0),
 ) -> np.ndarray:
     """Generates a synthetic voice harmonic waveform with defined pitch and formants."""
     t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
@@ -60,27 +60,23 @@ def test_voiceprint_enrollment_and_identification(temp_registry):
 
     # 2. Enroll both voices
     vp_vikram = temp_registry.enroll_speaker(
-        name="Vikram Malhotra",
-        role="VP of Engineering",
-        power_axis="UPWARD",
-        audio_signal_or_wav_path=voice_vikram
+        name="Vikram Malhotra", role="VP of Engineering", power_axis="UPWARD", audio_signal_or_wav_path=voice_vikram
     )
     assert vp_vikram is not None
     assert vp_vikram.speaker_name == "Vikram Malhotra"
     assert vp_vikram.power_axis == "UPWARD"
 
     vp_pooja = temp_registry.enroll_speaker(
-        name="Pooja Nair",
-        role="Principal PM",
-        power_axis="LATERAL",
-        audio_signal_or_wav_path=voice_pooja
+        name="Pooja Nair", role="Principal PM", power_axis="LATERAL", audio_signal_or_wav_path=voice_pooja
     )
     assert vp_pooja is not None
     assert vp_pooja.speaker_name == "Pooja Nair"
     assert vp_pooja.power_axis == "LATERAL"
 
     # 3. Test Recognition: Identify a new sample of Vikram's voice
-    new_vikram_speech = generate_synthetic_voice(pitch_f0=127.0, duration_s=1.0, timbre_formants=(460.0, 1220.0, 2210.0))
+    new_vikram_speech = generate_synthetic_voice(
+        pitch_f0=127.0, duration_s=1.0, timbre_formants=(460.0, 1220.0, 2210.0)
+    )
     match_result = temp_registry.identify_speaker(new_vikram_speech, threshold=0.75)
     assert match_result is not None
     matched_vp, confidence = match_result

@@ -4,11 +4,12 @@ Executes NVIDIA's Parakeet CTC/TDT Conformer model for fast, high-accuracy acous
 """
 
 import os
-from typing import List, Optional
+from typing import List
 
 try:
     import torch
     import librosa
+
     TORCH_AVAILABLE = True
 except ImportError:
     torch = None
@@ -39,6 +40,7 @@ class NvidiaParakeetEngine:
     def _load_model(self):
         if self._model is None or self._processor is None:
             from transformers import AutoProcessor, AutoModelForCTC
+
             self._processor = AutoProcessor.from_pretrained(self.model_id)
             self._model = AutoModelForCTC.from_pretrained(self.model_id).to(self.device)
             self._model.eval()
@@ -70,13 +72,6 @@ class NvidiaParakeetEngine:
                 return []
 
             duration = round(len(speech) / 16000.0, 2)
-            return [
-                Utterance(
-                    speaker=speaker_id,
-                    start_time=0.0,
-                    end_time=duration,
-                    transcript=transcription
-                )
-            ]
-        except Exception as e:
+            return [Utterance(speaker=speaker_id, start_time=0.0, end_time=duration, transcript=transcription)]
+        except Exception:
             return []

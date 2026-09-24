@@ -10,13 +10,10 @@ from datetime import datetime, timezone
 # Ensure path resolution
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from engine.schema import ConversationSession, Utterance
+from engine.schema import ConversationSession
 from engine.persona_ontology import PowerAxis
 from engine.coaching_engine import ExecutiveCoachingEngine
 from asr_diarization.local_stt_engine import LocalSTTEngine
-from privacy.pii_redactor import PIIRedactor
-from privacy.dpdp_compliance import DPDPComplianceManager
-from config import DATA_DIR
 
 
 def run_local_cli():
@@ -49,7 +46,6 @@ COUNTERPART: Perfect, I will call you on 31 aug at 10 am to review the cost savi
     ]
 
     engine = ExecutiveCoachingEngine(use_local_only=True)
-    compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
 
     for name, role, axis in counterparts:
         session_id = f"local_{int(datetime.now(timezone.utc).timestamp())}_{axis.lower()}"
@@ -60,32 +56,34 @@ COUNTERPART: Perfect, I will call you on 31 aug at 10 am to review the cost savi
             counterpart_name=name,
             counterpart_role=role,
             power_axis=axis,
-            dialogue=utterances
+            dialogue=utterances,
         )
 
         evaluation = engine.evaluate_session(session, top_n=2)
 
         print(f"\n[LOCAL EVALUATION] Counterpart: {name} ({role}) | Power Axis: {axis}")
-        print(f"   Presence: {evaluation.metrics.presence_score}/100 | Assertiveness: {evaluation.metrics.assertiveness_score}/100 | Active Listening: {evaluation.metrics.active_listening_score}/100")
+        print(
+            f"   Presence: {evaluation.metrics.presence_score}/100 | Assertiveness: {evaluation.metrics.assertiveness_score}/100 | Active Listening: {evaluation.metrics.active_listening_score}/100"
+        )
         print(f"   Fillers: {[f'{f.token}: {f.count}' for f in evaluation.metrics.filler_words_detected]}")
         print(f"   Focus:    {evaluation.persona_context}")
         print(f"   Advice:   {evaluation.longitudinal_summary}")
 
         print("   Top Strengths:")
         for idx, s in enumerate(evaluation.top_strengths, 1):
-            print(f"      {idx}. {s.observation} (Quote: \"{s.verbatim_quote}\")")
+            print(f'      {idx}. {s.observation} (Quote: "{s.verbatim_quote}")')
 
         print("   Areas for Improvement & Coached Alternatives:")
         for idx, a in enumerate(evaluation.areas_for_improvement, 1):
             print(f"      {idx}. Critique: {a.critique}")
-            print(f"         Coached:  \"{a.coached_phrasing}\"")
+            print(f'         Coached:  "{a.coached_phrasing}"')
 
         if evaluation.action_items:
             print("   Detected Action Items & Commitments:")
             for idx, ai in enumerate(evaluation.action_items, 1):
                 due_info = f" | Due: {ai.due_time_or_date}" if ai.due_time_or_date else ""
                 print(f"      [{idx}] [{ai.owner}] {ai.category}{due_info}: {ai.task}")
-                print(f"         Quote: \"{ai.verbatim_quote}\"")
+                print(f'         Quote: "{ai.verbatim_quote}"')
 
     print("\n" + "=" * 80)
     print(" Local processing and parsing completed successfully on your device.")

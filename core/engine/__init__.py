@@ -1,4 +1,5 @@
 """Core Executive Communication Engine package."""
+
 from .schema import (
     FillerWordMetric,
     CommunicationMetrics,
@@ -10,7 +11,7 @@ from .schema import (
     TranscriptionAnalysisResult,
     ExecutiveCoachingEvaluation,
     Utterance,
-    ConversationSession
+    ConversationSession,
 )
 from .persona_ontology import (
     PowerAxis,
@@ -19,7 +20,7 @@ from .persona_ontology import (
     PersonaOntologyEngine,
     UPWARD_RUBRIC,
     LATERAL_RUBRIC,
-    DOWNWARD_RUBRIC
+    DOWNWARD_RUBRIC,
 )
 from .metrics_calculator import MetricsCalculator
 from .temporal_resolver import TemporalResolver, TemporalResolution
@@ -59,6 +60,5 @@ __all__ = [
     "TranscriptionAnalyzer",
     "ExecutiveCoachingEngine",
     "GeminiCoachingSynthesizer",
-    "LocalCoachingSynthesizer"
+    "LocalCoachingSynthesizer",
 ]
-

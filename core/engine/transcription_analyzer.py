@@ -7,12 +7,10 @@ Analyzes transcribed dialogue turns or raw speech text to extract:
 Supports on-device deterministic NLP and optional Gemini AI synthesis.
 """
 
-import os
 import re
 import json
-import logging
 from datetime import datetime
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict
 
 try:
     from .schema import (
@@ -20,12 +18,9 @@ try:
         ConversationSession,
         KeyHighlight,
         ActionItem,
-        PotentialTask,
-        TranscriptionAnalysisResult
+        TranscriptionAnalysisResult,
     )
     from .action_item_extractor import ActionItemExtractor
-    from .temporal_resolver import TemporalResolver, TemporalResolution
-    from ..privacy.pii_redactor import PIIRedactor
     from ..config import get_gemini_api_key, GEMINI_MODEL
     from ..asr_diarization.indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
@@ -34,12 +29,9 @@ except (ImportError, ValueError):
         ConversationSession,
         KeyHighlight,
         ActionItem,
-        PotentialTask,
-        TranscriptionAnalysisResult
+        TranscriptionAnalysisResult,
     )
     from engine.action_item_extractor import ActionItemExtractor
-    from engine.temporal_resolver import TemporalResolver, TemporalResolution
-    from privacy.pii_redactor import PIIRedactor
     from config import get_gemini_api_key, GEMINI_MODEL
     from asr_diarization.indic_normalizer import IndicNormalizer
 
@@ -51,41 +43,41 @@ HIGHLIGHT_PATTERNS = [
         re.compile(
             r"\b(?:we\s+have\s+decided\s+to|we\s+agreed\s+(?:on|that)|the\s+decision\s+is|final\s+decision|aligned\s+on|consensus\s+is|conclusion\s+is)\b|"
             r"\b(?:faisla\s+ye\s+hai|decide\s+kiya\s+hai|agree\s+kiya\s+hai|final\s+ho\s+gaya)\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         ),
         "Decision",
-        "High"
+        "High",
     ),
     # Strategic Direction & Priorities
     (
         re.compile(
             r"\b(?:the\s+key\s+priority\s+is|our\s+main\s+focus\s+is|strategic\s+goal|top\s+priority|bottom\s+line\s+is|core\s+objective)\b|"
             r"\b(?:main\s+focus|sabse\s+important\s+baat|priority\s+ye\s+hai|core\s+point)\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         ),
         "Strategy",
-        "High"
+        "High",
     ),
     # Milestones & Delivery Status
     (
         re.compile(
             r"\b(?:milestone\s+reached|release\s+is\s+ready|completed\s+the|successfully\s+deployed|status\s+update|progress\s+is)\b|"
             r"\b(?:deploy\s+ho\s+gaya|complete\s+ho\s+chuka\s+hai|status\s+ye\s+hai)\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         ),
         "Milestone",
-        "Normal"
+        "Normal",
     ),
     # Crucial Insights & Risks
     (
         re.compile(
             r"\b(?:the\s+main\s+risk\s+is|major\s+blocker|crucial\s+takeaway|key\s+learning|important\s+to\s+note|latency\s+issue|performance\s+impact)\b|"
             r"\b(?:sabse\s+bada\s+risk|blocker\s+hai|dhyan\s+rakhna\s+hoga|problem\s+ye\s+hai)\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         ),
         "Key Insight",
-        "High"
-    )
+        "High",
+    ),
 ]
 
 
@@ -103,6 +95,7 @@ class TranscriptionAnalyzer:
         if self._gemini_client is None and self.api_key:
             try:
                 from google import genai
+
                 self._gemini_client = genai.Client(api_key=self.api_key)
             except Exception:
                 self._gemini_client = None
@@ -116,7 +109,7 @@ class TranscriptionAnalyzer:
         input_data: Union[str, List[Utterance], ConversationSession],
         ref_dt: Optional[datetime] = None,
         session_id: str = "transcription_analysis",
-        use_gemini: bool = True
+        use_gemini: bool = True,
     ) -> TranscriptionAnalysisResult:
         """
         Performs comprehensive transcription analysis to extract key highlights and potential tasks.
@@ -134,7 +127,7 @@ class TranscriptionAnalyzer:
                 key_highlights=[],
                 potential_tasks=[],
                 topics_discussed=[],
-                sentiment_tone="Neutral"
+                sentiment_tone="Neutral",
             )
 
         # Try Gemini LLM analysis if enabled and available
@@ -146,10 +139,7 @@ class TranscriptionAnalyzer:
         # Zero-latency on-device NLP heuristic analysis
         return self._analyze_on_device(utterances, ref_dt, session_id)
 
-    def extract_key_highlights(
-        self,
-        utterances: List[Utterance]
-    ) -> List[KeyHighlight]:
+    def extract_key_highlights(self, utterances: List[Utterance]) -> List[KeyHighlight]:
         """
         Extracts key highlights, strategic takeaways, and decisions from dialogue.
         """
@@ -191,7 +181,7 @@ class TranscriptionAnalyzer:
                             speaker=u.speaker,
                             verbatim_quote=sentence,
                             category=matched_category,
-                            importance=matched_importance
+                            importance=matched_importance,
                         )
                     )
 
@@ -201,7 +191,9 @@ class TranscriptionAnalyzer:
             for u in utterances:
                 for s in re.split(r"[.?!;]\s*", u.transcript):
                     s_clean = s.strip()
-                    if len(s_clean.split()) >= 4 and not re.match(r"^(?:yes|yeah|ok|okay|hi|hello|sure|theek hai)\b", s_clean, re.IGNORECASE):
+                    if len(s_clean.split()) >= 4 and not re.match(
+                        r"^(?:yes|yeah|ok|okay|hi|hello|sure|theek hai)\b", s_clean, re.IGNORECASE
+                    ):
                         substantive_sentences.append((s_clean, u.speaker))
 
             for s_text, spk in substantive_sentences[:2]:
@@ -212,16 +204,14 @@ class TranscriptionAnalyzer:
                         speaker=spk,
                         verbatim_quote=s_text,
                         category="Key Discussion Point",
-                        importance="Normal"
+                        importance="Normal",
                     )
                 )
 
         return highlights
 
     def extract_potential_tasks(
-        self,
-        utterances: List[Utterance],
-        ref_dt: Optional[datetime] = None
+        self, utterances: List[Utterance], ref_dt: Optional[datetime] = None
     ) -> List[ActionItem]:
         """
         Extracts potential tasks and action items with smart AM/PM next-occurrence temporal resolution.
@@ -229,10 +219,7 @@ class TranscriptionAnalyzer:
         return ActionItemExtractor.extract_from_dialogue(utterances, ref_dt=ref_dt)
 
     def _analyze_on_device(
-        self,
-        utterances: List[Utterance],
-        ref_dt: datetime,
-        session_id: str
+        self, utterances: List[Utterance], ref_dt: datetime, session_id: str
     ) -> TranscriptionAnalysisResult:
         """
         Fast on-device heuristic analyzer.
@@ -252,14 +239,11 @@ class TranscriptionAnalyzer:
             key_highlights=highlights,
             potential_tasks=tasks,
             topics_discussed=topics,
-            sentiment_tone=tone
+            sentiment_tone=tone,
         )
 
     def _analyze_with_gemini(
-        self,
-        utterances: List[Utterance],
-        ref_dt: datetime,
-        session_id: str
+        self, utterances: List[Utterance], ref_dt: datetime, session_id: str
     ) -> Optional[TranscriptionAnalysisResult]:
         """
         Performs semantic analysis with Gemini LLM.
@@ -321,9 +305,7 @@ Return pure JSON matching this exact structure:
             response = client.models.generate_content(
                 model=self.model,
                 contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                )
+                config=types.GenerateContentConfig(response_mime_type="application/json"),
             )
 
             raw = response.text.strip()
@@ -339,7 +321,7 @@ Return pure JSON matching this exact structure:
                     speaker=h.get("speaker", "SPEAKER"),
                     verbatim_quote=h.get("verbatim_quote", ""),
                     category=h.get("category", "Key Takeaway"),
-                    importance=h.get("importance", "Normal")
+                    importance=h.get("importance", "Normal"),
                 )
                 for h in data.get("key_highlights", [])
             ]
@@ -353,7 +335,7 @@ Return pure JSON matching this exact structure:
                     target_time_inferred_ampm=t.get("target_time_inferred_ampm"),
                     verbatim_quote=t.get("verbatim_quote", ""),
                     category=t.get("category", "Follow-up"),
-                    urgency=t.get("urgency", "Normal")
+                    urgency=t.get("urgency", "Normal"),
                 )
                 for t in data.get("potential_tasks", [])
             ]
@@ -369,15 +351,12 @@ Return pure JSON matching this exact structure:
                 key_highlights=highlights,
                 potential_tasks=tasks,
                 topics_discussed=data.get("topics_discussed", []),
-                sentiment_tone=data.get("sentiment_tone", "Neutral & Constructive")
+                sentiment_tone=data.get("sentiment_tone", "Neutral & Constructive"),
             )
         except Exception:
             return None
 
-    def _normalize_to_utterances(
-        self,
-        input_data: Union[str, List[Utterance], ConversationSession]
-    ) -> List[Utterance]:
+    def _normalize_to_utterances(self, input_data: Union[str, List[Utterance], ConversationSession]) -> List[Utterance]:
         """Converts diverse input types into a standardized list of Utterance objects."""
         if isinstance(input_data, ConversationSession):
             return input_data.dialogue
@@ -399,10 +378,14 @@ Return pure JSON matching this exact structure:
                 if match:
                     spk = match.group(1).upper()
                     content = match.group(2).strip()
-                    utterances.append(Utterance(speaker=spk, start_time=cur_time, end_time=cur_time + 3.0, transcript=content))
+                    utterances.append(
+                        Utterance(speaker=spk, start_time=cur_time, end_time=cur_time + 3.0, transcript=content)
+                    )
                     cur_time += 3.5
                 else:
-                    utterances.append(Utterance(speaker="USER", start_time=cur_time, end_time=cur_time + 3.0, transcript=line))
+                    utterances.append(
+                        Utterance(speaker="USER", start_time=cur_time, end_time=cur_time + 3.0, transcript=line)
+                    )
                     cur_time += 3.5
             return utterances
         return []
@@ -419,10 +402,53 @@ Return pure JSON matching this exact structure:
     def _extract_topics(self, text: str) -> List[str]:
         words = re.findall(r"\b[A-Za-z0-9_-]{4,}\b", text.lower())
         stop_words = {
-            "this", "that", "with", "have", "from", "today", "about", "what", "where", "when", "could", "should", "would",
-            "just", "very", "hume", "mujhe", "karna", "hoga", "karenge", "chahiye", "lagta", "raha", "gaya", "wala",
-            "vali", "bhi", "par", "aur", "lekin", "kyunki", "isiliye", "dekho", "there", "their", "will", "going",
-            "please", "send", "call", "meet", "sync", "team", "okay", "yeah", "actually", "basically"
+            "this",
+            "that",
+            "with",
+            "have",
+            "from",
+            "today",
+            "about",
+            "what",
+            "where",
+            "when",
+            "could",
+            "should",
+            "would",
+            "just",
+            "very",
+            "hume",
+            "mujhe",
+            "karna",
+            "hoga",
+            "karenge",
+            "chahiye",
+            "lagta",
+            "raha",
+            "gaya",
+            "wala",
+            "vali",
+            "bhi",
+            "par",
+            "aur",
+            "lekin",
+            "kyunki",
+            "isiliye",
+            "dekho",
+            "there",
+            "their",
+            "will",
+            "going",
+            "please",
+            "send",
+            "call",
+            "meet",
+            "sync",
+            "team",
+            "okay",
+            "yeah",
+            "actually",
+            "basically",
         }
         filtered = [w for w in words if w not in stop_words]
         counts: Dict[str, int] = {}
@@ -432,18 +458,15 @@ Return pure JSON matching this exact structure:
         return [t[0].capitalize() for t in sorted_topics[:4]]
 
     def _generate_summary(
-        self,
-        utterances: List[Utterance],
-        highlights: List[KeyHighlight],
-        tasks: List[ActionItem]
+        self, utterances: List[Utterance], highlights: List[KeyHighlight], tasks: List[ActionItem]
     ) -> str:
-        speaker_count = len(set(u.speaker for u in utterances))
         dialogue_turns = len(utterances)
 
         if highlights:
             core_hl = highlights[0].takeaway
             task_str = f" with {len(tasks)} actionable follow-up commitments recorded." if tasks else "."
             return f"Dialogue focused on {core_hl.lower()}{task_str}"
+
         elif tasks:
             return f"Session established {len(tasks)} concrete action items across {dialogue_turns} dialogue turns."
         else:
@@ -453,7 +476,9 @@ Return pure JSON matching this exact structure:
         text_lower = text.lower()
         if any(w in text_lower for w in ["blocker", "risk", "issue", "problem", "delay", "tention", "trouble"]):
             return "Urgent & Issue-Focused"
-        elif any(w in text_lower for w in ["great", "aligned", "agree", "perfect", "good", "congratulations", "shandar"]):
+        elif any(
+            w in text_lower for w in ["great", "aligned", "agree", "perfect", "good", "congratulations", "shandar"]
+        ):
             return "Positive & Collaborative"
         elif any(w in text_lower for w in ["decide", "ship", "deliver", "deploy", "commit", "schedule"]):
             return "Decisive & Action-Oriented"

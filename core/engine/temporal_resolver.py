@@ -7,19 +7,20 @@ relative to a reference timestamp, and normalizes dates and deadlines into ISO f
 
 import re
 from datetime import datetime, timedelta, date, time
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Optional
 from dataclasses import dataclass
 
 
 @dataclass
 class TemporalResolution:
     """Structured result from temporal resolution."""
+
     raw_match: str
-    formatted_label: str             # e.g. "Today at 9:00 PM" or "Tomorrow at 9:00 AM"
+    formatted_label: str  # e.g. "Today at 9:00 PM" or "Tomorrow at 9:00 AM"
     resolved_datetime: Optional[str]  # ISO 8601 string: "2026-09-12T21:00:00"
-    inferred_ampm: Optional[str]      # "AM" | "PM" | None
-    urgency: str                      # "High" | "Normal"
-    confidence: float                 # 0.0 to 1.0
+    inferred_ampm: Optional[str]  # "AM" | "PM" | None
+    urgency: str  # "High" | "Normal"
+    confidence: float  # 0.0 to 1.0
 
 
 class TemporalResolver:
@@ -29,28 +30,52 @@ class TemporalResolver:
 
     # Regex for days of the week
     WEEKDAYS = {
-        "monday": 0, "somwar": 0,
-        "tuesday": 1, "mangalwar": 1,
-        "wednesday": 2, "budhwar": 2,
-        "thursday": 3, "guruwar": 3, "veervar": 3,
-        "friday": 4, "shukrawar": 4,
-        "saturday": 5, "shanivar": 5,
-        "sunday": 6, "ravivar": 6, "itwar": 6
+        "monday": 0,
+        "somwar": 0,
+        "tuesday": 1,
+        "mangalwar": 1,
+        "wednesday": 2,
+        "budhwar": 2,
+        "thursday": 3,
+        "guruwar": 3,
+        "veervar": 3,
+        "friday": 4,
+        "shukrawar": 4,
+        "saturday": 5,
+        "shanivar": 5,
+        "sunday": 6,
+        "ravivar": 6,
+        "itwar": 6,
     }
 
     MONTHS = {
-        "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
-        "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
-        "aug": 8, "august": 8, "sep": 9, "september": 9, "oct": 10, "october": 10,
-        "nov": 11, "november": 11, "dec": 12, "december": 12
+        "jan": 1,
+        "january": 1,
+        "feb": 2,
+        "february": 2,
+        "mar": 3,
+        "march": 3,
+        "apr": 4,
+        "april": 4,
+        "may": 5,
+        "jun": 6,
+        "june": 6,
+        "jul": 7,
+        "july": 7,
+        "aug": 8,
+        "august": 8,
+        "sep": 9,
+        "september": 9,
+        "oct": 10,
+        "october": 10,
+        "nov": 11,
+        "november": 11,
+        "dec": 12,
+        "december": 12,
     }
 
     @classmethod
-    def resolve_time_expression(
-        cls,
-        text: str,
-        ref_dt: Optional[datetime] = None
-    ) -> Optional[TemporalResolution]:
+    def resolve_time_expression(cls, text: str, ref_dt: Optional[datetime] = None) -> Optional[TemporalResolution]:
         """
         Parses temporal expressions from text and resolves them relative to ref_dt.
         If AM/PM is omitted (e.g. 'call at 9'), infers the closest future occurrence.
@@ -98,7 +123,7 @@ class TemporalResolver:
             r"(\d{1,2})(?::(\d{2}))?\s*"
             r"(?:(am|pm|baje|o['’]?clock))?"
             r"(?:\s+(subah|shaam|dopahar|raat|morning|evening|afternoon|night))?\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         for match in pattern.finditer(text):
@@ -121,8 +146,17 @@ class TemporalResolver:
             raw_matched = match.group(0).strip()
             # If there's no pre/post preposition and no am/pm/baje/o'clock/qualifier, check if preceded by 'at'/'by'/'around' or an action verb
             has_trigger = bool(
-                re.search(r"\b(at|by|around|ko|tak|baje|am|pm|o['’]?clock|subah|shaam|dopahar|raat|morning|evening|night)\b", raw_matched, re.IGNORECASE)
-                or re.search(r"\b(call|meet|sync|ring|connect|talk|ping|start|ship|deliver|send|deploy|finish|complete)\b.*?" + re.escape(raw_matched), text, re.IGNORECASE)
+                re.search(
+                    r"\b(at|by|around|ko|tak|baje|am|pm|o['’]?clock|subah|shaam|dopahar|raat|morning|evening|night)\b",
+                    raw_matched,
+                    re.IGNORECASE,
+                )
+                or re.search(
+                    r"\b(call|meet|sync|ring|connect|talk|ping|start|ship|deliver|send|deploy|finish|complete)\b.*?"
+                    + re.escape(raw_matched),
+                    text,
+                    re.IGNORECASE,
+                )
             )
 
             if not has_trigger:
@@ -155,7 +189,7 @@ class TemporalResolver:
                     resolved_datetime=resolved_dt.isoformat(),
                     inferred_ampm=inferred,
                     urgency="High" if (resolved_dt - ref_dt).total_seconds() < 86400 else "Normal",
-                    confidence=0.95
+                    confidence=0.95,
                 )
 
             if explicit_ampm:
@@ -175,7 +209,7 @@ class TemporalResolver:
                     resolved_datetime=candidate_dt.isoformat(),
                     inferred_ampm=explicit_ampm,
                     urgency="High" if (candidate_dt - ref_dt).total_seconds() < 86400 else "Normal",
-                    confidence=0.98
+                    confidence=0.98,
                 )
 
             # --- AMBIGUOUS TIME: Calculate Next Occurrence of the clock time ---
@@ -187,7 +221,7 @@ class TemporalResolver:
                 ref_dt.replace(hour=am_hour, minute=minute, second=0, microsecond=0),
                 ref_dt.replace(hour=pm_hour, minute=minute, second=0, microsecond=0),
                 (ref_dt + timedelta(days=1)).replace(hour=am_hour, minute=minute, second=0, microsecond=0),
-                (ref_dt + timedelta(days=1)).replace(hour=pm_hour, minute=minute, second=0, microsecond=0)
+                (ref_dt + timedelta(days=1)).replace(hour=pm_hour, minute=minute, second=0, microsecond=0),
             ]
 
             # Choose the earliest candidate that is strictly in the future (or within a 1-minute margin)
@@ -206,7 +240,7 @@ class TemporalResolver:
                 resolved_datetime=best_dt.isoformat(),
                 inferred_ampm=inferred_ampm,
                 urgency="High" if (best_dt - ref_dt).total_seconds() < 86400 else "Normal",
-                confidence=0.92
+                confidence=0.92,
             )
 
         return None
@@ -221,7 +255,7 @@ class TemporalResolver:
             r"(?:next|this|on|is)?\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|somwar|mangalwar|budhwar|guruwar|shukrawar|shanivar|ravivar))"
             r"(?:\s+(morning|afternoon|evening|night|subah|shaam|dopahar|raat|ko|tak))?"
             r"(?:\s+(?:at|by|around|ko|mein)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|baje)?)?\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         match = pattern.search(text)
@@ -286,7 +320,7 @@ class TemporalResolver:
                 if day_offset == 0:
                     candidates = [
                         datetime.combine(target_date, time(hour=hour % 12, minute=minute)),
-                        datetime.combine(target_date, time(hour=(hour % 12) + 12, minute=minute))
+                        datetime.combine(target_date, time(hour=(hour % 12) + 12, minute=minute)),
                     ]
                     valid = [c for c in candidates if c >= ref_dt - timedelta(minutes=1)]
                     resolved_dt = valid[0] if valid else candidates[1]
@@ -306,9 +340,13 @@ class TemporalResolver:
                     resolved_dt = datetime.combine(target_date, time(hour=target_hour, minute=minute))
 
             day_display = (
-                "Today" if target_date == ref_dt.date()
-                else "Tomorrow" if target_date == ref_dt.date() + timedelta(days=1)
-                else target_date.strftime("%A, %b %d")
+                "Today"
+                if target_date == ref_dt.date()
+                else (
+                    "Tomorrow"
+                    if target_date == ref_dt.date() + timedelta(days=1)
+                    else target_date.strftime("%A, %b %d")
+                )
             )
             time_display = resolved_dt.strftime("%I:%M %p").lstrip("0")
             formatted = f"{day_display} at {time_display}"
@@ -319,11 +357,11 @@ class TemporalResolver:
                 resolved_datetime=resolved_dt.isoformat(),
                 inferred_ampm=inferred,
                 urgency="High" if day_offset <= 1 else "Normal",
-                confidence=0.95
+                confidence=0.95,
             )
         else:
             # Day only (e.g., "by Friday", "tomorrow morning", "kal shaam tak")
-            default_hour = 17 # 5 PM default for EOD/day deadlines
+            default_hour = 17  # 5 PM default for EOD/day deadlines
             if day_qualifier in ["subah", "morning"]:
                 default_hour = 10
             elif day_qualifier in ["dopahar", "afternoon"]:
@@ -333,9 +371,13 @@ class TemporalResolver:
 
             resolved_dt = datetime.combine(target_date, time(hour=default_hour, minute=0))
             day_display = (
-                "Today" if target_date == ref_dt.date()
-                else "Tomorrow" if target_date == ref_dt.date() + timedelta(days=1)
-                else target_date.strftime("%A, %b %d")
+                "Today"
+                if target_date == ref_dt.date()
+                else (
+                    "Tomorrow"
+                    if target_date == ref_dt.date() + timedelta(days=1)
+                    else target_date.strftime("%A, %b %d")
+                )
             )
             time_qual_str = f" ({day_qualifier.capitalize()})" if day_qualifier else ""
             formatted = f"{day_display}{time_qual_str}"
@@ -346,7 +388,7 @@ class TemporalResolver:
                 resolved_datetime=resolved_dt.isoformat(),
                 inferred_ampm="PM" if default_hour >= 12 else "AM",
                 urgency="High" if day_offset <= 1 else "Normal",
-                confidence=0.90
+                confidence=0.90,
             )
 
     @classmethod
@@ -357,7 +399,7 @@ class TemporalResolver:
         pattern = re.compile(
             r"\b(?:(\d{1,2})(?:st|nd|rd|th)?\s+([a-zA-Z]{3,9})|([a-zA-Z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?)"
             r"(?:\s+(?:at|by|around|ko)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|baje)?)?\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         match = pattern.search(text)
@@ -414,7 +456,7 @@ class TemporalResolver:
             resolved_datetime=resolved_dt.isoformat(),
             inferred_ampm=inferred_ampm,
             urgency="High" if (resolved_dt - ref_dt).total_seconds() < 86400 * 2 else "Normal",
-            confidence=0.98
+            confidence=0.98,
         )
 
     @classmethod
@@ -424,14 +466,19 @@ class TemporalResolver:
         """
         pattern = re.compile(
             r"\b(eod|end\s+of\s+day|end\s+of\s+week|eow|asap|next\s+week|agle\s+hafte|is\s+hafte|shaam\s+tak|aaj\s+shaam)\b",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
         match = pattern.search(text)
         if not match:
             return None
 
         matched_phrase = match.group(1).lower()
-        if "eod" in matched_phrase or "end of day" in matched_phrase or "shaam tak" in matched_phrase or "aaj shaam" in matched_phrase:
+        if (
+            "eod" in matched_phrase
+            or "end of day" in matched_phrase
+            or "shaam tak" in matched_phrase
+            or "aaj shaam" in matched_phrase
+        ):
             resolved_dt = ref_dt.replace(hour=18, minute=0, second=0, microsecond=0)
             if resolved_dt < ref_dt:
                 resolved_dt += timedelta(days=1)
@@ -441,7 +488,7 @@ class TemporalResolver:
                 resolved_datetime=resolved_dt.isoformat(),
                 inferred_ampm="PM",
                 urgency="High",
-                confidence=0.90
+                confidence=0.90,
             )
         elif "asap" in matched_phrase:
             resolved_dt = ref_dt + timedelta(hours=2)
@@ -451,7 +498,7 @@ class TemporalResolver:
                 resolved_datetime=resolved_dt.isoformat(),
                 inferred_ampm="AM" if resolved_dt.hour < 12 else "PM",
                 urgency="High",
-                confidence=0.95
+                confidence=0.95,
             )
         elif "end of week" in matched_phrase or "eow" in matched_phrase:
             days_until_friday = (4 - ref_dt.weekday()) % 7
@@ -465,7 +512,7 @@ class TemporalResolver:
                 resolved_datetime=resolved_dt.isoformat(),
                 inferred_ampm="PM",
                 urgency="Normal",
-                confidence=0.90
+                confidence=0.90,
             )
         elif "next week" in matched_phrase or "agle hafte" in matched_phrase:
             days_until_next_mon = (7 - ref_dt.weekday()) % 7 or 7
@@ -477,7 +524,7 @@ class TemporalResolver:
                 resolved_datetime=resolved_dt.isoformat(),
                 inferred_ampm="AM",
                 urgency="Normal",
-                confidence=0.88
+                confidence=0.88,
             )
 
         return None

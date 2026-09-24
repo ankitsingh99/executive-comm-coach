@@ -5,12 +5,11 @@ Performs deep semantic intent classification, grammatical transformation,
 and generates customized, contextual Executive BLUF coaching for real speech.
 """
 
-import os
 import re
 import json
 import urllib.request
 import urllib.error
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional
 
 try:
     from .schema import (
@@ -20,23 +19,13 @@ try:
         CommunicationMetrics,
         TopStrength,
         AreaForImprovement,
-        ActionItem,
-        KeyHighlight,
-        FillerWordMetric
     )
-    from .persona_ontology import (
-        PersonaOntologyEngine,
-        PersonaProfile,
-        PowerAxis
-    )
+    from .persona_ontology import PersonaOntologyEngine, PersonaProfile, PowerAxis
     from .metrics_calculator import (
         MetricsCalculator,
         HEDGING_PATTERNS,
-        FILLER_PATTERNS,
         ASSERTIVE_PATTERNS,
-        ACTIVE_LISTENING_PATTERNS
     )
-    from .action_item_extractor import ActionItemExtractor
     from .transcription_analyzer import TranscriptionAnalyzer
     from ..privacy.pii_redactor import PIIRedactor
     from ..asr_diarization.indic_normalizer import IndicNormalizer
@@ -48,23 +37,13 @@ except (ImportError, ValueError):
         CommunicationMetrics,
         TopStrength,
         AreaForImprovement,
-        ActionItem,
-        KeyHighlight,
-        FillerWordMetric
     )
-    from engine.persona_ontology import (
-        PersonaOntologyEngine,
-        PersonaProfile,
-        PowerAxis
-    )
+    from engine.persona_ontology import PersonaOntologyEngine, PersonaProfile, PowerAxis
     from engine.metrics_calculator import (
         MetricsCalculator,
         HEDGING_PATTERNS,
-        FILLER_PATTERNS,
         ASSERTIVE_PATTERNS,
-        ACTIVE_LISTENING_PATTERNS
     )
-    from engine.action_item_extractor import ActionItemExtractor
     from engine.transcription_analyzer import TranscriptionAnalyzer
     from privacy.pii_redactor import PIIRedactor
     from asr_diarization.indic_normalizer import IndicNormalizer
@@ -81,10 +60,7 @@ class LocalCoachingSynthesizer:
         self.model_name = model_name
 
     def synthesize(
-        self,
-        session: ConversationSession,
-        top_n: Optional[int] = None,
-        try_local_ollama: bool = True
+        self, session: ConversationSession, top_n: Optional[int] = None, try_local_ollama: bool = True
     ) -> ExecutiveCoachingEvaluation:
         """
         Executes semantic analysis and coaching generation on real transcribed speech.
@@ -101,7 +77,7 @@ class LocalCoachingSynthesizer:
                     transcript=red_text,
                     is_overlapping=getattr(u, "is_overlapping", False),
                     overlap_duration_sec=getattr(u, "overlap_duration_sec", 0.0),
-                    interrupted_speaker=getattr(u, "interrupted_speaker", None)
+                    interrupted_speaker=getattr(u, "interrupted_speaker", None),
                 )
             )
 
@@ -114,15 +90,10 @@ class LocalCoachingSynthesizer:
         counterpart_role = session.counterpart_role or "Colleague"
 
         profile = PersonaOntologyEngine.create_persona_profile(
-            counterpart_name=counterpart_label,
-            role_title=counterpart_role,
-            power_axis=power_axis
+            counterpart_name=counterpart_label, role_title=counterpart_role, power_axis=power_axis
         )
 
-        metrics = MetricsCalculator.analyze_dialogue(
-            redacted_dialogue,
-            target_speaker=session.target_speaker
-        )
+        metrics = MetricsCalculator.analyze_dialogue(redacted_dialogue, target_speaker=session.target_speaker)
 
         evaluation: Optional[ExecutiveCoachingEvaluation] = None
         if try_local_ollama:
@@ -134,11 +105,7 @@ class LocalCoachingSynthesizer:
         return self._enforce_strict_constraints(evaluation, top_n)
 
     def _try_ollama_local_inference(
-        self,
-        dialogue: List[Utterance],
-        profile: PersonaProfile,
-        metrics: CommunicationMetrics,
-        top_n: int
+        self, dialogue: List[Utterance], profile: PersonaProfile, metrics: CommunicationMetrics, top_n: int
     ) -> Optional[ExecutiveCoachingEvaluation]:
         """Queries local Ollama endpoint if active on user's machine and models exist."""
         try:
@@ -157,16 +124,11 @@ class LocalCoachingSynthesizer:
             dialogue_text = "\n".join([f"{u.speaker}: {u.transcript}" for u in dialogue])
             prompt = f"{system_prompt}\n\nTRANSCRIPT:\n{dialogue_text}\n\nReturn pure JSON matching ExecutiveCoachingEvaluation schema."
 
-            payload = {
-                "model": model_to_use,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json"
-            }
+            payload = {"model": model_to_use, "prompt": prompt, "stream": False, "format": "json"}
             req = urllib.request.Request(
                 f"{self.ollama_url}/api/generate",
                 data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
             with urllib.request.urlopen(req, timeout=3.0) as resp:
                 if resp.status == 200:
@@ -179,11 +141,7 @@ class LocalCoachingSynthesizer:
         return None
 
     def _semantic_intent_synthesis(
-        self,
-        dialogue: List[Utterance],
-        profile: PersonaProfile,
-        metrics: CommunicationMetrics,
-        top_n: int
+        self, dialogue: List[Utterance], profile: PersonaProfile, metrics: CommunicationMetrics, top_n: int
     ) -> ExecutiveCoachingEvaluation:
         """
         Actionable NLP coaching engine.
@@ -208,8 +166,21 @@ class LocalCoachingSynthesizer:
         full_quote = raw_text.strip()
 
         # 1. Linguistic and Friction Pattern Detection (English + Hinglish)
-        is_question = bool(re.search(r"\b(how|what|why|where|when|can|could|should|is it|how do i|kya|kyun|kaise|kab|kahan|batao)\b", full_quote, re.IGNORECASE) or "?" in full_quote)
-        is_seeking_learning = bool(re.search(r"\b(learn|start|study|understand|explore|guide|recommend|figure out|seekhna|samajhna|shuru)\b", full_quote, re.IGNORECASE))
+        is_question = bool(
+            re.search(
+                r"\b(how|what|why|where|when|can|could|should|is it|how do i|kya|kyun|kaise|kab|kahan|batao)\b",
+                full_quote,
+                re.IGNORECASE,
+            )
+            or "?" in full_quote
+        )
+        is_seeking_learning = bool(
+            re.search(
+                r"\b(learn|start|study|understand|explore|guide|recommend|figure out|seekhna|samajhna|shuru)\b",
+                full_quote,
+                re.IGNORECASE,
+            )
+        )
         has_hedging = any(bool(re.search(pat, full_quote, re.IGNORECASE)) for pat in HEDGING_PATTERNS)
         has_assertive = any(bool(re.search(pat, full_quote, re.IGNORECASE)) for pat in ASSERTIVE_PATTERNS)
         has_fillers = bool(metrics.filler_words_detected)
@@ -219,19 +190,62 @@ class LocalCoachingSynthesizer:
             r"\b(that was|this is|basically|um+|uh+|hm+|aaah|matlab|like|you know|so|mujhe lagta hai|shayad|lag raha hai|dekho|bhai|yaar|actually|literally)\b",
             "",
             full_quote,
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE,
         ).strip()
-        
-        topic_match = re.search(r"(?:about|on|regarding|for|evaluate|explore|status of|news from|focus on|ke bare mein|par|ka status)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)", full_quote, re.IGNORECASE)
-        
+
+        topic_match = re.search(
+            r"(?:about|on|regarding|for|evaluate|explore|status of|news from|focus on|ke bare mein|par|ka status)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)",
+            full_quote,
+            re.IGNORECASE,
+        )
+
         if topic_match:
             extracted_topic = topic_match.group(1).strip()
         else:
             meaningful_words = [
-                w for w in re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_quote)
-                if w.lower() not in [
-                    "that", "this", "with", "have", "from", "today", "about", "what", "where", "when", "could", "should", "would", "just", "very",
-                    "hume", "mujhe", "karna", "hoga", "karenge", "chahiye", "lagta", "raha", "gaya", "wala", "vali", "bhi", "par", "aur", "lekin", "kyunki", "isiliye", "dekho", "apna", "apne", "unka", "unke", "hain", "kare"
+                w
+                for w in re.findall(r"\b[a-zA-Z]{3,}\b", cleaned_quote)
+                if w.lower()
+                not in [
+                    "that",
+                    "this",
+                    "with",
+                    "have",
+                    "from",
+                    "today",
+                    "about",
+                    "what",
+                    "where",
+                    "when",
+                    "could",
+                    "should",
+                    "would",
+                    "just",
+                    "very",
+                    "hume",
+                    "mujhe",
+                    "karna",
+                    "hoga",
+                    "karenge",
+                    "chahiye",
+                    "lagta",
+                    "raha",
+                    "gaya",
+                    "wala",
+                    "vali",
+                    "bhi",
+                    "par",
+                    "aur",
+                    "lekin",
+                    "kyunki",
+                    "isiliye",
+                    "dekho",
+                    "apna",
+                    "apne",
+                    "unka",
+                    "unke",
+                    "hain",
+                    "kare",
                 ]
             ]
             extracted_topic = " ".join(meaningful_words[:3]) if meaningful_words else "the core deliverable"
@@ -243,44 +257,49 @@ class LocalCoachingSynthesizer:
 
         # 3. Concise Positive Strengths (Specific to actual delivery)
         if has_assertive:
-            strengths.append(TopStrength(
-                observation="Decisive ownership and assertive delivery commitment.",
-                verbatim_quote=full_quote
-            ))
+            strengths.append(
+                TopStrength(
+                    observation="Decisive ownership and assertive delivery commitment.", verbatim_quote=full_quote
+                )
+            )
         elif not has_fillers and len(full_quote.split()) >= 4:
-            strengths.append(TopStrength(
-                observation="Zero verbal hesitation. Clean, unbroken sentence cadence.",
-                verbatim_quote=full_quote
-            ))
+            strengths.append(
+                TopStrength(
+                    observation="Zero verbal hesitation. Clean, unbroken sentence cadence.", verbatim_quote=full_quote
+                )
+            )
         else:
-            strengths.append(TopStrength(
-                observation=f"Direct topical focus on {extracted_topic}.",
-                verbatim_quote=full_quote
-            ))
+            strengths.append(
+                TopStrength(observation=f"Direct topical focus on {extracted_topic}.", verbatim_quote=full_quote)
+            )
 
         if is_question:
-            strengths.append(TopStrength(
-                observation="Proactive engagement. Prompted alignment with an open inquiry.",
-                verbatim_quote=full_quote
-            ))
+            strengths.append(
+                TopStrength(
+                    observation="Proactive engagement. Prompted alignment with an open inquiry.",
+                    verbatim_quote=full_quote,
+                )
+            )
         else:
-            strengths.append(TopStrength(
-                observation="Controlled enunciation and steady pacing.",
-                verbatim_quote=full_quote
-            ))
-
-        target_counterpart = profile.counterpart_name if profile.counterpart_name else "your audience"
+            strengths.append(
+                TopStrength(observation="Controlled enunciation and steady pacing.", verbatim_quote=full_quote)
+            )
 
         # 4. Actionable Friction-Point Analysis & Coached Rephrasing
+
         if has_fillers:
             filler_summary = ", ".join([f"'{f.token}' ({f.count}x)" for f in metrics.filler_words_detected[:2]])
             critique = f"Hesitation markers ({filler_summary}) break delivery rhythm. Action: Pause silently for 0.5s instead of vocalizing."
             coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
-            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
+            improvements.append(
+                AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
+            )
 
         if is_seeking_learning and is_question:
             if profile.power_axis == PowerAxis.SOLO:
-                critique = "Framed as an open question during solo rehearsal. Action: State as a definitive thesis to test."
+                critique = (
+                    "Framed as an open question during solo rehearsal. Action: State as a definitive thesis to test."
+                )
                 coached = f"My objective is to validate {extracted_topic} through systematic prototyping."
             elif profile.power_axis == PowerAxis.UPWARD:
                 critique = "Open question shifts cognitive load upward. Action: Propose a baseline plan before asking for input."
@@ -292,12 +311,16 @@ class LocalCoachingSynthesizer:
                 critique = "Broad inquiry. Action: Define concrete next steps before opening for discussion."
                 coached = f"To structure {extracted_topic}, let's first evaluate the initial architectural tradeoffs."
 
-            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
+            improvements.append(
+                AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
+            )
 
         elif has_hedging:
             critique = "Hedging qualifiers ('just think', 'maybe', 'mujhe lagta hai') dilute conviction. Action: State the recommendation directly as a decision."
             coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
-            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
+            improvements.append(
+                AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
+            )
 
         else:
             # Informational / narrative statement without decision (e.g. "That was the news from India today")
@@ -310,25 +333,33 @@ class LocalCoachingSynthesizer:
             elif profile.power_axis == PowerAxis.CONFLICT:
                 critique = "Observation lacks mutual resolution criteria. Action: Propose shared objective metrics."
                 coached = f"Regarding {extracted_topic}, let's establish agreed criteria to resolve our blockers."
-            else: # UPWARD / LATERAL
-                critique = f"Statement offers context without a bottom-line decision (BLUF). Action: Lead with the recommendation."
+            else:  # UPWARD / LATERAL
+                critique = "Statement offers context without a bottom-line decision (BLUF). Action: Lead with the recommendation."
                 coached = f"Based on the latest {extracted_topic}, I recommend we prioritize rollout readiness."
 
-            improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
+            improvements.append(
+                AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
+            )
 
         # Check for interruption / cross-talk friction
         if getattr(metrics, "interruption_count", 0) > 0:
             interrupted_utt = next((u for u in user_turns if getattr(u, "interrupted_speaker", None)), None)
             quote_text = interrupted_utt.transcript if interrupted_utt else full_quote
             critique_int = f"Premature cross-talk detected ({metrics.interruption_count}x). Starting before interlocutor completes can signal impatience."
-            coached_int = f"Allow a 1.0s deliberate pause after counterpart finishes, then bridge: 'To build directly on that point...'"
-            improvements.insert(0, AreaForImprovement(critique=critique_int, verbatim_quote=quote_text, coached_phrasing=coached_int))
+            coached_int = "Allow a 1.0s deliberate pause after counterpart finishes, then bridge: 'To build directly on that point...'"
+            improvements.insert(
+                0, AreaForImprovement(critique=critique_int, verbatim_quote=quote_text, coached_phrasing=coached_int)
+            )
 
         # Check for unquantified narrative if relevant
         if len(improvements) == 1 and not has_hedging and not is_question:
-            critique_2 = "Statement lacks quantified outcomes. Action: Add measurable metrics, timelines, or next steps."
+            critique_2 = (
+                "Statement lacks quantified outcomes. Action: Add measurable metrics, timelines, or next steps."
+            )
             coached_2 = self._generate_crisp_action_plan(extracted_topic, profile.power_axis)
-            improvements.append(AreaForImprovement(critique=critique_2, verbatim_quote=full_quote, coached_phrasing=coached_2))
+            improvements.append(
+                AreaForImprovement(critique=critique_2, verbatim_quote=full_quote, coached_phrasing=coached_2)
+            )
 
         # Apply top_n cap only if caller explicitly requested a maximum limit
         final_strengths = strengths[:top_n] if top_n and top_n > 0 else strengths
@@ -364,7 +395,7 @@ class LocalCoachingSynthesizer:
             action_items=action_items,
             key_highlights=key_highlights,
             longitudinal_summary=summary,
-            persona_alignment_notes=alignment_note
+            persona_alignment_notes=alignment_note,
         )
 
     def _generate_crisp_bluf(self, text: str, topic: str, power_axis: PowerAxis) -> str:
@@ -396,7 +427,25 @@ class LocalCoachingSynthesizer:
             return f"Let's target delivering the {topic} prototype within the next two weeks."
 
     def _extract_core_topic(self, text: str) -> str:
-        words = [w for w in re.findall(r"\b[A-Za-z0-9_-]+\b", text) if len(w) > 3 and w.lower() not in ["basically", "matlab", "think", "maybe", "could", "would", "should", "there", "their", "about", "which"]]
+        words = [
+            w
+            for w in re.findall(r"\b[A-Za-z0-9_-]+\b", text)
+            if len(w) > 3
+            and w.lower()
+            not in [
+                "basically",
+                "matlab",
+                "think",
+                "maybe",
+                "could",
+                "would",
+                "should",
+                "there",
+                "their",
+                "about",
+                "which",
+            ]
+        ]
         if len(words) >= 2:
             return f"{words[0]} {words[1]}"
         elif len(words) == 1:
@@ -411,7 +460,9 @@ class LocalCoachingSynthesizer:
         elif power_axis == PowerAxis.DOWNWARD:
             return f"Engaging communication regarding {topic}. Action: Lead with your core message before providing background context."
         elif power_axis == PowerAxis.SOLO:
-            return f"Well-structured rehearsal on {topic}. Action: Practice deliberate pausing at key transition points."
+            return (
+                f"Well-structured rehearsal on {topic}. Action: Practice deliberate pausing at key transition points."
+            )
         else:
             return f"Clear delivery on {topic}. Action: Maintain concise framing to drive decisive outcomes."
 
@@ -419,12 +470,27 @@ class LocalCoachingSynthesizer:
         """Transforms a sentence into an appropriately framed coaching statement."""
         cleaned = text
         for pat in [
-            r"\bbasically\b", r"\bmatlab\b", r"\blike\b", r"\byou know\b",
-            r"\bactually\b", r"\bliterally\b", r"\bi mean\b",
-            r"\bu+m+\b", r"\bu+h+m*\b", r"\bh+m+\b", r"\bm+h+m*\b",
-            r"\ba+h+\b", r"\ba{2,}\b", r"\ba+a+h*\b", r"\be+h+\b", r"\be+r+m*\b",
-            r"\bi just think\b", r"\bmaybe we could\b", r"\bsorry to bother\b",
-            r"\bif i have to\b", r"\bhow do i start\b"
+            r"\bbasically\b",
+            r"\bmatlab\b",
+            r"\blike\b",
+            r"\byou know\b",
+            r"\bactually\b",
+            r"\bliterally\b",
+            r"\bi mean\b",
+            r"\bu+m+\b",
+            r"\bu+h+m*\b",
+            r"\bh+m+\b",
+            r"\bm+h+m*\b",
+            r"\ba+h+\b",
+            r"\ba{2,}\b",
+            r"\ba+a+h*\b",
+            r"\be+h+\b",
+            r"\be+r+m*\b",
+            r"\bi just think\b",
+            r"\bmaybe we could\b",
+            r"\bsorry to bother\b",
+            r"\bif i have to\b",
+            r"\bhow do i start\b",
         ]:
             cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
@@ -443,13 +509,13 @@ class LocalCoachingSynthesizer:
             return f"To guide your work on {topic}, what initial tradeoffs have you identified?"
 
     def _enforce_strict_constraints(
-        self,
-        evaluation: ExecutiveCoachingEvaluation,
-        top_n: Optional[int] = None
+        self, evaluation: ExecutiveCoachingEvaluation, top_n: Optional[int] = None
     ) -> ExecutiveCoachingEvaluation:
         """Enforces length <= 250 and score bounds."""
         strengths = evaluation.top_strengths[:top_n] if top_n and top_n > 0 else evaluation.top_strengths
-        improvements = evaluation.areas_for_improvement[:top_n] if top_n and top_n > 0 else evaluation.areas_for_improvement
+        improvements = (
+            evaluation.areas_for_improvement[:top_n] if top_n and top_n > 0 else evaluation.areas_for_improvement
+        )
 
         for s in strengths:
             s.observation = s.observation[:250].strip()
@@ -465,5 +531,5 @@ class LocalCoachingSynthesizer:
             action_items=evaluation.action_items,
             key_highlights=getattr(evaluation, "key_highlights", []),
             longitudinal_summary=evaluation.longitudinal_summary,
-            persona_alignment_notes=evaluation.persona_alignment_notes
+            persona_alignment_notes=evaluation.persona_alignment_notes,
         )

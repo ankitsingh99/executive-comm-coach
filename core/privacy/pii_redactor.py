@@ -4,7 +4,7 @@ Implements DPDP Act (2023) privacy-by-design safeguards before text is stored or
 """
 
 import re
-from typing import Tuple, List, Dict
+from typing import Tuple, Dict
 
 
 class PIIRedactor:

@@ -35,7 +35,7 @@ class SarvamSpeechClient:
         audio_file_path: str,
         language_code: str = "hi-IN",
         model: str = "saaras:v2",
-        with_diarization: bool = True
+        with_diarization: bool = True,
     ) -> List[Utterance]:
         """
         Submits audio file to Sarvam AI Saaras endpoint with speaker diarization enabled.
@@ -54,21 +54,18 @@ class SarvamSpeechClient:
                     "model": model,
                     "language_code": language_code,
                     "with_diarization": "true" if with_diarization else "false",
-                    "with_timestamps": "true"
+                    "with_timestamps": "true",
                 },
                 file_field="file",
                 filename=filename,
-                file_bytes=file_bytes
+                file_bytes=file_bytes,
             )
 
             req = urllib.request.Request(
                 self.base_url,
                 data=body,
-                headers={
-                    "api-subscription-key": self.api_key,
-                    "Content-Type": content_type
-                },
-                method="POST"
+                headers={"api-subscription-key": self.api_key, "Content-Type": content_type},
+                method="POST",
             )
 
             with urllib.request.urlopen(req, timeout=30.0) as response:
@@ -80,11 +77,7 @@ class SarvamSpeechClient:
             return []
 
     def _build_multipart_payload(
-        self,
-        fields: Dict[str, str],
-        file_field: str,
-        filename: str,
-        file_bytes: bytes
+        self, fields: Dict[str, str], file_field: str, filename: str, file_bytes: bytes
     ) -> (str, bytes):
         """Constructs multipart/form-data payload without external dependencies."""
         boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
@@ -138,7 +131,7 @@ class SarvamSpeechClient:
                             speaker=speaker_label,
                             start_time=round(start_t, 2),
                             end_time=round(end_t, 2),
-                            transcript=text
+                            transcript=text,
                         )
                     )
             if utterances:
@@ -147,13 +140,6 @@ class SarvamSpeechClient:
         # Fallback: if diarization entries are empty, parse top-level transcript
         raw_transcript = response_json.get("transcript", "").strip()
         if raw_transcript:
-            utterances.append(
-                Utterance(
-                    speaker="USER",
-                    start_time=0.0,
-                    end_time=5.0,
-                    transcript=raw_transcript
-                )
-            )
+            utterances.append(Utterance(speaker="USER", start_time=0.0, end_time=5.0, transcript=raw_transcript))
 
         return utterances

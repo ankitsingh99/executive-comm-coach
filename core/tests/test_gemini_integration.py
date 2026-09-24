@@ -28,7 +28,7 @@ def test_gemini_audio_engine_mock_transcription(tmp_path):
 
     mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = '''{
+    mock_response.text = """{
       "transcription": [
         {
           "speaker": "USER",
@@ -48,7 +48,7 @@ def test_gemini_audio_engine_mock_transcription(tmp_path):
           "confidence_score": 0.98
         }
       ]
-    }'''
+    }"""
     mock_client.models.generate_content.return_value = mock_response
 
     with patch.object(audio_engine, "_get_client", return_value=mock_client):
@@ -72,13 +72,15 @@ def test_gemini_coaching_synthesizer_mock():
         counterpart_role="VP of Eng",
         power_axis="UPWARD",
         dialogue=[
-            Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="Ummm I was thinking maybe we delay launch.")
-        ]
+            Utterance(
+                speaker="USER", start_time=0.0, end_time=4.0, transcript="Ummm I was thinking maybe we delay launch."
+            )
+        ],
     )
 
     mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = '''{
+    mock_response.text = """{
       "persona_context": "Upward Executive Briefing",
       "metrics": {
         "presence_score": 75,
@@ -101,7 +103,7 @@ def test_gemini_coaching_synthesizer_mock():
       ],
       "longitudinal_summary": "Direct topical focus. Action: Eliminate qualifiers by leading with the bottom-line decision.",
       "persona_alignment_notes": "Evaluated against UPWARD (BLUF) communication rubric."
-    }'''
+    }"""
     mock_client.models.generate_content.return_value = mock_response
 
     with patch.object(synthesizer, "_get_client", return_value=mock_client):

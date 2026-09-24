@@ -4,11 +4,10 @@ Uses Google Gemini for deep semantic coaching, register-tailored rephrasings,
 and multi-dimensional communication scoring.
 """
 
-import os
 import json
 import logging
 import warnings
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 # Suppress GenAI automatic function calling warning
 logging.getLogger("google.genai").setLevel(logging.ERROR)
@@ -18,15 +17,13 @@ try:
     from .schema import (
         ConversationSession,
         ExecutiveCoachingEvaluation,
-        CommunicationMetrics,
         TopStrength,
         AreaForImprovement,
         ActionItem,
         KeyHighlight,
-        FillerWordMetric,
-        Utterance
+        Utterance,
     )
-    from .persona_ontology import PersonaOntologyEngine, PowerAxis, PersonaProfile
+    from .persona_ontology import PersonaOntologyEngine, PowerAxis
     from .metrics_calculator import MetricsCalculator
     from .action_item_extractor import ActionItemExtractor
     from .transcription_analyzer import TranscriptionAnalyzer
@@ -36,15 +33,13 @@ except (ImportError, ValueError):
     from engine.schema import (
         ConversationSession,
         ExecutiveCoachingEvaluation,
-        CommunicationMetrics,
         TopStrength,
         AreaForImprovement,
         ActionItem,
         KeyHighlight,
-        FillerWordMetric,
-        Utterance
+        Utterance,
     )
-    from engine.persona_ontology import PersonaOntologyEngine, PowerAxis, PersonaProfile
+    from engine.persona_ontology import PersonaOntologyEngine, PowerAxis
     from engine.metrics_calculator import MetricsCalculator
     from engine.action_item_extractor import ActionItemExtractor
     from engine.transcription_analyzer import TranscriptionAnalyzer
@@ -67,6 +62,7 @@ class GeminiCoachingSynthesizer:
         if self._client is None and self.api_key:
             try:
                 from google import genai
+
                 self._client = genai.Client(api_key=self.api_key)
             except Exception:
                 self._client = None
@@ -76,9 +72,7 @@ class GeminiCoachingSynthesizer:
         return bool(self.api_key and self._get_client() is not None)
 
     def synthesize(
-        self,
-        session: ConversationSession,
-        top_n: Optional[int] = None
+        self, session: ConversationSession, top_n: Optional[int] = None
     ) -> Optional[ExecutiveCoachingEvaluation]:
         """
         Synthesizes structured coaching evaluation using Gemini.
@@ -105,13 +99,10 @@ class GeminiCoachingSynthesizer:
         profile = PersonaOntologyEngine.create_persona_profile(
             counterpart_name=session.counterpart_name or "",
             role_title=session.counterpart_role or "",
-            power_axis=power_axis
+            power_axis=power_axis,
         )
 
-        metrics = MetricsCalculator.analyze_dialogue(
-            redacted_dialogue,
-            target_speaker=session.target_speaker
-        )
+        metrics = MetricsCalculator.analyze_dialogue(redacted_dialogue, target_speaker=session.target_speaker)
 
         system_instruction = PersonaOntologyEngine.generate_system_instruction(profile)
         dialogue_text = "\n".join([f"{u.speaker}: {u.transcript}" for u in redacted_dialogue])
@@ -194,9 +185,7 @@ Guidelines:
                 pass
 
             response = client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(**config_kwargs)
+                model=self.model, contents=prompt, config=types.GenerateContentConfig(**config_kwargs)
             )
 
             raw_text = response.text.strip()
@@ -206,10 +195,7 @@ Guidelines:
             data = json.loads(raw_text)
 
             strengths = [
-                TopStrength(
-                    observation=s.get("observation", "")[:250],
-                    verbatim_quote=s.get("verbatim_quote", "")
-                )
+                TopStrength(observation=s.get("observation", "")[:250], verbatim_quote=s.get("verbatim_quote", ""))
                 for s in data.get("top_strengths", [])
             ]
 
@@ -217,7 +203,7 @@ Guidelines:
                 AreaForImprovement(
                     critique=a.get("critique", "")[:250],
                     verbatim_quote=a.get("verbatim_quote", ""),
-                    coached_phrasing=a.get("coached_phrasing", "")[:250]
+                    coached_phrasing=a.get("coached_phrasing", "")[:250],
                 )
                 for a in data.get("areas_for_improvement", [])
             ]
@@ -229,7 +215,7 @@ Guidelines:
                     speaker=h.get("speaker", "SPEAKER"),
                     verbatim_quote=h.get("verbatim_quote", ""),
                     category=h.get("category", "Key Takeaway"),
-                    importance=h.get("importance", "Normal")
+                    importance=h.get("importance", "Normal"),
                 )
                 for h in data.get("key_highlights", [])
             ]
@@ -243,7 +229,7 @@ Guidelines:
                     target_time_inferred_ampm=ai.get("target_time_inferred_ampm"),
                     verbatim_quote=ai.get("verbatim_quote", ""),
                     category=ai.get("category", "Follow-up"),
-                    urgency=ai.get("urgency", "Normal")
+                    urgency=ai.get("urgency", "Normal"),
                 )
                 for ai in data.get("action_items", [])
             ]
@@ -267,8 +253,10 @@ Guidelines:
                 action_items=action_items,
                 key_highlights=highlights,
                 longitudinal_summary=data.get("longitudinal_summary", ""),
-                persona_alignment_notes=data.get("persona_alignment_notes", f"Evaluated against {power_axis.value} communication rubric.")
+                persona_alignment_notes=data.get(
+                    "persona_alignment_notes", f"Evaluated against {power_axis.value} communication rubric."
+                ),
             )
 
-        except Exception as e:
+        except Exception:
             return None

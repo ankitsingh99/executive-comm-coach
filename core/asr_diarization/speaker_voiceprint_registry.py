@@ -14,15 +14,14 @@ from typing import List, Dict, Tuple, Optional, Any
 
 try:
     from ..config import DATA_DIR
-    from ..engine.persona_ontology import PowerAxis
 except (ImportError, ValueError):
     from config import DATA_DIR
-    from engine.persona_ontology import PowerAxis
 
 
 @dataclass
 class SpeakerVoiceprint:
     """Acoustic biometric voiceprint profile for a known person."""
+
     speaker_name: str
     role: str = "Colleague"
     power_axis: str = "LATERAL"
@@ -53,7 +52,7 @@ class SpeakerVoiceprint:
             pitch_range_hz=float(data.get("pitch_range_hz", 35.0)),
             spectral_centroid_hz=float(data.get("spectral_centroid_hz", 1800.0)),
             enrolled_at_utc=data.get("enrolled_at_utc", datetime.now(timezone.utc).isoformat()),
-            sample_count=int(data.get("sample_count", 1))
+            sample_count=int(data.get("sample_count", 1)),
         )
 
 
@@ -75,14 +74,14 @@ class SpeakerVoiceprintRegistry:
         # Next 8 dims: spectral distribution around centroid
         for j in range(8):
             freq_center = (j + 1) * (centroid_hz / 4.0)
-            dist = np.exp(-((freq_center - centroid_hz) ** 2) / (2 * (600.0 ** 2)))
+            dist = np.exp(-((freq_center - centroid_hz) ** 2) / (2 * (600.0**2)))
             vec[16 + j] = float(dist)
         # Remaining 8 dims: pitch range and pacing moments
         vec[24] = float(pitch_hz / 300.0)
         vec[25] = float(centroid_hz / 4000.0)
         for k in range(26, 32):
             vec[k] = float(np.sin((k + 1) * pitch_hz / 100.0) * 0.1)
-        
+
         norm = float(np.linalg.norm(vec))
         if norm > 0:
             vec = vec / norm
@@ -101,9 +100,7 @@ class SpeakerVoiceprintRegistry:
             try:
                 with open(self.registry_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    self.voiceprints = {
-                        k: SpeakerVoiceprint.from_dict(v) for k, v in data.items()
-                    }
+                    self.voiceprints = {k: SpeakerVoiceprint.from_dict(v) for k, v in data.items()}
             except Exception:
                 self.voiceprints = {}
         else:
@@ -119,9 +116,7 @@ class SpeakerVoiceprintRegistry:
             pass
 
     def extract_voiceprint_features(
-        self,
-        audio_signal: np.ndarray,
-        sample_rate: int = 16000
+        self, audio_signal: np.ndarray, sample_rate: int = 16000
     ) -> Optional[Tuple[List[float], float, float, float]]:
         """
         Extracts 32-dimensional normalized acoustic voiceprint vector
@@ -131,7 +126,7 @@ class SpeakerVoiceprintRegistry:
             return None
 
         frame_len = int(0.040 * sample_rate)  # 40ms frame
-        hop_len = int(0.020 * sample_rate)    # 20ms hop
+        hop_len = int(0.020 * sample_rate)  # 20ms hop
 
         frames = []
         for start in range(0, len(audio_signal) - frame_len + 1, hop_len):
@@ -146,7 +141,7 @@ class SpeakerVoiceprintRegistry:
         # 1. Pitch Estimation via Autocorrelation across voiced frames
         pitches = []
         min_lag = int(sample_rate / 450)  # Max pitch: 450 Hz
-        max_lag = int(sample_rate / 75)   # Min pitch: 75 Hz
+        max_lag = int(sample_rate / 75)  # Min pitch: 75 Hz
 
         for f in frames:
             corr = np.correlate(f, f, mode="full")[len(f) - 1 :]
@@ -202,14 +197,18 @@ class SpeakerVoiceprintRegistry:
             float(np.mean(std_bands[:6])),
             float(np.mean(std_bands[6:12])),
             float(np.mean(std_bands[12:18])),
-            float(np.mean(std_bands[18:]))
+            float(np.mean(std_bands[18:])),
         ]
-        features = list(norm_bands) + dynamics + [
-            float(mean_pitch / 400.0),
-            float(pitch_range / 200.0),
-            float(mean_centroid / 4000.0),
-            float(np.std(pitches) / 100.0 if len(pitches) > 1 else 0.1)
-        ]
+        features = (
+            list(norm_bands)
+            + dynamics
+            + [
+                float(mean_pitch / 400.0),
+                float(pitch_range / 200.0),
+                float(mean_centroid / 4000.0),
+                float(np.std(pitches) / 100.0 if len(pitches) > 1 else 0.1),
+            ]
+        )
 
         # L2-normalize final embedding vector
         vec = np.array(features, dtype=np.float32)
@@ -249,7 +248,7 @@ class SpeakerVoiceprintRegistry:
         role: str = "Colleague",
         power_axis: str = "LATERAL",
         audio_signal_or_wav_path: Any = None,
-        sample_rate: int = 16000
+        sample_rate: int = 16000,
     ) -> Optional[SpeakerVoiceprint]:
         """
         Enrolls or updates a speaker's voiceprint in the persistent registry.
@@ -291,7 +290,7 @@ class SpeakerVoiceprintRegistry:
                 mean_pitch_hz=round((existing.mean_pitch_hz * n + mean_pitch) / (n + 1), 1),
                 pitch_range_hz=round((existing.pitch_range_hz * n + pitch_range) / (n + 1), 1),
                 spectral_centroid_hz=round((existing.spectral_centroid_hz * n + centroid) / (n + 1), 1),
-                sample_count=n + 1
+                sample_count=n + 1,
             )
         else:
             voiceprint = SpeakerVoiceprint(
@@ -302,7 +301,7 @@ class SpeakerVoiceprintRegistry:
                 mean_pitch_hz=round(mean_pitch, 1),
                 pitch_range_hz=round(pitch_range, 1),
                 spectral_centroid_hz=round(centroid, 1),
-                sample_count=1
+                sample_count=1,
             )
 
         self.voiceprints[key] = voiceprint
@@ -310,10 +309,7 @@ class SpeakerVoiceprintRegistry:
         return voiceprint
 
     def identify_speaker(
-        self,
-        audio_signal_or_wav_path: Any,
-        sample_rate: int = 16000,
-        threshold: float = 0.78
+        self, audio_signal_or_wav_path: Any, sample_rate: int = 16000, threshold: float = 0.78
     ) -> Optional[Tuple[SpeakerVoiceprint, float]]:
         """
         Matches incoming audio signal against enrolled voiceprints.
@@ -377,7 +373,7 @@ class SpeakerVoiceprintRegistry:
                 "power_axis": v.power_axis,
                 "mean_pitch_hz": v.mean_pitch_hz,
                 "sample_count": v.sample_count,
-                "enrolled_at_utc": v.enrolled_at_utc
+                "enrolled_at_utc": v.enrolled_at_utc,
             }
             for v in self.voiceprints.values()
         ]

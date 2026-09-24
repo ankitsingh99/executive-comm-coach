@@ -32,7 +32,7 @@ class ConsentRecord(BaseModel):
         purpose: str = "Executive Communication Skills Analysis",
         data_retention_days: int = 30,
         local_storage_encrypted: bool = True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             session_id=session_id,
@@ -42,7 +42,7 @@ class ConsentRecord(BaseModel):
             purpose=purpose,
             data_retention_days=data_retention_days,
             local_storage_encrypted=local_storage_encrypted,
-            **kwargs
+            **kwargs,
         )
         self.session_id = session_id
         self.timestamp_iso = timestamp_iso or datetime.now(timezone.utc).isoformat()
@@ -68,7 +68,7 @@ class DPDPComplianceManager:
             counterpart_notified=counterpart_notified,
             audible_chime_played=True,
             purpose="Executive Communication Skills Coaching",
-            local_storage_encrypted=True
+            local_storage_encrypted=True,
         )
         self.consent_logs[session_id] = record
         return record
@@ -102,5 +102,5 @@ class DPDPComplianceManager:
             "session_id": session_id,
             "purged_files_count": len(erased_items),
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "compliance_standard": "DPDP Act 2023 Section 12 Right to Erasure"
+            "compliance_standard": "DPDP Act 2023 Section 12 Right to Erasure",
         }

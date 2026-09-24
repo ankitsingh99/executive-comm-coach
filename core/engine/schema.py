@@ -8,9 +8,11 @@ from typing import List, Optional, Dict, Any
 
 try:
     from pydantic import BaseModel, Field, field_validator
+
     HAS_PYDANTIC = True
 except ImportError:
     HAS_PYDANTIC = False
+
     # Portable fallback using standard dataclasses
     class BaseModel:
         def __init__(self, **kwargs):
@@ -38,11 +40,13 @@ except ImportError:
     def field_validator(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
 
 class FillerWordMetric(BaseModel):
     """Detected verbal filler word and frequency count."""
+
     token: str = ""
     count: int = 0
 
@@ -54,6 +58,7 @@ class FillerWordMetric(BaseModel):
 
 class SpeakerAcousticProfile(BaseModel):
     """Acoustic voice characteristics and tone classification for an individual speaker."""
+
     speaker_id: str = "SPEAKER_01"
     mean_pitch_hz: float = 0.0
     pitch_range_hz: float = 0.0
@@ -73,7 +78,7 @@ class SpeakerAcousticProfile(BaseModel):
         tone_label: str = "Calm & Measured",
         talk_time_percentage: float = 100.0,
         confidence_score: float = 1.0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             speaker_id=speaker_id,
@@ -84,7 +89,7 @@ class SpeakerAcousticProfile(BaseModel):
             tone_label=tone_label,
             talk_time_percentage=talk_time_percentage,
             confidence_score=confidence_score,
-            **kwargs
+            **kwargs,
         )
         self.speaker_id = speaker_id
         self.mean_pitch_hz = float(mean_pitch_hz)
@@ -98,6 +103,7 @@ class SpeakerAcousticProfile(BaseModel):
 
 class AcousticAnalysisResult(BaseModel):
     """Aggregate acoustic voice and speaker detection analysis."""
+
     detected_speaker_count: int = 1
     is_multi_speaker: bool = False
     speakers: List[SpeakerAcousticProfile] = []
@@ -115,7 +121,7 @@ class AcousticAnalysisResult(BaseModel):
         turn_taking_events: int = 0,
         overlapping_speech_events: int = 0,
         overlap_duration_total_sec: float = 0.0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             detected_speaker_count=detected_speaker_count,
@@ -125,7 +131,7 @@ class AcousticAnalysisResult(BaseModel):
             turn_taking_events=turn_taking_events,
             overlapping_speech_events=overlapping_speech_events,
             overlap_duration_total_sec=overlap_duration_total_sec,
-            **kwargs
+            **kwargs,
         )
         self.detected_speaker_count = int(detected_speaker_count)
         self.is_multi_speaker = bool(is_multi_speaker)
@@ -138,6 +144,7 @@ class AcousticAnalysisResult(BaseModel):
 
 class CommunicationMetrics(BaseModel):
     """Core quantitative communication efficacy scores [0, 100]."""
+
     presence_score: int = 0
     assertiveness_score: int = 0
     active_listening_score: int = 0
@@ -154,7 +161,7 @@ class CommunicationMetrics(BaseModel):
         filler_words_detected: Optional[List[FillerWordMetric]] = None,
         interruption_count: int = 0,
         overlap_count: int = 0,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             presence_score=presence_score,
@@ -163,7 +170,7 @@ class CommunicationMetrics(BaseModel):
             filler_words_detected=filler_words_detected or [],
             interruption_count=interruption_count,
             overlap_count=overlap_count,
-            **kwargs
+            **kwargs,
         )
         self.presence_score = max(0, min(100, int(presence_score)))
         self.assertiveness_score = max(0, min(100, int(assertiveness_score)))
@@ -175,6 +182,7 @@ class CommunicationMetrics(BaseModel):
 
 class TopStrength(BaseModel):
     """Itemized positive communication observation."""
+
     observation: str = ""
     verbatim_quote: str = ""
 
@@ -186,22 +194,14 @@ class TopStrength(BaseModel):
 
 class AreaForImprovement(BaseModel):
     """Itemized area for communication improvement with coached rephrasing."""
+
     critique: str = ""
     verbatim_quote: str = ""
     coached_phrasing: str = ""
 
-    def __init__(
-        self,
-        critique: str = "",
-        verbatim_quote: str = "",
-        coached_phrasing: str = "",
-        **kwargs
-    ):
+    def __init__(self, critique: str = "", verbatim_quote: str = "", coached_phrasing: str = "", **kwargs):
         super().__init__(
-            critique=critique[:250],
-            verbatim_quote=verbatim_quote,
-            coached_phrasing=coached_phrasing[:250],
-            **kwargs
+            critique=critique[:250], verbatim_quote=verbatim_quote, coached_phrasing=coached_phrasing[:250], **kwargs
         )
         self.critique = critique[:250]
         self.verbatim_quote = verbatim_quote
@@ -210,6 +210,7 @@ class AreaForImprovement(BaseModel):
 
 class KeyHighlight(BaseModel):
     """Itemized key highlight, strategic decision, or takeaway extracted from transcription."""
+
     headline: str = ""
     takeaway: str = ""
     speaker: str = "SPEAKER"
@@ -225,7 +226,7 @@ class KeyHighlight(BaseModel):
         verbatim_quote: str = "",
         category: str = "Key Takeaway",
         importance: str = "Normal",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             headline=headline[:250],
@@ -234,7 +235,7 @@ class KeyHighlight(BaseModel):
             verbatim_quote=verbatim_quote,
             category=category,
             importance=importance,
-            **kwargs
+            **kwargs,
         )
         self.headline = headline[:250]
         self.takeaway = takeaway[:300]
@@ -246,6 +247,7 @@ class KeyHighlight(BaseModel):
 
 class ActionItem(BaseModel):
     """Extracted action item, commitment, or scheduled follow-up from spoken dialogue."""
+
     owner: str = "USER"
     task: str = ""
     due_time_or_date: Optional[str] = None
@@ -265,7 +267,7 @@ class ActionItem(BaseModel):
         verbatim_quote: str = "",
         category: str = "Follow-up",
         urgency: str = "Normal",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             owner=owner,
@@ -276,7 +278,7 @@ class ActionItem(BaseModel):
             verbatim_quote=verbatim_quote,
             category=category,
             urgency=urgency,
-            **kwargs
+            **kwargs,
         )
         self.owner = owner
         self.task = task[:250]
@@ -294,6 +296,7 @@ PotentialTask = ActionItem
 
 class TranscriptionAnalysisResult(BaseModel):
     """Complete structured intelligence extracted from transcription."""
+
     session_id: str = ""
     timestamp_utc: str = ""
     summary: str = ""
@@ -311,7 +314,7 @@ class TranscriptionAnalysisResult(BaseModel):
         potential_tasks: Optional[List[ActionItem]] = None,
         topics_discussed: Optional[List[str]] = None,
         sentiment_tone: str = "Neutral & Constructive",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             session_id=session_id,
@@ -321,7 +324,7 @@ class TranscriptionAnalysisResult(BaseModel):
             potential_tasks=potential_tasks or [],
             topics_discussed=topics_discussed or [],
             sentiment_tone=sentiment_tone,
-            **kwargs
+            **kwargs,
         )
         self.session_id = session_id
         self.timestamp_utc = timestamp_utc
@@ -334,6 +337,7 @@ class TranscriptionAnalysisResult(BaseModel):
 
 class ExecutiveCoachingEvaluation(BaseModel):
     """Complete structured coaching evaluation report constrained by Top-N parameter."""
+
     persona_context: str = ""
     metrics: CommunicationMetrics = None
     top_strengths: List[TopStrength] = []
@@ -353,7 +357,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
         key_highlights: Optional[List[KeyHighlight]] = None,
         longitudinal_summary: str = "",
         persona_alignment_notes: str = "",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             persona_context=persona_context,
@@ -364,7 +368,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
             key_highlights=key_highlights or [],
             longitudinal_summary=longitudinal_summary,
             persona_alignment_notes=persona_alignment_notes,
-            **kwargs
+            **kwargs,
         )
         self.persona_context = persona_context
         self.metrics = metrics or CommunicationMetrics()
@@ -378,6 +382,7 @@ class ExecutiveCoachingEvaluation(BaseModel):
 
 class Utterance(BaseModel):
     """Single timestamped and diarized dialogue turn."""
+
     speaker: str = "USER"
     start_time: float = 0.0
     end_time: float = 0.0
@@ -395,7 +400,7 @@ class Utterance(BaseModel):
         is_overlapping: bool = False,
         overlap_duration_sec: float = 0.0,
         interrupted_speaker: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             speaker=speaker,
@@ -405,7 +410,7 @@ class Utterance(BaseModel):
             is_overlapping=is_overlapping,
             overlap_duration_sec=overlap_duration_sec,
             interrupted_speaker=interrupted_speaker,
-            **kwargs
+            **kwargs,
         )
         self.speaker = speaker
         self.start_time = float(start_time)
@@ -418,6 +423,7 @@ class Utterance(BaseModel):
 
 class ConversationSession(BaseModel):
     """Complete meeting/conversation session data."""
+
     session_id: str = ""
     timestamp_utc: str = ""
     target_speaker: str = "USER"
@@ -439,7 +445,7 @@ class ConversationSession(BaseModel):
         dialogue: Optional[List[Utterance]] = None,
         raw_audio_path: Optional[str] = None,
         is_encrypted: bool = True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             session_id=session_id,
@@ -451,7 +457,7 @@ class ConversationSession(BaseModel):
             dialogue=dialogue or [],
             raw_audio_path=raw_audio_path,
             is_encrypted=is_encrypted,
-            **kwargs
+            **kwargs,
         )
         self.session_id = session_id
         self.timestamp_utc = timestamp_utc

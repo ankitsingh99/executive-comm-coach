@@ -20,12 +20,22 @@ def test_hinglish_fillers_and_hedging_detection():
 
 def test_hinglish_action_item_extraction():
     dialogue = [
-        Utterance(speaker="Rahul", start_time=0.0, end_time=4.0, transcript="Main kal 10 baje call karunga aur metrics discuss karenge."),
-        Utterance(speaker="USER", start_time=4.5, end_time=9.0, transcript="Theek hai, hum kal shaam tak release ship kar denge.")
+        Utterance(
+            speaker="Rahul",
+            start_time=0.0,
+            end_time=4.0,
+            transcript="Main kal 10 baje call karunga aur metrics discuss karenge.",
+        ),
+        Utterance(
+            speaker="USER",
+            start_time=4.5,
+            end_time=9.0,
+            transcript="Theek hai, hum kal shaam tak release ship kar denge.",
+        ),
     ]
     items = ActionItemExtractor.extract_from_dialogue(dialogue)
     assert len(items) >= 2
-    
+
     rahul_item = next(item for item in items if item.owner == "Rahul")
     assert "call" in rahul_item.category.lower() or "meeting" in rahul_item.category.lower()
     assert "kal" in rahul_item.due_time_or_date.lower() or "10 baje" in rahul_item.due_time_or_date.lower()
@@ -34,7 +44,12 @@ def test_hinglish_action_item_extraction():
 def test_hinglish_coaching_takeaways_and_rephrasing():
     dialogue = [
         Utterance(speaker="Sandeep", start_time=0.0, end_time=3.0, transcript="Production latency ka status kya hai?"),
-        Utterance(speaker="USER", start_time=3.5, end_time=8.0, transcript="Matlab mujhe lagta hai ki hume caching enable karni chahiye, par thoda doubt hai.")
+        Utterance(
+            speaker="USER",
+            start_time=3.5,
+            end_time=8.0,
+            transcript="Matlab mujhe lagta hai ki hume caching enable karni chahiye, par thoda doubt hai.",
+        ),
     ]
     session = ConversationSession(
         session_id="test_hinglish_123",
@@ -43,7 +58,7 @@ def test_hinglish_coaching_takeaways_and_rephrasing():
         counterpart_name="Sandeep",
         counterpart_role="VP of Engineering",
         power_axis="UPWARD",
-        dialogue=dialogue
+        dialogue=dialogue,
     )
 
     engine = ExecutiveCoachingEngine(use_local_only=True)

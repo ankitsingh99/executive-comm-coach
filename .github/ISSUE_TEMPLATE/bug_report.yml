@@ -1,0 +1,43 @@
+name: 🐛 Bug Report
+description: Report a reproducible bug or unexpected behavior
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for reporting an issue with Executive Communication Coach!
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps or command line used to reproduce the issue.
+      placeholder: |
+        1. Run `executive-comm-coach --axis UPWARD`
+        2. Speak in Hinglish: "..."
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS (Apple Silicon M1/M2/M3/M4)
+        - macOS (Intel)
+        - Linux (Ubuntu/Debian)
+        - Linux (Other)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Paste any terminal stack traces or error logs here.
+      render: shell

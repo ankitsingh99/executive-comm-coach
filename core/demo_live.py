@@ -89,32 +89,36 @@ USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms acr
     print("  [Diarized Transcript Turns]:")
     for u in utterances:
         speaker_tag = f"[{u.speaker}]"
-        print(f"   {speaker_tag:<15} [{u.start_time:04.1f}s - {u.end_time:04.1f}s]: \"{u.transcript}\"")
+        print(f'   {speaker_tag:<15} [{u.start_time:04.1f}s - {u.end_time:04.1f}s]: "{u.transcript}"')
 
     # -------------------------------------------------------------------------
     # STEP 4: Local PII & Sensitive Entity Redaction
     # -------------------------------------------------------------------------
     print_step_header(4, "Privacy-by-Design Local PII Redaction")
-    print("  Scanning transcript turns for sensitive financial data, credentials, and phone numbers before LLM synthesis...\n")
+    print(
+        "  Scanning transcript turns for sensitive financial data, credentials, and phone numbers before LLM synthesis...\n"
+    )
 
     redacted_turns = []
     total_redactions = {}
     for u in utterances:
         red_text, counts = PIIRedactor.redact_text(u.transcript)
-        redacted_turns.append(Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text))
+        redacted_turns.append(
+            Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text)
+        )
         for k, v in counts.items():
             total_redactions[k] = total_redactions.get(k, 0) + v
 
     for u in redacted_turns:
         if "REDACTED" in u.transcript:
-            print(f"   [SCRUBBED] \"{u.transcript}\"")
+            print(f'   [SCRUBBED] "{u.transcript}"')
     print(f"   [SUMMARY] Redaction Summary: {total_redactions}")
 
     # -------------------------------------------------------------------------
     # STEP 5: Persona Context & Executive Coaching Synthesis
     # -------------------------------------------------------------------------
     print_step_header(5, "Executive Coaching Synthesis (Upward BLUF Evaluation)")
-    
+
     counterpart_name = "Vikram Malhotra"
     counterpart_role = "VP of Engineering"
     power_axis = PowerAxis.UPWARD
@@ -126,18 +130,18 @@ USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms acr
         counterpart_name=counterpart_name,
         counterpart_role=counterpart_role,
         power_axis=power_axis.value,
-        dialogue=redacted_turns
+        dialogue=redacted_turns,
     )
 
     coach = ExecutiveCoachingEngine(use_local_only=True)
     evaluation = coach.evaluate_session(session, top_n=2)
 
     print(f"  [CONTEXT] Relational Dynamic: {evaluation.persona_context}\n")
-    
+
     # Quantitative Scores
     print("  +--------------------------------------------------------+")
     print("  |                  EXECUTIVE SCORECARD                   |")
-    print("  +------------------------+-------------------------------+");
+    print("  +------------------------+-------------------------------+")
     print(f"  |  Executive Presence    |  {evaluation.metrics.presence_score:>3}/100                      |")
     print(f"  |  Assertiveness Index   |  {evaluation.metrics.assertiveness_score:>3}/100                      |")
     print(f"  |  Active Listening      |  {evaluation.metrics.active_listening_score:>3}/100                      |")
@@ -150,13 +154,13 @@ USER: Understood. Our data demonstrates that the P99 latency dropped by 42ms acr
     print("  TOP POSITIVE STRENGTHS:")
     for idx, s in enumerate(evaluation.top_strengths, 1):
         print(f"    {idx}. {s.observation}")
-        print(f"       Quote: \"{s.verbatim_quote}\"")
+        print(f'       Quote: "{s.verbatim_quote}"')
 
     print("\n  AREAS FOR IMPROVEMENT & HIGH-IMPACT COACHED PHRASING:")
     for idx, a in enumerate(evaluation.areas_for_improvement, 1):
         print(f"    {idx}. Critique: {a.critique}")
-        print(f"       Original: \"{a.verbatim_quote}\"")
-        print(f"       Coached:  \"{a.coached_phrasing}\"")
+        print(f'       Original: "{a.verbatim_quote}"')
+        print(f'       Coached:  "{a.coached_phrasing}"')
 
     # -------------------------------------------------------------------------
     # STEP 6: Statutory Right to Erasure

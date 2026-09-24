@@ -5,32 +5,91 @@ phonetic variations, and ensures consistent downstream NLP/regex extraction.
 """
 
 import re
-import unicodedata
-from typing import Dict, Tuple
+from typing import Dict
 
 # Comprehensive Devanagari to Romanized IAST / Popular Phonetic Mapping
 DEVANAGARI_VOWELS: Dict[str, str] = {
-    'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo',
-    'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
-    'अं': 'an', 'अः': 'ah', 'ऑ': 'o', 'ऍ': 'e'
+    "अ": "a",
+    "आ": "aa",
+    "इ": "i",
+    "ई": "ee",
+    "उ": "u",
+    "ऊ": "oo",
+    "ऋ": "ri",
+    "ए": "e",
+    "ऐ": "ai",
+    "ओ": "o",
+    "औ": "au",
+    "अं": "an",
+    "अः": "ah",
+    "ऑ": "o",
+    "ऍ": "e",
 }
 
 DEVANAGARI_MATRAS: Dict[str, str] = {
-    'ा': 'aa', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo',
-    'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au',
-    'ं': 'n', 'ँ': 'n', 'ः': 'h', '्': '', 'ॉ': 'o', 'ॅ': 'e'
+    "ा": "aa",
+    "ि": "i",
+    "ी": "ee",
+    "ु": "u",
+    "ू": "oo",
+    "ृ": "ri",
+    "े": "e",
+    "ै": "ai",
+    "ो": "o",
+    "ौ": "au",
+    "ं": "n",
+    "ँ": "n",
+    "ः": "h",
+    "्": "",
+    "ॉ": "o",
+    "ॅ": "e",
 }
 
 DEVANAGARI_CONSONANTS: Dict[str, str] = {
-    'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'ng',
-    'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'ny',
-    'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
-    'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
-    'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
-    'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v',
-    'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
-    'क़': 'q', 'ख़': 'kh', 'ग़': 'gh', 'ज़': 'z', 'ड़': 'r', 'ढ़': 'rh', 'फ़': 'f',
-    'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gya', 'श्र': 'shr'
+    "क": "k",
+    "ख": "kh",
+    "ग": "g",
+    "घ": "gh",
+    "ङ": "ng",
+    "च": "ch",
+    "छ": "chh",
+    "ज": "j",
+    "झ": "jh",
+    "ञ": "ny",
+    "ट": "t",
+    "ठ": "th",
+    "ड": "d",
+    "ढ": "dh",
+    "ण": "n",
+    "त": "t",
+    "थ": "th",
+    "द": "d",
+    "ध": "dh",
+    "न": "n",
+    "प": "p",
+    "फ": "ph",
+    "ब": "b",
+    "भ": "bh",
+    "म": "m",
+    "य": "y",
+    "र": "r",
+    "ल": "l",
+    "व": "v",
+    "श": "sh",
+    "ष": "sh",
+    "स": "s",
+    "ह": "h",
+    "क़": "q",
+    "ख़": "kh",
+    "ग़": "gh",
+    "ज़": "z",
+    "ड़": "r",
+    "ढ़": "rh",
+    "फ़": "f",
+    "क्ष": "ksh",
+    "त्र": "tr",
+    "ज्ञ": "gya",
+    "श्र": "shr",
 }
 
 # High-frequency Devanagari words to idiomatic Romanized Hinglish dictionary
@@ -127,7 +186,7 @@ class IndicNormalizer:
     @classmethod
     def contains_devanagari(cls, text: str) -> bool:
         """Checks if text contains Devanagari Unicode characters (U+0900 to U+097F)."""
-        return any('\u0900' <= char <= '\u097F' for char in text)
+        return any("\u0900" <= char <= "\u097f" for char in text)
 
     @classmethod
     def transliterate_devanagari_to_roman(cls, text: str) -> str:
@@ -166,12 +225,14 @@ class IndicNormalizer:
                             matra = chars[i + 1]
                             res.append(base + DEVANAGARI_MATRAS[matra])
                             i += 1
-                        elif i + 1 < len(chars) and chars[i + 1] == '्':  # Halant
+                        elif i + 1 < len(chars) and chars[i + 1] == "्":  # Halant
                             res.append(base)
                             i += 1
                         else:
                             # Inherited schwa 'a' if not at the very end of word
-                            res.append(base + ('a' if i + 1 < len(chars) and chars[i + 1] in DEVANAGARI_CONSONANTS else ''))
+                            res.append(
+                                base + ("a" if i + 1 < len(chars) and chars[i + 1] in DEVANAGARI_CONSONANTS else "")
+                            )
                     elif ch in DEVANAGARI_MATRAS:
                         res.append(DEVANAGARI_MATRAS[ch])
                     else:

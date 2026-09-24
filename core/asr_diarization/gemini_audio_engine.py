@@ -8,7 +8,7 @@ import os
 import json
 import logging
 import warnings
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Any
 
 # Suppress GenAI automatic function calling warning
 logging.getLogger("google.genai").setLevel(logging.ERROR)
@@ -39,8 +39,9 @@ class GeminiAudioEngine:
         if self._client is None and self.api_key:
             try:
                 from google import genai
+
                 self._client = genai.Client(api_key=self.api_key)
-            except Exception as e:
+            except Exception:
                 self._client = None
         return self._client
 
@@ -49,9 +50,7 @@ class GeminiAudioEngine:
         return bool(self.api_key and self._get_client() is not None)
 
     def process_audio(
-        self,
-        audio_wav_path: str,
-        speaker_id: str = "USER"
+        self, audio_wav_path: str, speaker_id: str = "USER"
     ) -> Tuple[List[Utterance], AcousticAnalysisResult]:
         """
         Transcribes audio and extracts acoustic voice/tone characteristics using Gemini.
@@ -76,6 +75,7 @@ class GeminiAudioEngine:
             audio_duration_sec = 0.0
             try:
                 import wave
+
                 with wave.open(audio_wav_path, "rb") as wf:
                     n_frames = wf.getnframes()
                     sr = wf.getframerate()
@@ -84,10 +84,7 @@ class GeminiAudioEngine:
             except Exception:
                 pass
 
-            audio_part = types.Part.from_bytes(
-                data=audio_bytes,
-                mime_type="audio/wav"
-            )
+            audio_part = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
 
             prompt = """Analyze this audio recording with high precision for speech-to-text, speaker diarization, overlapping cross-talk, and acoustic tone.
 
@@ -161,9 +158,7 @@ Instructions:
                 pass
 
             response = client.models.generate_content(
-                model=self.model,
-                contents=[audio_part, prompt],
-                config=types.GenerateContentConfig(**config_kwargs)
+                model=self.model, contents=[audio_part, prompt], config=types.GenerateContentConfig(**config_kwargs)
             )
 
             raw_text = response.text.strip()
@@ -213,11 +208,15 @@ Instructions:
             # Synthesize realistic sequential timestamps if missing, equal, or zeroed out
             if utterances:
                 all_zeroes = all(u.start_time == 0.0 and u.end_time == 0.0 for u in utterances)
-                not_advancing = len(utterances) > 1 and all(u.start_time == utterances[0].start_time for u in utterances)
+                not_advancing = len(utterances) > 1 and all(
+                    u.start_time == utterances[0].start_time for u in utterances
+                )
                 if all_zeroes or not_advancing:
                     total_words = sum(max(1, len(u.transcript.split())) for u in utterances)
-                    effective_duration = audio_duration_sec if audio_duration_sec > 0.5 else max(3.0, total_words * 0.45)
-                    
+                    effective_duration = (
+                        audio_duration_sec if audio_duration_sec > 0.5 else max(3.0, total_words * 0.45)
+                    )
+
                     cur_t = 0.0
                     for idx, u in enumerate(utterances):
                         w_count = max(1, len(u.transcript.split()))
@@ -229,7 +228,9 @@ Instructions:
                         cur_t = u.end_time
 
             # Compute overlapping voice events and simultaneous speech durations
-            processed_utts, overlap_events, total_overlap_dur, _ = DiarizationEngine.compute_overlapping_speech(utterances)
+            processed_utts, overlap_events, total_overlap_dur, _ = DiarizationEngine.compute_overlapping_speech(
+                utterances
+            )
 
             # Parse Acoustic & Tone profiles
             spk_count = int(data.get("speaker_count", max(1, len(data.get("speakers", [])))))
@@ -246,7 +247,7 @@ Instructions:
                         speech_rate_wpm=140.0,
                         tone_label=s.get("tone_label", overall_tone),
                         talk_time_percentage=float(s.get("talk_time_percentage", 100.0)),
-                        confidence_score=float(s.get("confidence_score", 0.95))
+                        confidence_score=float(s.get("confidence_score", 0.95)),
                     )
                 )
 
@@ -256,7 +257,7 @@ Instructions:
                         speaker_id="SPEAKER_01",
                         tone_label=overall_tone,
                         talk_time_percentage=100.0,
-                        confidence_score=0.95
+                        confidence_score=0.95,
                     )
                 ]
 
@@ -267,10 +268,10 @@ Instructions:
                 overall_tone=overall_tone,
                 turn_taking_events=max(0, spk_count - 1),
                 overlapping_speech_events=overlap_events,
-                overlap_duration_total_sec=total_overlap_dur
+                overlap_duration_total_sec=total_overlap_dur,
             )
 
             return processed_utts, acoustic_res
 
-        except Exception as e:
+        except Exception:
             return [], AcousticAnalysisResult()

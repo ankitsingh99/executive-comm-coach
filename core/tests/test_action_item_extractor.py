@@ -12,7 +12,7 @@ def test_action_item_extraction_scheduling_and_calls():
         speaker="Rahul",
         start_time=0.0,
         end_time=4.0,
-        transcript="Hey, I will call you on 31 aug at 10 am to review the proposal."
+        transcript="Hey, I will call you on 31 aug at 10 am to review the proposal.",
     )
     items = ActionItemExtractor.extract_from_utterance(utterance)
     assert len(items) == 1
@@ -28,7 +28,7 @@ def test_action_item_extraction_deliverable_and_deadline():
         speaker="USER",
         start_time=0.0,
         end_time=5.0,
-        transcript="Understood. We have decided to ship the release branch on Thursday morning."
+        transcript="Understood. We have decided to ship the release branch on Thursday morning.",
     )
     items = ActionItemExtractor.extract_from_utterance(utterance)
     assert len(items) == 1
@@ -43,7 +43,7 @@ def test_action_item_extraction_delegation_and_requests():
         speaker="Priya",
         start_time=0.0,
         end_time=4.0,
-        transcript="Please send me the updated latency metrics by Friday EOD."
+        transcript="Please send me the updated latency metrics by Friday EOD.",
     )
     items = ActionItemExtractor.extract_from_utterance(utterance)
     assert len(items) == 1
@@ -55,10 +55,7 @@ def test_action_item_extraction_delegation_and_requests():
 
 def test_action_item_extraction_review_and_investigation():
     utterance = Utterance(
-        speaker="USER",
-        start_time=0.0,
-        end_time=4.0,
-        transcript="I will review the PR by tomorrow afternoon."
+        speaker="USER", start_time=0.0, end_time=4.0, transcript="I will review the PR by tomorrow afternoon."
     )
     items = ActionItemExtractor.extract_from_utterance(utterance)
     assert len(items) == 1
@@ -74,7 +71,7 @@ def test_action_item_extraction_casual_dialogue_negative():
         speaker="USER",
         start_time=0.0,
         end_time=3.0,
-        transcript="It was a great discussion yesterday and the weather was really nice."
+        transcript="It was a great discussion yesterday and the weather was really nice.",
     )
     items = ActionItemExtractor.extract_from_utterance(utterance)
     assert len(items) == 0
@@ -83,7 +80,12 @@ def test_action_item_extraction_casual_dialogue_negative():
 def test_coaching_engine_populates_action_items():
     dialogue = [
         Utterance(speaker="Rahul", start_time=0.0, end_time=4.0, transcript="I will call you on 31 aug at 10 am."),
-        Utterance(speaker="USER", start_time=4.5, end_time=9.0, transcript="We have decided to ship the release on Friday morning.")
+        Utterance(
+            speaker="USER",
+            start_time=4.5,
+            end_time=9.0,
+            transcript="We have decided to ship the release on Friday morning.",
+        ),
     ]
     session = ConversationSession(
         session_id="test_act_123",
@@ -92,7 +94,7 @@ def test_coaching_engine_populates_action_items():
         counterpart_name="Rahul",
         counterpart_role="Peer",
         power_axis="LATERAL",
-        dialogue=dialogue
+        dialogue=dialogue,
     )
     engine = ExecutiveCoachingEngine(use_local_only=True)
     evaluation = engine.evaluate_session(session)
@@ -107,13 +109,9 @@ def test_coaching_engine_populates_action_items():
 
 def test_action_item_ambiguous_time_resolution():
     from datetime import datetime
+
     ref_dt = datetime(2026, 9, 12, 11, 0, 0)
-    utterance = Utterance(
-        speaker="Ankit",
-        start_time=0.0,
-        end_time=3.0,
-        transcript="I will call Rahul at 9."
-    )
+    utterance = Utterance(speaker="Ankit", start_time=0.0, end_time=3.0, transcript="I will call Rahul at 9.")
     items = ActionItemExtractor.extract_from_utterance(utterance, ref_dt=ref_dt)
     assert len(items) == 1
     assert items[0].target_time_inferred_ampm == "PM"

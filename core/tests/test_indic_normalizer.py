@@ -39,10 +39,7 @@ def test_metrics_calculator_with_devanagari_and_hinglish():
 
 
 def test_action_item_extractor_with_devanagari_and_hinglish():
-    utterance_devanagari = Utterance(
-        speaker="USER",
-        transcript="हम कल सुबह १० बजे कॉल करेंगे।"
-    )
+    utterance_devanagari = Utterance(speaker="USER", transcript="हम कल सुबह १० बजे कॉल करेंगे।")
     items = ActionItemExtractor.extract_from_utterance(utterance_devanagari)
     assert len(items) >= 1
     assert "kal" in items[0].due_time_or_date.lower() or "10" in str(items[0].due_time_or_date)
@@ -55,8 +52,11 @@ def test_local_coaching_synthesizer_hinglish_session():
         counterpart_name="Director",
         counterpart_role="Engineering Director",
         dialogue=[
-            Utterance(speaker="USER", transcript="Dekho basically matlab mujhe lagta hai hume caching enable karni chahiye. Hum kal 10 baje sync karenge.")
-        ]
+            Utterance(
+                speaker="USER",
+                transcript="Dekho basically matlab mujhe lagta hai hume caching enable karni chahiye. Hum kal 10 baje sync karenge.",
+            )
+        ],
     )
 
     synthesizer = LocalCoachingSynthesizer()

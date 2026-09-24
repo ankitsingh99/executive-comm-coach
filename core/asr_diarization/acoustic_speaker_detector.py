@@ -8,7 +8,7 @@ classify vocal tone dynamics across all communication modes.
 import os
 import wave
 import numpy as np
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple
 
 try:
     from ..engine.schema import SpeakerAcousticProfile, AcousticAnalysisResult
@@ -26,7 +26,7 @@ class AcousticSpeakerToneDetector:
     def __init__(self, sample_rate: int = 16000):
         self.sample_rate = sample_rate
         self.frame_length_ms = 50.0  # 50 ms window
-        self.hop_length_ms = 25.0    # 25 ms hop
+        self.hop_length_ms = 25.0  # 25 ms hop
 
     def analyze_wav_file(self, wav_path: str) -> AcousticAnalysisResult:
         """
@@ -37,7 +37,7 @@ class AcousticSpeakerToneDetector:
                 detected_speaker_count=1,
                 is_multi_speaker=False,
                 speakers=[SpeakerAcousticProfile(speaker_id="SPEAKER_01", tone_label="Calm & Measured")],
-                overall_tone="Calm & Measured"
+                overall_tone="Calm & Measured",
             )
 
         try:
@@ -66,12 +66,12 @@ class AcousticSpeakerToneDetector:
 
             return self.analyze_audio_signal(audio, self.sample_rate)
 
-        except Exception as e:
+        except Exception:
             return AcousticAnalysisResult(
                 detected_speaker_count=1,
                 is_multi_speaker=False,
                 speakers=[SpeakerAcousticProfile(speaker_id="SPEAKER_01", tone_label="Calm & Measured")],
-                overall_tone="Calm & Measured"
+                overall_tone="Calm & Measured",
             )
 
     def analyze_audio_signal(self, signal: np.ndarray, sample_rate: int) -> AcousticAnalysisResult:
@@ -83,7 +83,7 @@ class AcousticSpeakerToneDetector:
                 detected_speaker_count=1,
                 is_multi_speaker=False,
                 speakers=[SpeakerAcousticProfile(speaker_id="SPEAKER_01", tone_label="Calm & Measured")],
-                overall_tone="Calm & Measured"
+                overall_tone="Calm & Measured",
             )
 
         frame_len = int(self.frame_length_ms * sample_rate / 1000)
@@ -98,7 +98,7 @@ class AcousticSpeakerToneDetector:
                 detected_speaker_count=1,
                 is_multi_speaker=False,
                 speakers=[SpeakerAcousticProfile(speaker_id="SPEAKER_01", tone_label="Calm & Measured")],
-                overall_tone="Calm & Measured"
+                overall_tone="Calm & Measured",
             )
 
         # Feature Extraction per frame
@@ -109,7 +109,7 @@ class AcousticSpeakerToneDetector:
         voiced_flags = []
 
         min_lag = int(sample_rate / 450)  # Max pitch: 450 Hz
-        max_lag = int(sample_rate / 75)   # Min pitch: 75 Hz
+        max_lag = int(sample_rate / 75)  # Min pitch: 75 Hz
 
         for frame in frames:
             rms = np.sqrt(np.mean(frame**2))
@@ -129,7 +129,7 @@ class AcousticSpeakerToneDetector:
             # Pitch via Normalized Autocorrelation
             if rms > 0.015:  # Energy threshold for speech
                 corr = np.correlate(frame, frame, mode="full")
-                corr = corr[len(corr)//2 :]
+                corr = corr[len(corr) // 2 :]
                 if len(corr) > max_lag:
                     search_slice = corr[min_lag:max_lag]
                     if len(search_slice) > 0 and np.max(search_slice) > 0.35 * corr[0]:
@@ -151,17 +151,19 @@ class AcousticSpeakerToneDetector:
             return AcousticAnalysisResult(
                 detected_speaker_count=1,
                 is_multi_speaker=False,
-                speakers=[SpeakerAcousticProfile(
-                    speaker_id="SPEAKER_01",
-                    mean_pitch_hz=140.0,
-                    pitch_range_hz=30.0,
-                    energy_rms=float(np.mean(energies)),
-                    speech_rate_wpm=130.0,
-                    tone_label="Calm & Measured",
-                    talk_time_percentage=100.0,
-                    confidence_score=0.90
-                )],
-                overall_tone="Calm & Measured"
+                speakers=[
+                    SpeakerAcousticProfile(
+                        speaker_id="SPEAKER_01",
+                        mean_pitch_hz=140.0,
+                        pitch_range_hz=30.0,
+                        energy_rms=float(np.mean(energies)),
+                        speech_rate_wpm=130.0,
+                        tone_label="Calm & Measured",
+                        talk_time_percentage=100.0,
+                        confidence_score=0.90,
+                    )
+                ],
+                overall_tone="Calm & Measured",
             )
 
         voiced_pitches = pitches[voiced_indices]
@@ -181,7 +183,7 @@ class AcousticSpeakerToneDetector:
             is_multi_speaker=(detected_count > 1),
             speakers=speaker_profiles,
             overall_tone=overall_tone,
-            turn_taking_events=max(0, detected_count - 1)
+            turn_taking_events=max(0, detected_count - 1),
         )
 
     def _cluster_voices(
@@ -191,18 +193,14 @@ class AcousticSpeakerToneDetector:
         voiced_energies: np.ndarray,
         voiced_indices: np.ndarray,
         hop_len: int,
-        sample_rate: int
+        sample_rate: int,
     ) -> Tuple[List[SpeakerAcousticProfile], int]:
         """
         Segments voiced features into 1 or more distinct speaker profiles.
         """
-        total_voiced_duration = len(voiced_indices) * (hop_len / sample_rate)
-
         # Standardize features
         p_mean = np.mean(voiced_pitches)
         p_std = np.std(voiced_pitches)
-        c_mean = np.mean(voiced_centroids)
-        c_std = max(1.0, np.std(voiced_centroids))
 
         # Check bimodal distribution of fundamental pitch & timbre
         # Distinguish distinct pitch registers (e.g. 120 Hz vs 220 Hz or distinct centroid groups)
@@ -231,7 +229,6 @@ class AcousticSpeakerToneDetector:
             for spk_idx, idx_list in clusters.items():
                 spk_pitches = voiced_pitches[idx_list] if len(idx_list) > 0 else voiced_pitches
                 spk_energies = voiced_energies[idx_list] if len(idx_list) > 0 else voiced_energies
-                spk_centroids = voiced_centroids[idx_list] if len(idx_list) > 0 else voiced_centroids
 
                 m_pitch = float(np.mean(spk_pitches))
                 r_pitch = float(np.ptp(spk_pitches))
@@ -249,7 +246,7 @@ class AcousticSpeakerToneDetector:
                         speech_rate_wpm=145.0,
                         tone_label=tone,
                         talk_time_percentage=talk_pct,
-                        confidence_score=0.88
+                        confidence_score=0.88,
                     )
                 )
         else:
@@ -268,7 +265,7 @@ class AcousticSpeakerToneDetector:
                     speech_rate_wpm=140.0,
                     tone_label=tone,
                     talk_time_percentage=100.0,
-                    confidence_score=0.95
+                    confidence_score=0.95,
                 )
             )
 
