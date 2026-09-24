@@ -363,14 +363,17 @@ def main():
     id_res = voice_registry.identify_speaker(wav_path)
     if id_res is not None:
         recognized_voice, voice_match_conf = id_res
-        if recognized_voice.power_axis == "SOLO" or acoustic_result.detected_speaker_count == 1:
+        if (
+            recognized_voice.is_user
+            or recognized_voice.power_axis == "SOLO"
+            or acoustic_result.detected_speaker_count == 1
+        ):
             print(
-                f"  [VOICEPRINT RECOGNIZED] Welcome back, '{recognized_voice.speaker_name}'! [Match Confidence: {int(voice_match_conf * 100)}%]"
+                f"  [USER VOICE RECOGNIZED] Welcome back, '{recognized_voice.speaker_name}'! [Identified App User with {int(voice_match_conf * 100)}% match confidence]\n"
             )
-            print(f"     Auto-calibrated profile for {recognized_voice.speaker_name} (Solo Practice).\n")
         else:
             print(
-                f"  [VOICEPRINT RECOGNIZED] Identified Counterpart: '{recognized_voice.speaker_name}' ({recognized_voice.role}) [Match Confidence: {int(voice_match_conf * 100)}%]"
+                f"  [COUNTERPART VOICE RECOGNIZED] Identified Interlocutor: '{recognized_voice.speaker_name}' ({recognized_voice.role}) [Match Confidence: {int(voice_match_conf * 100)}%]"
             )
             print(
                 f"     Auto-calibrated relational context to {recognized_voice.power_axis} mode without manual tagging!\n"
@@ -383,27 +386,31 @@ def main():
 
     current_user_name = (
         recognized_voice.speaker_name
-        if (recognized_voice and recognized_voice.power_axis == "SOLO")
+        if (recognized_voice and (recognized_voice.is_user or recognized_voice.power_axis == "SOLO"))
         else (intro_user or None)
     )
     current_counterpart_name = (
         recognized_voice.speaker_name
-        if (recognized_voice and recognized_voice.power_axis != "SOLO")
+        if (recognized_voice and not recognized_voice.is_user and recognized_voice.power_axis != "SOLO")
         else (intro_counterpart or None)
     )
 
     if intro_user and not (recognized_voice and recognized_voice.speaker_name == intro_user):
-        print(f"  [VERBAL INTRODUCTION DETECTED] Welcome '{intro_user}'! Identified speaker name from speech.")
-        print(f"     Enrolled voiceprint for '{intro_user}' into local memory for future solo sessions!\n")
+        print(f"  [VERBAL INTRODUCTION DETECTED] Welcome '{intro_user}'! Identified user name from speech.")
+        print(f"     Enrolled user voice profile for '{intro_user}' into local memory for future sessions!\n")
         voice_registry.enroll_speaker(
-            name=intro_user, role="Self", power_axis="SOLO", audio_signal_or_wav_path=wav_path
+            name=intro_user, role="Self", power_axis="SOLO", audio_signal_or_wav_path=wav_path, is_user=True
         )
 
     if intro_counterpart and not (recognized_voice and recognized_voice.speaker_name == intro_counterpart):
         print(f"  [VERBAL INTRODUCTION DETECTED] Interlocutor introduced themselves: '{intro_counterpart}'")
         print(f"     Auto-tagged speaker turns and enrolled voiceprint for '{intro_counterpart}' into voice memory!\n")
         voice_registry.enroll_speaker(
-            name=intro_counterpart, role="Collaborator", power_axis="LATERAL", audio_signal_or_wav_path=wav_path
+            name=intro_counterpart,
+            role="Collaborator",
+            power_axis="LATERAL",
+            audio_signal_or_wav_path=wav_path,
+            is_user=False,
         )
 
     utterances = DiarizationEngine.assign_roles(
@@ -437,7 +444,11 @@ def main():
             axis_enum = PowerAxis(recognized_voice.power_axis.upper())
         except Exception:
             axis_enum = PowerAxis.SOLO if recognized_voice.power_axis == "SOLO" else PowerAxis.LATERAL
-        counterpart_name = recognized_voice.speaker_name
+        counterpart_name = (
+            recognized_voice.speaker_name
+            if not recognized_voice.is_user
+            else (args.counterpart or "Self (Solo Practice)")
+        )
         counterpart_role = recognized_voice.role
     elif intro_user and args.axis is None and acoustic_result.detected_speaker_count == 1:
         axis_enum = PowerAxis.SOLO
@@ -454,49 +465,53 @@ def main():
             utterances=utterances,
             acoustic_result=acoustic_result,
         )
-        # Proactively offer voiceprint biometric enrollment
+        # Proactively offer user & counterpart voiceprint biometric enrollment
         if sys.stdin.isatty():
             try:
-                if axis_enum == PowerAxis.SOLO:
-                    user_target = counterpart_name if counterpart_name not in ["Self (Solo Practice)", "Self"] else ""
-                    if not user_target and not recognized_voice:
-                        user_target = input(
-                            "\n  [VOICEPRINT ENROLLMENT] Enter your name to remember your voice for future auto-recognition (or Enter to skip): "
-                        ).strip()
+                # 1. Profile and name the USER's voice if not yet recognized/enrolled
+                if not current_user_name:
+                    user_target = input(
+                        "\n  [USER VOICE PROFILING] Enter YOUR name to remember your voice profile across sessions (or Enter to skip): "
+                    ).strip()
                     if user_target:
                         voice_registry.enroll_speaker(
                             name=user_target,
                             role="Self",
                             power_axis="SOLO",
                             audio_signal_or_wav_path=wav_path,
+                            is_user=True,
                         )
-                        counterpart_name = user_target
                         current_user_name = user_target
+                        if axis_enum == PowerAxis.SOLO:
+                            counterpart_name = user_target
                         print(
-                            f"  >> [VOICEPRINT SAVED] Enrolled biometric voiceprint for '{user_target}' into local memory!\n"
+                            f"  >> [USER VOICE SAVED] Enrolled biometric voice profile for '{user_target}' (App User) into local memory!\n"
                         )
-                else:
+
+                # 2. Profile and name the COUNTERPART's voice in multi-speaker/relational mode
+                if axis_enum != PowerAxis.SOLO and acoustic_result.detected_speaker_count > 1:
                     cp_target = (
                         counterpart_name
                         if counterpart_name
                         not in ["Counterpart", "Colleague", "Peer Collaborator", "Friend / Colleague"]
                         else ""
                     )
-                    if not cp_target:
+                    if not cp_target and not current_counterpart_name:
                         cp_target = input(
-                            "\n  [VOICEPRINT ENROLLMENT] Enter counterpart's name to remember their voice for future auto-tagging (or Enter to skip): "
+                            "  [COUNTERPART VOICE PROFILING] Enter counterpart's name to remember their voice for future auto-tagging (or Enter to skip): "
                         ).strip()
-                    if cp_target:
+                    if cp_target and not current_counterpart_name:
                         voice_registry.enroll_speaker(
                             name=cp_target,
                             role=counterpart_role,
                             power_axis=axis_enum.value,
                             audio_signal_or_wav_path=wav_path,
+                            is_user=False,
                         )
                         counterpart_name = cp_target
                         current_counterpart_name = cp_target
                         print(
-                            f"  >> [VOICEPRINT SAVED] Enrolled biometric voiceprint for '{cp_target}' ({counterpart_role}) into local memory!\n"
+                            f"  >> [COUNTERPART VOICE SAVED] Enrolled biometric voiceprint for '{cp_target}' ({counterpart_role}) into local memory!\n"
                         )
             except (EOFError, KeyboardInterrupt):
                 pass

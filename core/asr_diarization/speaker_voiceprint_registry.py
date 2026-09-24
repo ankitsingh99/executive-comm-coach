@@ -20,7 +20,7 @@ except (ImportError, ValueError):
 
 @dataclass
 class SpeakerVoiceprint:
-    """Acoustic biometric voiceprint profile for a known person."""
+    """Acoustic biometric voiceprint profile for a known person (app user or counterpart)."""
 
     speaker_name: str
     role: str = "Colleague"
@@ -31,8 +31,13 @@ class SpeakerVoiceprint:
     spectral_centroid_hz: float = 1800.0
     enrolled_at_utc: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     sample_count: int = 1
+    is_user: bool = False
 
     def __post_init__(self):
+        if not self.is_user and (
+            self.role.lower() in ["self", "user", "app user"] or self.power_axis.upper() == "SOLO"
+        ):
+            self.is_user = True
         if not self.embedding_vector or len(self.embedding_vector) != 32:
             self.embedding_vector = SpeakerVoiceprintRegistry.synthesize_fallback_embedding(
                 self.mean_pitch_hz, self.spectral_centroid_hz
@@ -53,6 +58,7 @@ class SpeakerVoiceprint:
             spectral_centroid_hz=float(data.get("spectral_centroid_hz", 1800.0)),
             enrolled_at_utc=data.get("enrolled_at_utc", datetime.now(timezone.utc).isoformat()),
             sample_count=int(data.get("sample_count", 1)),
+            is_user=bool(data.get("is_user", False)),
         )
 
 
@@ -249,6 +255,7 @@ class SpeakerVoiceprintRegistry:
         power_axis: str = "LATERAL",
         audio_signal_or_wav_path: Any = None,
         sample_rate: int = 16000,
+        is_user: Optional[bool] = None,
     ) -> Optional[SpeakerVoiceprint]:
         """
         Enrolls or updates a speaker's voiceprint in the persistent registry.
@@ -270,6 +277,11 @@ class SpeakerVoiceprintRegistry:
 
         embedding, mean_pitch, pitch_range, centroid = extracted
         key = name.strip()
+        user_flag = (
+            is_user
+            if is_user is not None
+            else (role.lower() in ["self", "user", "app user"] or power_axis.upper() == "SOLO")
+        )
 
         if key in self.voiceprints:
             # Update existing voiceprint with running average
@@ -291,6 +303,7 @@ class SpeakerVoiceprintRegistry:
                 pitch_range_hz=round((existing.pitch_range_hz * n + pitch_range) / (n + 1), 1),
                 spectral_centroid_hz=round((existing.spectral_centroid_hz * n + centroid) / (n + 1), 1),
                 sample_count=n + 1,
+                is_user=user_flag,
             )
         else:
             voiceprint = SpeakerVoiceprint(
@@ -302,6 +315,7 @@ class SpeakerVoiceprintRegistry:
                 pitch_range_hz=round(pitch_range, 1),
                 spectral_centroid_hz=round(centroid, 1),
                 sample_count=1,
+                is_user=user_flag,
             )
 
         self.voiceprints[key] = voiceprint

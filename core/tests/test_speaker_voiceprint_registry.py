@@ -114,3 +114,47 @@ def test_voiceprint_rejection_and_erasure(temp_registry):
     assert deleted is True
     assert len(temp_registry.list_enrolled_speakers()) == 0
     assert temp_registry.identify_speaker(voice_vikram) is None
+
+
+def test_multi_user_profiling_and_distinction(temp_registry):
+    # Test that different app users (e.g. Ashish, Priya) and counterparts can be profiled & recognized
+    user_ashish_voice = generate_synthetic_voice(
+        pitch_f0=115.0, duration_s=1.0, timbre_formants=(400.0, 1100.0, 2100.0)
+    )
+    user_priya_voice = generate_synthetic_voice(pitch_f0=230.0, duration_s=1.0, timbre_formants=(750.0, 1900.0, 3200.0))
+    counterpart_rohan = generate_synthetic_voice(
+        pitch_f0=160.0, duration_s=1.0, timbre_formants=(520.0, 1400.0, 2400.0)
+    )
+
+    vp_ashish = temp_registry.enroll_speaker(
+        name="Ashish", role="Self", power_axis="SOLO", audio_signal_or_wav_path=user_ashish_voice, is_user=True
+    )
+    assert vp_ashish.is_user is True
+
+    vp_priya = temp_registry.enroll_speaker(
+        name="Priya", role="Self", power_axis="SOLO", audio_signal_or_wav_path=user_priya_voice, is_user=True
+    )
+    assert vp_priya.is_user is True
+
+    vp_rohan = temp_registry.enroll_speaker(
+        name="Rohan", role="Tech Lead", power_axis="LATERAL", audio_signal_or_wav_path=counterpart_rohan, is_user=False
+    )
+    assert vp_rohan.is_user is False
+
+    # Check recognition for User Ashish
+    match_a = temp_registry.identify_speaker(user_ashish_voice, threshold=0.75)
+    assert match_a is not None
+    assert match_a[0].speaker_name == "Ashish"
+    assert match_a[0].is_user is True
+
+    # Check recognition for User Priya
+    match_p = temp_registry.identify_speaker(user_priya_voice, threshold=0.75)
+    assert match_p is not None
+    assert match_p[0].speaker_name == "Priya"
+    assert match_p[0].is_user is True
+
+    # Check recognition for Counterpart Rohan
+    match_r = temp_registry.identify_speaker(counterpart_rohan, threshold=0.75)
+    assert match_r is not None
+    assert match_r[0].speaker_name == "Rohan"
+    assert match_r[0].is_user is False
