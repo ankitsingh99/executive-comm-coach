@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "executive-comm-coach"
+version = "0.1.0"
+description = "Privacy-first, ambient AI executive communication coach for English, Hindi, and Hinglish dialogue"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Ankit Singh", email = "ankitsingh99@users.noreply.github.com" }
+]
+keywords = [
+    "executive-coaching",
+    "speech-analysis",
+    "diarization",
+    "gemini",
+    "asr",
+    "hinglish",
+    "dpdp-compliance",
+    "voiceprints"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "sounddevice>=0.5.0",
+    "scipy>=1.12.0",
+    "numpy>=1.24.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    "transformers>=4.38.0",
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "faster-whisper>=1.0.0",
+    "SpeechRecognition>=3.10.0",
+    "pydantic>=2.0.0",
+    "google-genai>=2.20.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=24.0.0",
+    "flake8>=7.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/ankitsingh99/executive-comm-coach"
+Repository = "https://github.com/ankitsingh99/executive-comm-coach.git"
+Documentation = "https://github.com/ankitsingh99/executive-comm-coach#readme"
+
+[project.scripts]
+executive-comm-coach = "core.record_live_coach:main"
+comm-coach = "core.record_live_coach:main"
+comm-coach-server = "core.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core", "core.*"]

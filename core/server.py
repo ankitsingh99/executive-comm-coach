@@ -332,6 +332,11 @@ def run_server(port: int = 8080):
         server.server_close()
 
 
-if __name__ == "__main__":
+def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
     run_server(port)
+
+
+if __name__ == "__main__":
+    main()
+

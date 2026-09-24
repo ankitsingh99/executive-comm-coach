@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include ARCHITECTURE.md
+include API_REFERENCE.md
+include requirements.txt
+recursive-include emulator *

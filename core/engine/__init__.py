@@ -28,6 +28,10 @@ from .transcription_analyzer import TranscriptionAnalyzer
 from .coaching_engine import ExecutiveCoachingEngine
 from .gemini_coaching_engine import GeminiCoachingSynthesizer
 
+from .local_coaching_synthesizer import LocalCoachingSynthesizer
+
+PersonaOntology = PersonaOntologyEngine
+
 __all__ = [
     "FillerWordMetric",
     "CommunicationMetrics",
@@ -44,6 +48,7 @@ __all__ = [
     "PersonaProfile",
     "EvaluationRubricDimension",
     "PersonaOntologyEngine",
+    "PersonaOntology",
     "UPWARD_RUBRIC",
     "LATERAL_RUBRIC",
     "DOWNWARD_RUBRIC",
@@ -53,5 +58,7 @@ __all__ = [
     "ActionItemExtractor",
     "TranscriptionAnalyzer",
     "ExecutiveCoachingEngine",
-    "GeminiCoachingSynthesizer"
+    "GeminiCoachingSynthesizer",
+    "LocalCoachingSynthesizer"
 ]
+

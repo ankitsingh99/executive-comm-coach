@@ -30,7 +30,19 @@ For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE
 - Python 3.10+ (macOS Apple Silicon or Linux)
 - Microphone access
 
-### Setup Environment
+### Installation & Packaging
+
+#### Option A: Install directly from Git
+```bash
+pip install git+https://github.com/ankitsingh99/executive-comm-coach.git
+```
+Once installed, run the coach from any terminal window:
+```bash
+executive-comm-coach --axis UPWARD
+comm-coach-server 8080
+```
+
+#### Option B: Developer Setup (Local Editable Mode)
 ```bash
 # Clone the repository
 git clone https://github.com/ankitsingh99/executive-comm-coach.git
@@ -40,8 +52,8 @@ cd executive-comm-coach
 python3 -m venv venv
 source venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install in editable mode
+pip install -e .
 ```
 
 ### Run Live Terminal Microphone Coaching
@@ -63,10 +75,13 @@ pip install -r requirements.txt
 ```bash
 # Start local emulator server on port 8080:
 python core/server.py 8080
+# Or using the installed CLI entrypoint:
+comm-coach-server 8080
 
 # Open in browser:
 open http://localhost:8080
 ```
+
 
 ### Run Ambient Conversation Monitor (Nudge)
 ```bash
