@@ -380,6 +380,158 @@ class TranscriptionAnalysisResult(BaseModel):
         self.sentiment_tone = sentiment_tone
 
 
+class EmotionalTrajectoryPoint(BaseModel):
+    """Emotional trajectory and psychological tension marker across conversational turns."""
+
+    timestamp_sec: float = 0.0
+    speaker: str = "USER"
+    emotion_label: str = "Neutral & Composed"
+    valence_score: float = 0.0  # -1.0 (highly negative/anxious) to +1.0 (highly positive/enthusiastic)
+    tension_level: str = "LOW"  # LOW, MEDIUM, HIGH
+    pacing_wpm: float = 0.0
+
+    def __init__(
+        self,
+        timestamp_sec: float = 0.0,
+        speaker: str = "USER",
+        emotion_label: str = "Neutral & Composed",
+        valence_score: float = 0.0,
+        tension_level: str = "LOW",
+        pacing_wpm: float = 0.0,
+        **kwargs,
+    ):
+        super().__init__(
+            timestamp_sec=timestamp_sec,
+            speaker=speaker,
+            emotion_label=emotion_label,
+            valence_score=valence_score,
+            tension_level=tension_level,
+            pacing_wpm=pacing_wpm,
+            **kwargs,
+        )
+        self.timestamp_sec = float(timestamp_sec)
+        self.speaker = str(speaker)
+        self.emotion_label = str(emotion_label)
+        self.valence_score = float(valence_score)
+        self.tension_level = str(tension_level)
+        self.pacing_wpm = float(pacing_wpm)
+
+
+class ConversationalDynamicsMetric(BaseModel):
+    """Comprehensive conversational dynamics, pacing, talk-time parity, and inquiry/advocacy balance."""
+
+    user_talk_time_pct: float = 50.0
+    counterpart_talk_time_pct: float = 50.0
+    user_words_total: int = 0
+    counterpart_words_total: int = 0
+    average_turn_latency_ms: float = 0.0
+    ask_vs_tell_ratio: float = 1.0  # Inquiry to Advocacy ratio (inquiries / max(1, directives))
+    inquiry_count: int = 0
+    directive_count: int = 0
+    brevity_potential_pct: float = 0.0  # Estimated reduction percentage by eliminating redundancies & fillers
+    deep_listening_score: int = 0  # 0-100 reflective listening vs passive nod quotient
+    vocal_tension_index: str = "Calm & Grounded"
+
+    def __init__(
+        self,
+        user_talk_time_pct: float = 50.0,
+        counterpart_talk_time_pct: float = 50.0,
+        user_words_total: int = 0,
+        counterpart_words_total: int = 0,
+        average_turn_latency_ms: float = 0.0,
+        ask_vs_tell_ratio: float = 1.0,
+        inquiry_count: int = 0,
+        directive_count: int = 0,
+        brevity_potential_pct: float = 0.0,
+        deep_listening_score: int = 0,
+        vocal_tension_index: str = "Calm & Grounded",
+        **kwargs,
+    ):
+        super().__init__(
+            user_talk_time_pct=user_talk_time_pct,
+            counterpart_talk_time_pct=counterpart_talk_time_pct,
+            user_words_total=user_words_total,
+            counterpart_words_total=counterpart_words_total,
+            average_turn_latency_ms=average_turn_latency_ms,
+            ask_vs_tell_ratio=ask_vs_tell_ratio,
+            inquiry_count=inquiry_count,
+            directive_count=directive_count,
+            brevity_potential_pct=brevity_potential_pct,
+            deep_listening_score=deep_listening_score,
+            vocal_tension_index=vocal_tension_index,
+            **kwargs,
+        )
+        self.user_talk_time_pct = float(user_talk_time_pct)
+        self.counterpart_talk_time_pct = float(counterpart_talk_time_pct)
+        self.user_words_total = int(user_words_total)
+        self.counterpart_words_total = int(counterpart_words_total)
+        self.average_turn_latency_ms = float(average_turn_latency_ms)
+        self.ask_vs_tell_ratio = float(ask_vs_tell_ratio)
+        self.inquiry_count = int(inquiry_count)
+        self.directive_count = int(directive_count)
+        self.brevity_potential_pct = float(brevity_potential_pct)
+        self.deep_listening_score = max(0, min(100, int(deep_listening_score)))
+        self.vocal_tension_index = str(vocal_tension_index)
+
+
+class AgreementPoint(BaseModel):
+    """Explicit consensus or mutual alignment point finalized during conversation."""
+
+    headline: str = ""
+    agreed_solution: str = ""
+    speaker_turn: str = ""
+    verbatim_quote: str = ""
+
+    def __init__(
+        self,
+        headline: str = "",
+        agreed_solution: str = "",
+        speaker_turn: str = "",
+        verbatim_quote: str = "",
+        **kwargs,
+    ):
+        super().__init__(
+            headline=headline[:250],
+            agreed_solution=agreed_solution[:300],
+            speaker_turn=speaker_turn,
+            verbatim_quote=verbatim_quote,
+            **kwargs,
+        )
+        self.headline = headline[:250]
+        self.agreed_solution = agreed_solution[:300]
+        self.speaker_turn = speaker_turn
+        self.verbatim_quote = verbatim_quote
+
+
+class UnresolvedOpenLoop(BaseModel):
+    """Unresolved tension, lingering objection, or open loop requiring follow-up resolution."""
+
+    concern_topic: str = ""
+    raised_by: str = ""
+    context: str = ""
+    recommended_followup: str = ""
+
+    def __init__(
+        self,
+        concern_topic: str = "",
+        raised_by: str = "",
+        context: str = "",
+        recommended_followup: str = "",
+        **kwargs,
+    ):
+        super().__init__(
+            concern_topic=concern_topic[:250],
+            raised_by=raised_by,
+            context=context[:300],
+            recommended_followup=recommended_followup[:300],
+            **kwargs,
+        )
+        self.concern_topic = concern_topic[:250]
+        self.raised_by = raised_by
+        self.context = context[:300]
+        self.recommended_followup = recommended_followup[:300]
+
+
 class ExecutiveCoachingEvaluation(BaseModel):
     """Complete structured coaching evaluation report constrained by Top-N parameter."""
 
@@ -391,6 +543,10 @@ class ExecutiveCoachingEvaluation(BaseModel):
     key_highlights: List[KeyHighlight] = []
     longitudinal_summary: str = ""
     persona_alignment_notes: str = ""
+    dynamics: Optional[ConversationalDynamicsMetric] = None
+    emotional_trajectory: List[EmotionalTrajectoryPoint] = []
+    agreements: List[AgreementPoint] = []
+    unresolved_loops: List[UnresolvedOpenLoop] = []
 
     def __init__(
         self,
@@ -402,6 +558,10 @@ class ExecutiveCoachingEvaluation(BaseModel):
         key_highlights: Optional[List[KeyHighlight]] = None,
         longitudinal_summary: str = "",
         persona_alignment_notes: str = "",
+        dynamics: Optional[ConversationalDynamicsMetric] = None,
+        emotional_trajectory: Optional[List[EmotionalTrajectoryPoint]] = None,
+        agreements: Optional[List[AgreementPoint]] = None,
+        unresolved_loops: Optional[List[UnresolvedOpenLoop]] = None,
         **kwargs,
     ):
         super().__init__(
@@ -413,6 +573,10 @@ class ExecutiveCoachingEvaluation(BaseModel):
             key_highlights=key_highlights or [],
             longitudinal_summary=longitudinal_summary,
             persona_alignment_notes=persona_alignment_notes,
+            dynamics=dynamics,
+            emotional_trajectory=emotional_trajectory or [],
+            agreements=agreements or [],
+            unresolved_loops=unresolved_loops or [],
             **kwargs,
         )
         self.persona_context = persona_context
@@ -423,6 +587,10 @@ class ExecutiveCoachingEvaluation(BaseModel):
         self.key_highlights = key_highlights or []
         self.longitudinal_summary = longitudinal_summary
         self.persona_alignment_notes = persona_alignment_notes
+        self.dynamics = dynamics or ConversationalDynamicsMetric()
+        self.emotional_trajectory = emotional_trajectory or []
+        self.agreements = agreements or []
+        self.unresolved_loops = unresolved_loops or []
 
 
 class Utterance(BaseModel):

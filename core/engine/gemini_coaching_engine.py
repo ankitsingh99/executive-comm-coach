@@ -22,11 +22,14 @@ try:
         ActionItem,
         KeyHighlight,
         Utterance,
+        AgreementPoint,
+        UnresolvedOpenLoop,
     )
     from .persona_ontology import PersonaOntologyEngine, PowerAxis
     from .metrics_calculator import MetricsCalculator
     from .action_item_extractor import ActionItemExtractor
     from .transcription_analyzer import TranscriptionAnalyzer
+    from .conversational_intelligence_engine import ConversationalIntelligenceEngine
     from ..privacy.pii_redactor import PIIRedactor
     from ..config import get_gemini_api_key, GEMINI_MODEL
 except (ImportError, ValueError):
@@ -38,11 +41,14 @@ except (ImportError, ValueError):
         ActionItem,
         KeyHighlight,
         Utterance,
+        AgreementPoint,
+        UnresolvedOpenLoop,
     )
     from engine.persona_ontology import PersonaOntologyEngine, PowerAxis
     from engine.metrics_calculator import MetricsCalculator
     from engine.action_item_extractor import ActionItemExtractor
     from engine.transcription_analyzer import TranscriptionAnalyzer
+    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
     from privacy.pii_redactor import PIIRedactor
     from config import get_gemini_api_key, GEMINI_MODEL
 
@@ -107,6 +113,13 @@ class GeminiCoachingSynthesizer:
         system_instruction = PersonaOntologyEngine.generate_system_instruction(profile)
         dialogue_text = "\n".join([f"{u.speaker}: {u.transcript}" for u in redacted_dialogue])
 
+        (
+            dyn_metric,
+            algo_trajectory,
+            algo_agreements,
+            algo_loops,
+        ) = ConversationalIntelligenceEngine.analyze_session(redacted_dialogue, target_speaker=session.target_speaker)
+
         prompt = f"""{system_instruction}
 
 Analyze the following transcribed dialogue:
@@ -149,6 +162,22 @@ Return pure JSON matching this exact structure:
       "importance": "High | Normal"
     }}
   ],
+  "agreements": [
+    {{
+      "headline": "Consensus outcome headline (maximum 100 chars)",
+      "agreed_solution": "Direct summary of agreed solution",
+      "speaker_turn": "Speaker turn reference",
+      "verbatim_quote": "Exact spoken consensus statement"
+    }}
+  ],
+  "unresolved_loops": [
+    {{
+      "concern_topic": "Pending question or tension topic (maximum 100 chars)",
+      "raised_by": "Speaker name",
+      "context": "Context of unresolved issue",
+      "recommended_followup": "Actionable follow-up recommendation to resolve the loop"
+    }}
+  ],
   "action_items": [
     {{
       "owner": "Speaker name (e.g. Rahul or USER)",
@@ -166,12 +195,12 @@ Return pure JSON matching this exact structure:
 }}
 
 Guidelines:
-1. Multilingual & Hinglish Fluency: The transcript may contain English, Hindi, Hinglish (code-mixed Hindi-English), or South Asian corporate idioms (e.g. 'matlab hume ye kal ship karna hai', 'mujhe lagta hai ki latency badh sakti hai', 'aap please update bhej dena', 'theek hai'). You MUST fluently comprehend Hinglish dialogue turns, identify real communication friction points, extract all commitments/action items, and provide polished executive coached phrasing with high conviction.
+1. Multilingual & Hinglish Fluency: The transcript may contain English, Hindi, Hinglish (code-mixed Hindi-English), or South Asian corporate idioms. You MUST fluently comprehend Hinglish dialogue turns, identify real communication friction points, extract all commitments/action items, agreements, open loops, and provide polished executive coached phrasing with high conviction.
 2. Deliver genuine strengths and genuine improvement areas without artificial padding.
-3. Detect ALL commitments, scheduling promises, follow-up calls (e.g. 'I will call you on 31 aug at 10 am', 'main kal 10 baje call karunga'), deliverables, and assigned tasks into 'action_items'. If a clock time like 'at 9' is mentioned without AM/PM, resolve to the next upcoming 9 o'clock.
-4. Extract key highlights covering major decisions and critical takeaways into 'key_highlights'.
-5. Every critique must include a direct 'Action:' directive.
-6. Every coached_phrasing must be natural, polished, and directly rephrase what was actually said.
+3. Detect ALL commitments, scheduling promises, deliverables, and assigned tasks into 'action_items'.
+4. Detect explicit consensus points in 'agreements', and lingering ambiguities/tensions in 'unresolved_loops'.
+5. Extract key highlights covering major decisions and critical takeaways into 'key_highlights'.
+6. Every critique must include a direct 'Action:' directive.
 7. Return ONLY valid JSON without markdown wrapping.
 """
 
@@ -220,6 +249,26 @@ Guidelines:
                 for h in data.get("key_highlights", [])
             ]
 
+            agreements = [
+                AgreementPoint(
+                    headline=ag.get("headline", "")[:250],
+                    agreed_solution=ag.get("agreed_solution", "")[:300],
+                    speaker_turn=ag.get("speaker_turn", ""),
+                    verbatim_quote=ag.get("verbatim_quote", ""),
+                )
+                for ag in data.get("agreements", [])
+            ] or algo_agreements
+
+            unresolved_loops = [
+                UnresolvedOpenLoop(
+                    concern_topic=ol.get("concern_topic", "")[:250],
+                    raised_by=ol.get("raised_by", ""),
+                    context=ol.get("context", "")[:300],
+                    recommended_followup=ol.get("recommended_followup", "")[:300],
+                )
+                for ol in data.get("unresolved_loops", [])
+            ] or algo_loops
+
             action_items = [
                 ActionItem(
                     owner=ai.get("owner", "USER"),
@@ -256,6 +305,10 @@ Guidelines:
                 persona_alignment_notes=data.get(
                     "persona_alignment_notes", f"Evaluated against {power_axis.value} communication rubric."
                 ),
+                dynamics=dyn_metric,
+                emotional_trajectory=algo_trajectory,
+                agreements=agreements,
+                unresolved_loops=unresolved_loops,
             )
 
         except Exception:

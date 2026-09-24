@@ -27,6 +27,7 @@ try:
         ASSERTIVE_PATTERNS,
     )
     from .transcription_analyzer import TranscriptionAnalyzer
+    from .conversational_intelligence_engine import ConversationalIntelligenceEngine
     from ..privacy.pii_redactor import PIIRedactor
     from ..asr_diarization.indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
@@ -45,6 +46,7 @@ except (ImportError, ValueError):
         ASSERTIVE_PATTERNS,
     )
     from engine.transcription_analyzer import TranscriptionAnalyzer
+    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
     from privacy.pii_redactor import PIIRedactor
     from asr_diarization.indic_normalizer import IndicNormalizer
 
@@ -387,6 +389,13 @@ class LocalCoachingSynthesizer:
         action_items = analyzer.extract_potential_tasks(dialogue)
         key_highlights = analyzer.extract_key_highlights(dialogue)
 
+        (
+            dynamics_metric,
+            emotional_traj,
+            agreements,
+            open_loops,
+        ) = ConversationalIntelligenceEngine.analyze_session(dialogue, target_speaker="USER")
+
         return ExecutiveCoachingEvaluation(
             persona_context=profile.strategic_focus,
             metrics=metrics,
@@ -396,6 +405,10 @@ class LocalCoachingSynthesizer:
             key_highlights=key_highlights,
             longitudinal_summary=summary,
             persona_alignment_notes=alignment_note,
+            dynamics=dynamics_metric,
+            emotional_trajectory=emotional_traj,
+            agreements=agreements,
+            unresolved_loops=open_loops,
         )
 
     def _generate_crisp_bluf(self, text: str, topic: str, power_axis: PowerAxis) -> str:
@@ -532,4 +545,8 @@ class LocalCoachingSynthesizer:
             key_highlights=getattr(evaluation, "key_highlights", []),
             longitudinal_summary=evaluation.longitudinal_summary,
             persona_alignment_notes=evaluation.persona_alignment_notes,
+            dynamics=getattr(evaluation, "dynamics", None),
+            emotional_trajectory=getattr(evaluation, "emotional_trajectory", []),
+            agreements=getattr(evaluation, "agreements", []),
+            unresolved_loops=getattr(evaluation, "unresolved_loops", []),
         )

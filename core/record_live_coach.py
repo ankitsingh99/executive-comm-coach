@@ -565,7 +565,63 @@ def main():
         rephrase_label = "Polished Phrasing:" if axis_enum == PowerAxis.SOLO else "Coached Delivery: "
         print(f'       {rephrase_label}  "{a.coached_phrasing}"')
 
-    print("\n  +--------------------------------------------------------------+")
+    # Conversational Dynamics & Pacing
+    if getattr(evaluation, "dynamics", None):
+        dyn = evaluation.dynamics
+        print("  +--------------------------------------------------------------+")
+        print("  |                 CONVERSATIONAL DYNAMICS & PACING             |")
+        print("  +--------------------------------------------------------------+")
+        print(
+            f"  |  Talk-Time Split       |  USER: {dyn.user_talk_time_pct:.1f}%  |  CP: {dyn.counterpart_talk_time_pct:.1f}%"
+        )
+        print(
+            f"  |  Word Volume Ratio     |  USER: {dyn.user_words_total} words | CP: {dyn.counterpart_words_total} words"
+        )
+        print(f"  |  Turn Response Latency |  {dyn.average_turn_latency_ms:.0f} ms average")
+        print(
+            f"  |  Inquiry vs Advocacy   |  {dyn.ask_vs_tell_ratio:.2f}:1 ({dyn.inquiry_count} Asks / {dyn.directive_count} Tells)"
+        )
+        print(f"  |  Brevity Potential     |  {dyn.brevity_potential_pct:.1f}% potential word reduction")
+        print(f"  |  Deep Reflection Score |  {dyn.deep_listening_score}/100 active listening depth")
+        print(f"  |  Vocal Tension Index   |  {dyn.vocal_tension_index}")
+        print("  +--------------------------------------------------------------+\n")
+
+    # Emotional Trajectory Arc
+    if getattr(evaluation, "emotional_trajectory", []):
+        print("  +--------------------------------------------------------------+")
+        print("  |                 EMOTIONAL TRAJECTORY & TENSION ARC           |")
+        print("  +--------------------------------------------------------------+")
+        for idx, pt in enumerate(evaluation.emotional_trajectory, 1):
+            val_sign = "+" if pt.valence_score >= 0 else ""
+            tension_flag = f"[{pt.tension_level} Tension]" if pt.tension_level in ["MEDIUM", "HIGH"] else "[Grounded]"
+            print(
+                f"    [{idx}] @ {pt.timestamp_sec:4.1f}s ({pt.speaker}): {pt.emotion_label:<24} | Val: {val_sign}{pt.valence_score:.2f} | {pt.pacing_wpm:.0f} wpm {tension_flag}"
+            )
+        print("  +--------------------------------------------------------------+\n")
+
+    # Consensus & Agreed Outcomes
+    if getattr(evaluation, "agreements", []):
+        print("  +--------------------------------------------------------------+")
+        print("  |                 AGREED OUTCOMES & CONSENSUS POINTS           |")
+        print("  +--------------------------------------------------------------+")
+        for idx, ag in enumerate(evaluation.agreements, 1):
+            print(f"    [{idx}] {ag.headline}")
+            print(f"       • Agreed Solution: {ag.agreed_solution}")
+            print(f'       • Spoken Quote:   "{ag.verbatim_quote}"')
+        print("  +--------------------------------------------------------------+\n")
+
+    # Unresolved Tensions & Open Loops
+    if getattr(evaluation, "unresolved_loops", []):
+        print("  +--------------------------------------------------------------+")
+        print("  |                 UNRESOLVED TENSIONS & OPEN LOOPS             |")
+        print("  +--------------------------------------------------------------+")
+        for idx, ol in enumerate(evaluation.unresolved_loops, 1):
+            print(f"    [{idx}] {ol.concern_topic} (Raised by {ol.raised_by})")
+            print(f"       • Context:     {ol.context}")
+            print(f"       • Action Plan: {ol.recommended_followup}")
+        print("  +--------------------------------------------------------------+\n")
+
+    print("  +--------------------------------------------------------------+")
     print("  |                    KEY HIGHLIGHTS & TAKEAWAYS                |")
     print("  +--------------------------------------------------------------+")
     if not getattr(evaluation, "key_highlights", []):
