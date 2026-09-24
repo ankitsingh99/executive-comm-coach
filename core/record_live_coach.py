@@ -9,6 +9,7 @@ import sys
 import os
 import time
 import argparse
+from typing import Optional
 
 # Ensure path resolution
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine.schema import ConversationSession, Utterance
 from engine.persona_ontology import PowerAxis
 from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.context_calibrator import CommunicationContextCalibrator
 from asr_diarization.live_mic_recorder import LiveMicRecorder
 from asr_diarization.local_stt_engine import LocalSTTEngine
 from asr_diarization.acoustic_speaker_detector import AcousticSpeakerToneDetector
@@ -81,30 +83,53 @@ def parse_args():
     return parser.parse_args()
 
 
-def prompt_for_communication_context(detected_count: int = 1, detected_tone: str = "Calm & Measured") -> tuple:
+def prompt_for_communication_context(
+    detected_count: int = 1,
+    detected_tone: str = "Calm & Measured",
+    utterances: Optional[list] = None,
+    acoustic_result: Optional[object] = None,
+) -> tuple:
     """Interactively asks the user who they were speaking with after transcription and acoustic analysis."""
-    default_choice = "1" if detected_count == 1 else "3"
-    rec_label = (
-        "(Acoustic recommendation: Solo Practice)"
-        if detected_count == 1
-        else f"(Acoustic recommendation: Multi-party dialogue, {detected_count} voices detected)"
-    )
+    # Run multimodal context calibration using acoustic modulation, turn dynamics, and discourse
+    inference = CommunicationContextCalibrator.infer_context(acoustic_result, utterances or [])
+
+    axis_to_num = {
+        PowerAxis.SOLO: "1",
+        PowerAxis.CASUAL: "2",
+        PowerAxis.LATERAL: "3",
+        PowerAxis.UPWARD: "4",
+        PowerAxis.DOWNWARD: "5",
+        PowerAxis.CONFLICT: "6",
+    }
+    default_choice = axis_to_num.get(inference.recommended_axis, "1" if detected_count == 1 else "3")
 
     print("\n  +--------------------------------------------------------------+")
     print("  |            COMMUNICATION CONTEXT CALIBRATION                 |")
     print("  +--------------------------------------------------------------+")
-    print(f"  Acoustic Sensing: {rec_label}")
+    print(f"  • Acoustic Dynamics: {inference.acoustic_rationale}")
+    print(f"  • Discourse Content: {inference.semantic_rationale}")
+    print(
+        f"  • Inferred Context:  [{default_choice}] {inference.recommended_axis.value} ({int(inference.confidence_score * 100)}% confidence)"
+    )
     print("  Who were you speaking with, or what was the context?\n")
     print(
-        f"    [1] Solo Practice / Monologue (Speaking all by myself, rehearsing speech/thoughts) {'[Default]' if default_choice == '1' else ''}"
+        f"    [1] Solo Practice / Monologue (Speaking all by myself, rehearsing speech/thoughts) {'[Recommended Default]' if default_choice == '1' else ''}"
     )
-    print("    [2] Casual / Social (Friend, informal coffee chat, social banter)")
     print(
-        f"    [3] Collaborative / Peer (Colleague, sync, sprint/project collaboration) {'[Default]' if default_choice == '3' else ''}"
+        f"    [2] Casual / Social (Friend, informal coffee chat, social banter) {'[Recommended Default]' if default_choice == '2' else ''}"
     )
-    print("    [4] Formal / Executive (Manager, Director, CXO, interview, proposal)")
-    print("    [5] Mentorship / Downward (Direct report, mentee, 1-on-1 coaching)")
-    print("    [6] Difficult / Conflict Resolution (Negotiation, tension, debate)")
+    print(
+        f"    [3] Collaborative / Peer (Colleague, sync, sprint/project collaboration) {'[Recommended Default]' if default_choice == '3' else ''}"
+    )
+    print(
+        f"    [4] Formal / Executive (Manager, Director, CXO, interview, proposal) {'[Recommended Default]' if default_choice == '4' else ''}"
+    )
+    print(
+        f"    [5] Mentorship / Downward (Direct report, mentee, 1-on-1 coaching) {'[Recommended Default]' if default_choice == '5' else ''}"
+    )
+    print(
+        f"    [6] Difficult / Conflict Resolution (Negotiation, tension, debate) {'[Recommended Default]' if default_choice == '6' else ''}"
+    )
     print()
 
     axis_map = {
@@ -424,7 +449,10 @@ def main():
         counterpart_role = "Collaborator"
     elif not args.non_interactive and args.axis is None:
         axis_enum, counterpart_name, counterpart_role = prompt_for_communication_context(
-            detected_count=acoustic_result.detected_speaker_count, detected_tone=acoustic_result.overall_tone
+            detected_count=acoustic_result.detected_speaker_count,
+            detected_tone=acoustic_result.overall_tone,
+            utterances=utterances,
+            acoustic_result=acoustic_result,
         )
         # Proactively offer voiceprint biometric enrollment
         if sys.stdin.isatty():
