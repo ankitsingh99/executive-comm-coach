@@ -123,13 +123,22 @@ executive-comm-coach/
 │   └── index.html                    # Glassmorphic interactive Web UI
 │
 ├── ARCHITECTURE.md                   # Complete architectural reference & data contracts
+├── API_REFERENCE.md                  # Comprehensive module & REST API manual
 ├── record.sh                         # Live microphone execution script
 └── nudge.sh                          # Ambient conversation monitor script
 ```
 
 ---
 
-## 4. License
+## 4. Documentation & Developer Guides
+
+- **[System Architecture Guide](ARCHITECTURE.md)**: End-to-end dataflow diagrams, pipeline contracts, and operational guidelines.
+- **[API Reference & Manual](API_REFERENCE.md)**: Exhaustive class, method, data structure, and REST API documentation.
+
+---
+
+## 5. License
 
 Licensed under the Apache License, Version 2.0.
+
 
