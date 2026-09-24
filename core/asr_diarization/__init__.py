@@ -1,4 +1,4 @@
-"""ASR, Diarization, and Voiceprint Identification module."""
+"""ASR, Diarization, Acoustic Sensing, and Voiceprint Identification module."""
 from .vad_gater import AmbientVadGate, VadFrameResult
 from .sarvam_client import SarvamSpeechClient
 from .diarizer import DiarizationEngine
@@ -7,6 +7,8 @@ from .nvidia_parakeet_engine import NvidiaParakeetEngine
 from .acoustic_speaker_detector import AcousticSpeakerToneDetector
 from .gemini_audio_engine import GeminiAudioEngine
 from .speaker_voiceprint_registry import SpeakerVoiceprintRegistry, SpeakerVoiceprint
+from .indic_normalizer import IndicNormalizer
+from .live_mic_recorder import LiveMicRecorder
 
 __all__ = [
     "AmbientVadGate",
@@ -18,5 +20,7 @@ __all__ = [
     "AcousticSpeakerToneDetector",
     "GeminiAudioEngine",
     "SpeakerVoiceprintRegistry",
-    "SpeakerVoiceprint"
+    "SpeakerVoiceprint",
+    "IndicNormalizer",
+    "LiveMicRecorder"
 ]

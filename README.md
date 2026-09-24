@@ -1,58 +1,30 @@
 # Executive Communication Coach
 
-An on-device, privacy-first AI communication intelligence system and Android service that analyzes spoken workplace conversations and provides persona-calibrated executive coaching.
+An on-device, privacy-first AI communication intelligence system and companion service that analyzes spoken workplace and personal conversations across all registers (Executive, Collaborative, Casual, Solo Practice, Mentorship, and Conflict), providing persona-calibrated communication coaching, cross-talk detection, and commitment tracking.
+
+For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE.md](file:///Users/ashish/git/executive-comm-coach/ARCHITECTURE.md).
 
 ---
 
-## 1. System Architecture
+## 1. Core Capabilities
 
-```
-[Hardware Microphone / Ambient Audio Service]
-                      │
-                      ▼
-[Silero VAD Acoustic Gate (600ms trigger / 3s silence purge)]
-                      │
-                      ▼
-[DPDP Statutory Consent & Audible Notification Chime]
-                      │
-                      ▼
-[NVIDIA Parakeet STT (nvidia/parakeet-ctc-0.6b Conformer-CTC)]
-                      │
-                      ▼
-[PII & Confidential Entity Redactor (Regex / Tokenization)]
-                      │
-                      ▼
-[Semantic Intent & Relational Coaching Synthesizer]
-  ├── Intent Classification (Question, Status, Proposal, Blocker)
-  ├── Topic & Noun Extraction
-  ├── Quantitative Scoring (Presence, Assertiveness, Listening)
-  └── Dynamic Persona Calibration (Upward BLUF, Lateral, Downward)
-                      │
-                      ▼
-[Executive Scorecard & Bespoke Coached BLUF Alternatives]
-                      │
-                      ▼
-[SQLCipher / DPDP Section 12 Right-to-Erasure Pipeline]
-```
+- **Universal Communication Coaching**: Automatically adapts coaching rubrics across 6 registers:
+  - **Formal / Executive (UPWARD)**: Bottom-Line-Up-Front (BLUF) synthesis, quantified business impact, and proactive decisions.
+  - **Collaborative / Peer (LATERAL)**: Shared milestone alignment, dependency tracking, and reciprocity.
+  - **Casual / Social (CASUAL)**: Natural conversational cadence, warmth, and engagement flow.
+  - **Solo Practice (SOLO)**: Monologue enunciation, structured inquiry, and thesis testing.
+  - **Mentorship (DOWNWARD)**: Socratic questions, constructive guidance, and psychological safety.
+  - **Difficult / Conflict Resolution (CONFLICT)**: Objective de-escalation, mutual resolution criteria, and neutral framing.
+- **Multilingual & Hinglish Code-Mixing Support**: Native comprehension of Hindi, Indian English, and code-mixed Hinglish with South Asian discourse particles (*matlab*, *yaani*, *haina*, *arre*, *bhai*, *theek hai*).
+- **Phonetic Hesitation & Non-Verbal Sound Detection**: Accurately itemizes vocal elongations (*ummm*, *aaaa*, *hmmm*), tongue clicks/tut-tuts (*tch*, *tsk*, *tch-tch*), and sigh sounds (*uff*, *oof*).
+- **Overlapping Speech & Cross-Talk Diarization**: Detects simultaneous speech turns, tags who interrupted whom, computes overlap duration, and provides coaching on floor-holding and intentional turn-taking.
+- **Automated Commitments & Action Items Engine**: Automatically captures follow-up calls, deliverables, scheduling promises, and deadlines with smart AM/PM inference and date resolution.
+- **Acoustic Voiceprint Memory Vault**: On-device biometric voiceprint recognition using local acoustic features with DPDP-compliant consent prompts and Section 12 Right-to-Erasure.
+- **Interactive Web & Mobile App Emulator**: Modern glassmorphic real-time coaching interface with live browser microphone capture, speech recognition, waveform visualizer, and insights drawer.
 
 ---
 
-- **Interactive Web & Mobile App Emulator**: Glassmorphic real-time coaching interface with live browser microphone capture, speech recognition, waveform visualizer, comprehensive feedback insights drawer, and interactive voice vault.
-- **NVIDIA Parakeet & Google Gemini STT**: Multimodal audio transcription and tone sensing running locally or via Gemini Live APIs.
-- **Dynamic Semantic Intent & BLUF Coaching**: Automatically transforms passive, hypothetical statements into decisive, proactive Bottom-Line-Up-Front (BLUF) executive assertions.
-- **Multilingual & Hinglish Support**: Code-mixed Hindi/English comprehension, hesitation markers (*matlab*, *yaani*, *haina*), hedging detection, and action item temporal parsing (*"kal 10 baje"*, *"shaam tak"*).
-- **Automated Commitments & Action Items Engine**: Automatically captures promises, follow-up calls, deadlines, and deliverables from spoken conversations.
-- **Persistent Biometric Voiceprints**: On-device voiceprint memory vault recognizing speakers across conversations with DPDP-compliant consent prompts.
-- **Relational Persona Ontology**: Calibrated against three organizational power axes:
-  - **Upward (Executive / Leadership)**: BLUF synthesis, quantified business impact, decisive recommendations.
-  - **Lateral (Peer / Product)**: Collaborative framing, mutual benefit, shared dependency alignment.
-  - **Downward (Direct Report / Mentee)**: Psychological safety, Socratic questioning, developmental inquiry.
-- **DPDP Act 2023 Compliance**: Privacy-by-design architecture featuring statutory audible chime notifications, automated PII scrubbing (PAN, Aadhaar, secrets, financial figures), and Section 12 Right-to-Erasure purging.
-- **Android Native Architecture**: Android 14/15/16 Foreground Service with ONNX Runtime Mobile Silero VAD, 16kHz ring buffer, AES-256 Opus encryption, Room/SQLCipher encrypted storage, and Dagger Hilt.
-
----
-
-## 3. Quickstart Guide
+## 2. Quickstart Guide
 
 ### Prerequisites
 - Python 3.10+ (macOS Apple Silicon or Linux)
@@ -72,6 +44,21 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Run Live Terminal Microphone Coaching
+```bash
+# Run live microphone coaching (records dynamically until silence after speech):
+./record.sh
+
+# Adjust pause/silence threshold:
+./record.sh --silence 1.5
+
+# Specify communication mode / context:
+./record.sh --axis UPWARD --counterpart "Director"
+./record.sh --axis LATERAL --counterpart "Colleague"
+./record.sh --axis SOLO
+```
+*Tip: Press <kbd>Enter</kbd> or <kbd>Ctrl+C</kbd> at any time to finish speaking immediately.*
+
 ### Launch Interactive App Emulator (Web & Mobile)
 ```bash
 # Start local emulator server on port 8080:
@@ -81,60 +68,68 @@ python core/server.py 8080
 open http://localhost:8080
 ```
 
-### Run Live Terminal Microphone Coaching
+### Run Ambient Conversation Monitor (Nudge)
 ```bash
-# Run live microphone coaching (records from hardware microphone):
-./record.sh 8
-
-# Specify custom duration and power axis:
-./record.sh 15 --axis UPWARD --counterpart "Director" --role "Engineering Director"
-./record.sh 10 --axis LATERAL --counterpart "Colleague" --role "Product Lead"
-./record.sh 10 --axis DOWNWARD --counterpart "Team Member" --role "Associate Engineer"
+# Passively monitors room for conversation onset with < 2.5% CPU:
+./nudge.sh
 ```
 
-### Run Automated Unit Tests
+### Run Automated Test Suite
 ```bash
 ./venv/bin/pytest -v
 ```
+*55 passing unit and integration tests covering ASR, diarization, VAD gating, Indic normalization, temporal resolution, and coaching synthesis.*
 
 ---
 
-## 4. Repository Structure
+## 3. Modular Architecture Overview
 
 ```
 executive-comm-coach/
 ├── core/
-│   ├── server.py                     # HTTP server powering the interactive app emulator
-│   ├── asr_diarization/
-│   │   ├── diarizer.py               # Diarization & verbal self-introduction extraction
+│   ├── asr_diarization/              # Audio streaming, VAD gating, STT & voiceprints
+│   │   ├── acoustic_speaker_detector.py # Pitch, RMS energy, and vocal tone classifier
+│   │   ├── diarizer.py                  # Speaker turn alignment & overlap detection
+│   │   ├── gemini_audio_engine.py       # Gemini multimodal transcription & tone sensing
+│   │   ├── indic_normalizer.py          # Devanagari transliteration & Hinglish harmonization
+│   │   ├── live_mic_recorder.py         # Native sounddevice / CoreAudio real-time streamer
+│   │   ├── local_stt_engine.py          # Faster-Whisper on-device STT fallback
+│   │   ├── nvidia_parakeet_engine.py    # Local CTC/RNNT transducer STT integration
+│   │   ├── sarvam_client.py             # Cloud Saarathi/Sarvam Indic speech client
 │   │   ├── speaker_voiceprint_registry.py # Persistent acoustic biometric vault
-│   │   ├── live_mic_recorder.py      # CoreAudio / sounddevice 16kHz PCM capture
-│   │   ├── gemini_audio_engine.py    # Google Gemini audio & tone sensing
-│   │   ├── nvidia_parakeet_engine.py # NVIDIA Parakeet CTC STT inference
-│   │   ├── local_stt_engine.py       # Speech recognition dispatcher
-│   │   ├── vad_gater.py              # Silero VAD acoustic filter
-│   │   ├── acoustic_speaker_detector.py # Pitch & vocal cadence detection
-│   │   └── sarvam_client.py          # Multilingual diarization adapter
-│   ├── engine/
-│   │   ├── action_item_extractor.py  # Commitment, deadline & action items extractor
-│   │   ├── coaching_engine.py        # Master executive coaching pipeline
-│   │   ├── local_coaching_synthesizer.py # Local deterministic BLUF synthesizer
-│   │   ├── gemini_coaching_engine.py # Gemini GenAI coaching synthesizer
-│   │   ├── metrics_calculator.py     # Presence, assertiveness, Hinglish fillers
-│   │   ├── persona_ontology.py       # Upward/Lateral/Downward persona models
-│   │   └── schema.py                 # Structured dataclasses and JSON models
-│   ├── privacy/
-│   │   ├── dpdp_compliance.py        # DPDP consent & right-to-erasure
-│   │   └── pii_redactor.py           # Aadhaar, PAN, email, phone scrubbing
-│   └── tests/                        # 30 automated unit tests (100% passing)
+│   │   └── vad_gater.py                 # Silero-style low-power ambient acoustic gate
+│   │
+│   ├── engine/                       # Linguistic analysis, metrics & coaching
+│   │   ├── action_item_extractor.py     # Extracts commitments, follow-ups & deadlines
+│   │   ├── coaching_engine.py           # Master coaching facade (Gemini + local fallback)
+│   │   ├── gemini_coaching_engine.py    # Deep semantic coaching via Gemini
+│   │   ├── local_coaching_synthesizer.py # 100% on-device offline NLP coaching engine
+│   │   ├── metrics_calculator.py        # Presence, assertiveness & listening scoring
+│   │   ├── persona_ontology.py          # Multi-register communication rubrics (6 modes)
+│   │   ├── schema.py                    # Strict Pydantic & dataclass schemas
+│   │   ├── temporal_resolver.py         # Smart date/time & AM/PM resolver
+│   │   └── transcription_analyzer.py    # Highlights, metrics & task pipeline
+│   │
+│   ├── privacy/                      # Statutory DPDP compliance & PII redaction
+│   │   ├── dpdp_compliance.py           # Statutory consent, chime & right-to-erasure
+│   │   └── pii_redactor.py              # Pattern-based entity & credential scrubber
+│   │
+│   ├── config.py                     # Configuration, API keys, and model paths
+│   ├── record_live_coach.py          # Live interactive hardware microphone coach
+│   ├── cli_coach.py                  # Offline transcript coaching CLI
+│   └── server.py                     # REST & WebSocket API server
+│
 ├── emulator/
-│   └── index.html                    # Glassmorphic interactive mobile app emulator
-└── android/                          # Native Android 15/16 Jetpack Compose project
-    ├── app/src/main/                 # Kotlin Compose UI, Foreground Service & Room DB
+│   └── index.html                    # Glassmorphic interactive Web UI
+│
+├── ARCHITECTURE.md                   # Complete architectural reference & data contracts
+├── record.sh                         # Live microphone execution script
+└── nudge.sh                          # Ambient conversation monitor script
 ```
 
 ---
 
-## 5. License
+## 4. License
 
 Licensed under the Apache License, Version 2.0.
+
