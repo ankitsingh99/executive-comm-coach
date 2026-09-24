@@ -166,6 +166,7 @@ class LocalCoachingSynthesizer:
             raw_sentences = [raw_text.strip() or "Speech turn."]
 
         full_quote = raw_text.strip()
+        is_hinglish = IndicNormalizer.is_hinglish(full_quote)
 
         # 1. Linguistic and Friction Pattern Detection (English + Hinglish)
         is_question = bool(
@@ -287,12 +288,13 @@ class LocalCoachingSynthesizer:
                 TopStrength(observation="Controlled enunciation and steady pacing.", verbatim_quote=full_quote)
             )
 
-        # 4. Actionable Friction-Point Analysis & Coached Rephrasing
-
+        # 4. Actionable Friction-Point Analysis & Language-Matched Coached Rephrasing
         if has_fillers:
             filler_summary = ", ".join([f"'{f.token}' ({f.count}x)" for f in metrics.filler_words_detected[:2]])
             critique = f"Hesitation markers ({filler_summary}) break delivery rhythm. Action: Pause silently for 0.5s instead of vocalizing."
-            coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
+            coached = self._generate_crisp_bluf(
+                full_quote, extracted_topic, profile.power_axis, is_hinglish=is_hinglish
+            )
             improvements.append(
                 AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
             )
@@ -302,16 +304,32 @@ class LocalCoachingSynthesizer:
                 critique = (
                     "Framed as an open question during solo rehearsal. Action: State as a definitive thesis to test."
                 )
-                coached = f"My objective is to validate {extracted_topic} through systematic prototyping."
+                coached = (
+                    f"Mera objective systematic prototyping se {extracted_topic} validate karna hai."
+                    if is_hinglish
+                    else f"My objective is to validate {extracted_topic} through systematic prototyping."
+                )
             elif profile.power_axis == PowerAxis.UPWARD:
                 critique = "Open question shifts cognitive load upward. Action: Propose a baseline plan before asking for input."
-                coached = f"I am leading the roadmap for {extracted_topic}. Let's align on the top two milestones."
+                coached = (
+                    f"Main {extracted_topic} ka roadmap lead kar raha hoon. Aaiye top two milestones align kar lete hain."
+                    if is_hinglish
+                    else f"I am leading the roadmap for {extracted_topic}. Let's align on the top two milestones."
+                )
             elif profile.power_axis == PowerAxis.LATERAL:
                 critique = "Broad question. Action: Frame around shared team deliverables and technical prerequisites."
-                coached = f"Let's review prerequisites for {extracted_topic} to ensure our sprint goals align."
+                coached = (
+                    f"Aaiye {extracted_topic} ke prerequisites review kar lete hain taaki sprint goals align rahein."
+                    if is_hinglish
+                    else f"Let's review prerequisites for {extracted_topic} to ensure our sprint goals align."
+                )
             else:
                 critique = "Broad inquiry. Action: Define concrete next steps before opening for discussion."
-                coached = f"To structure {extracted_topic}, let's first evaluate the initial architectural tradeoffs."
+                coached = (
+                    f"{extracted_topic} ko structure karne ke liye pehle architectural tradeoffs evaluate karte hain."
+                    if is_hinglish
+                    else f"To structure {extracted_topic}, let's first evaluate the initial architectural tradeoffs."
+                )
 
             improvements.append(
                 AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
@@ -319,7 +337,9 @@ class LocalCoachingSynthesizer:
 
         elif has_hedging:
             critique = "Hedging qualifiers ('just think', 'maybe', 'mujhe lagta hai') dilute conviction. Action: State the recommendation directly as a decision."
-            coached = self._generate_crisp_bluf(full_quote, extracted_topic, profile.power_axis)
+            coached = self._generate_crisp_bluf(
+                full_quote, extracted_topic, profile.power_axis, is_hinglish=is_hinglish
+            )
             improvements.append(
                 AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
             )
@@ -328,16 +348,32 @@ class LocalCoachingSynthesizer:
             # Informational / narrative statement without decision (e.g. "That was the news from India today")
             if profile.power_axis == PowerAxis.SOLO:
                 critique = "Observation ended without an action item. Action: Add a direct conclusion or next step."
-                coached = f"Key takeaway on {extracted_topic}: focus execution on the top deliverable first."
+                coached = (
+                    f"{extracted_topic} ka key takeaway ye hai ki core deliverable pehle execute karein."
+                    if is_hinglish
+                    else f"Key takeaway on {extracted_topic}: focus execution on the top deliverable first."
+                )
             elif profile.power_axis == PowerAxis.CASUAL:
                 critique = "Statement is passive. Action: Add an open hook to invite conversational flow."
-                coached = f"That wraps up the latest on {extracted_topic}—what's your take on it?"
+                coached = (
+                    f"{extracted_topic} ka status update ye hai—aapka kya take hai is par?"
+                    if is_hinglish
+                    else f"That wraps up the latest on {extracted_topic}—what's your take on it?"
+                )
             elif profile.power_axis == PowerAxis.CONFLICT:
                 critique = "Observation lacks mutual resolution criteria. Action: Propose shared objective metrics."
-                coached = f"Regarding {extracted_topic}, let's establish agreed criteria to resolve our blockers."
+                coached = (
+                    f"{extracted_topic} ke regarding, aaiye shared objective criteria establish kar lete hain."
+                    if is_hinglish
+                    else f"Regarding {extracted_topic}, let's establish agreed criteria to resolve our blockers."
+                )
             else:  # UPWARD / LATERAL
                 critique = "Statement offers context without a bottom-line decision (BLUF). Action: Lead with the recommendation."
-                coached = f"Based on the latest {extracted_topic}, I recommend we prioritize rollout readiness."
+                coached = (
+                    f"Latest {extracted_topic} ke basis par, main recommend karta hoon ki hum rollout readiness prioritize karein."
+                    if is_hinglish
+                    else f"Based on the latest {extracted_topic}, I recommend we prioritize rollout readiness."
+                )
 
             improvements.append(
                 AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached)
@@ -348,7 +384,11 @@ class LocalCoachingSynthesizer:
             interrupted_utt = next((u for u in user_turns if getattr(u, "interrupted_speaker", None)), None)
             quote_text = interrupted_utt.transcript if interrupted_utt else full_quote
             critique_int = f"Premature cross-talk detected ({metrics.interruption_count}x). Starting before interlocutor completes can signal impatience."
-            coached_int = "Allow a 1.0s deliberate pause after counterpart finishes, then bridge: 'To build directly on that point...'"
+            coached_int = (
+                "Counterpart ke complete karne ke baad 1.0s ka pause lein, phir bridge karein: 'Aapke point par build karte hue...'"
+                if is_hinglish
+                else "Allow a 1.0s deliberate pause after counterpart finishes, then bridge: 'To build directly on that point...'"
+            )
             improvements.insert(
                 0, AreaForImprovement(critique=critique_int, verbatim_quote=quote_text, coached_phrasing=coached_int)
             )
@@ -358,7 +398,7 @@ class LocalCoachingSynthesizer:
             critique_2 = (
                 "Statement lacks quantified outcomes. Action: Add measurable metrics, timelines, or next steps."
             )
-            coached_2 = self._generate_crisp_action_plan(extracted_topic, profile.power_axis)
+            coached_2 = self._generate_crisp_action_plan(extracted_topic, profile.power_axis, is_hinglish=is_hinglish)
             improvements.append(
                 AreaForImprovement(critique=critique_2, verbatim_quote=full_quote, coached_phrasing=coached_2)
             )
@@ -369,15 +409,35 @@ class LocalCoachingSynthesizer:
 
         # 5. Crisp, Actionable Summary
         if profile.power_axis == PowerAxis.SOLO:
-            summary = f"Good topic focus on {extracted_topic}. Action: Eliminate trailing statements by concluding each point with an actionable next step."
+            summary = (
+                f"{extracted_topic} par accha focus raha. Action: Trailing statements ko actionable next step ke sath conclude karein."
+                if is_hinglish
+                else f"Good topic focus on {extracted_topic}. Action: Eliminate trailing statements by concluding each point with an actionable next step."
+            )
         elif profile.power_axis == PowerAxis.UPWARD:
-            summary = f"Clear topic grounding on {extracted_topic}. Action: Front-load the recommendation (BLUF) in your first sentence to maximize executive brevity."
+            summary = (
+                f"{extracted_topic} par clear grounding hai. Action: First sentence mein hi recommendation (BLUF) front-load karein taaki executive brevity bani rahe."
+                if is_hinglish
+                else f"Clear topic grounding on {extracted_topic}. Action: Front-load the recommendation (BLUF) in your first sentence to maximize executive brevity."
+            )
         elif profile.power_axis == PowerAxis.LATERAL:
-            summary = f"Constructive sync on {extracted_topic}. Action: Anchor proposals to shared milestones and explicit team dependencies."
+            summary = (
+                f"{extracted_topic} par constructive sync raha. Action: Proposals ko shared team milestones aur explicit dependencies se anchor karein."
+                if is_hinglish
+                else f"Constructive sync on {extracted_topic}. Action: Anchor proposals to shared milestones and explicit team dependencies."
+            )
         elif profile.power_axis == PowerAxis.CONFLICT:
-            summary = f"Tense discussion around {extracted_topic}. Action: Keep framing strictly objective and centered on shared criteria."
+            summary = (
+                f"{extracted_topic} par focused discussion. Action: Framing ko strictly objective aur shared criteria par center rakhein."
+                if is_hinglish
+                else f"Tense discussion around {extracted_topic}. Action: Keep framing strictly objective and centered on shared criteria."
+            )
         else:
-            summary = f"Engaging communication regarding {extracted_topic}. Action: Lead with your core message before providing background context."
+            summary = (
+                f"{extracted_topic} par engaging communication. Action: Background context dene se pehle core message se lead karein."
+                if is_hinglish
+                else f"Engaging communication regarding {extracted_topic}. Action: Lead with your core message before providing background context."
+            )
 
         alignment_note = (
             f"Evaluated against {profile.power_axis.value} (BLUF) executive communication rubric."
@@ -411,8 +471,22 @@ class LocalCoachingSynthesizer:
             unresolved_loops=open_loops,
         )
 
-    def _generate_crisp_bluf(self, text: str, topic: str, power_axis: PowerAxis) -> str:
-        """Generates a punchy, highly natural BLUF sentence tailored to register."""
+    def _generate_crisp_bluf(self, text: str, topic: str, power_axis: PowerAxis, is_hinglish: bool = False) -> str:
+        """Generates a punchy, highly natural BLUF sentence tailored to register and language."""
+        if is_hinglish:
+            if power_axis == PowerAxis.SOLO:
+                return f"Hamari priority ye honi chahiye ki {topic} ke core milestones schedule par execute hon."
+            elif power_axis == PowerAxis.CASUAL:
+                return f"Maine {topic} ko closely track kiya hai—progress kafi solid chal rahi hai!"
+            elif power_axis == PowerAxis.CONFLICT:
+                return f"Main {topic} ke constraints samajhta hoon. Aaiye concrete next steps par agree kar lete hain."
+            elif power_axis == PowerAxis.UPWARD:
+                return f"Main recommend karta hoon ki hum {topic} ke sath proceed karein taaki roadmap on-track rahe."
+            elif power_axis == PowerAxis.LATERAL:
+                return f"Aaiye {topic} par align kar lete hain taaki upcoming sprint unblock ho sake."
+            else:
+                return f"{topic} ko advance karne ke liye, initial tradeoffs kya identify kiye hain?"
+
         if power_axis == PowerAxis.SOLO:
             return f"The priority for {topic} is executing the core milestones on schedule."
         elif power_axis == PowerAxis.CASUAL:
@@ -426,8 +500,22 @@ class LocalCoachingSynthesizer:
         else:
             return f"To advance {topic}, what initial tradeoffs have you identified?"
 
-    def _generate_crisp_action_plan(self, topic: str, power_axis: PowerAxis) -> str:
-        """Generates a quantified, concrete action plan alternative."""
+    def _generate_crisp_action_plan(self, topic: str, power_axis: PowerAxis, is_hinglish: bool = False) -> str:
+        """Generates a quantified, concrete action plan alternative in English or Hinglish."""
+        if is_hinglish:
+            if power_axis == PowerAxis.SOLO:
+                return f"Main weekend tak {topic} ka initial benchmark complete kar dunga."
+            elif power_axis == PowerAxis.UPWARD:
+                return (
+                    f"Main recommend karta hoon ki next sprint tak {topic} deploy kar dein, taaki risk 20% reduce ho."
+                )
+            elif power_axis == PowerAxis.LATERAL:
+                return f"Kal 15 minute ka sync rakh lete hain taaki {topic} ka API contract finalize ho sake."
+            elif power_axis == PowerAxis.CONFLICT:
+                return f"Aaiye {topic} ke objective test data ko review kar lete hain taaki direction clear ho."
+            else:
+                return f"Agale do hafton mein {topic} ka prototype deliver karne ka target rakhte hain."
+
         if power_axis == PowerAxis.SOLO:
             return f"I will complete the initial benchmark for {topic} by end of week."
         elif power_axis == PowerAxis.UPWARD:

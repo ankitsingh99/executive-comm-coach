@@ -201,7 +201,8 @@ Guidelines:
 4. Detect explicit consensus points in 'agreements', and lingering ambiguities/tensions in 'unresolved_loops'.
 5. Extract key highlights covering major decisions and critical takeaways into 'key_highlights'.
 6. Every critique must include a direct 'Action:' directive.
-7. Return ONLY valid JSON without markdown wrapping.
+7. Language & Tone Matching: Every coached_phrasing MUST match the conversational language and natural tone of the speaker. If the user or counterpart spoke in Hinglish (code-mixed Hindi-English), provide coached_phrasing in natural, polished executive Hinglish (e.g. 'Main recommend karta hoon ki hum kal deploy kar dein taaki delivery risk 20% reduce ho') or English, matching whichever language blend most naturally fits the context without sounding stiff, artificial, or disconnected.
+8. Return ONLY valid JSON without markdown wrapping.
 """
 
         try:

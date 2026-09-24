@@ -253,6 +253,69 @@ class IndicNormalizer:
         return result
 
     @classmethod
+    def is_hinglish(cls, text: str) -> bool:
+        """Detects whether text contains Devanagari or Romanized Hinglish vocabulary."""
+        if not text:
+            return False
+        if cls.contains_devanagari(text):
+            return True
+
+        hinglish_tokens = [
+            r"\bmatlab\b",
+            r"\bmujhe\b",
+            r"\bhume\b",
+            r"\bhum\b",
+            r"\bhoga\b",
+            r"\bhogi\b",
+            r"\bhonge\b",
+            r"\bhai\b",
+            r"\bhain\b",
+            r"\bkarna\b",
+            r"\bkarenge\b",
+            r"\bkarunga\b",
+            r"\bkarein\b",
+            r"\bkar\b",
+            r"\bchahiye\b",
+            r"\blagta\b",
+            r"\blag\b",
+            r"\braha\b",
+            r"\brahi\b",
+            r"\brahe\b",
+            r"\btheek\b",
+            r"\bthik\b",
+            r"\bbilkul\b",
+            r"\bbhai\b",
+            r"\byaar\b",
+            r"\bdekho\b",
+            r"\bsuno\b",
+            r"\baap\b",
+            r"\baapka\b",
+            r"\baapne\b",
+            r"\baaj\b",
+            r"\bkal\b",
+            r"\bparso\b",
+            r"\bbaje\b",
+            r"\bshandar\b",
+            r"\bmast\b",
+            r"\bachha\b",
+            r"\baccha\b",
+            r"\bhaina\b",
+            r"\bkyunki\b",
+            r"\blekin\b",
+            r"\bisiliye\b",
+            r"\bdikkat\b",
+            r"\bmushkil\b",
+            r"\bkaise\b",
+            r"\bkyun\b",
+            r"\bkaun\b",
+            r"\bbatao\b",
+            r"\bsamajh\b",
+            r"\bbolo\b",
+        ]
+        pattern = "|".join(hinglish_tokens)
+        return bool(re.search(pattern, text, re.IGNORECASE))
+
+    @classmethod
     def normalize_text(cls, text: str) -> str:
         """
         Master normalization pipeline:

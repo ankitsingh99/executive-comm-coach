@@ -74,3 +74,34 @@ def test_hinglish_coaching_takeaways_and_rephrasing():
     assert len(first_imp.critique) > 10
     assert len(first_imp.coached_phrasing) > 10
     assert "Action:" in first_imp.critique
+    # Verify coached phrasing matches natural Hinglish register
+    assert any(
+        w in first_imp.coached_phrasing.lower()
+        for w in ["karta hoon", "karein", "proceed", "caching", "recommend", "taaki"]
+    )
+
+
+def test_hinglish_language_matched_coached_delivery_lateral_and_solo():
+    dialogue_lateral = [
+        Utterance(
+            speaker="USER",
+            start_time=0.0,
+            end_time=5.0,
+            transcript="Umm matlab mujhe lagta hai ki hume API contract kal tak finalize kar lena chahiye.",
+        )
+    ]
+    session = ConversationSession(
+        session_id="test_hinglish_lateral",
+        timestamp_utc="2026-08-28T23:00:00Z",
+        target_speaker="USER",
+        counterpart_name="Pooja",
+        counterpart_role="Peer Dev",
+        power_axis="LATERAL",
+        dialogue=dialogue_lateral,
+    )
+    engine = ExecutiveCoachingEngine(use_local_only=True)
+    evaluation = engine.evaluate_session(session)
+
+    assert len(evaluation.areas_for_improvement) >= 1
+    coached = evaluation.areas_for_improvement[0].coached_phrasing
+    assert any(w in coached.lower() for w in ["align", "sprint", "karein", "contract", "api"])
