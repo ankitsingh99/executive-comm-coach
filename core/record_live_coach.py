@@ -167,18 +167,18 @@ def main():
  +------------------------------------------------------------------------------+
 """)
 
-    silence_threshold = getattr(args, "silence_sec", 2.2)
+    silence_threshold = getattr(args, "silence_sec", 2.0)
     max_duration = args.duration if (args.duration and args.duration > 0) else 180
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     recorder = LiveMicRecorder()
 
     sensitivity_level = getattr(args, "sensitivity", "high").lower()
     sens_map = {
-        "high": (0.35, 2.5),
-        "medium": (0.50, 1.8),
+        "high": (0.45, 2.0),
+        "medium": (0.55, 1.5),
         "low": (0.65, 1.0)
     }
-    speech_prob_thresh, gain_val = sens_map.get(sensitivity_level, (0.35, 2.5))
+    speech_prob_thresh, gain_val = sens_map.get(sensitivity_level, (0.45, 2.0))
 
     # Step 0: Ambient Conversation Auto-Detection & Nudge (Default)
     if not getattr(args, "direct", False):

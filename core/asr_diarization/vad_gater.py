@@ -47,9 +47,10 @@ class AmbientVadGate:
         self.frame_history: List[VadFrameResult] = []
 
     @staticmethod
-    def calculate_speech_probability(audio_chunk_16k: "np.ndarray") -> float:
+    def calculate_speech_probability(audio_chunk_16k: "np.ndarray", noise_floor_rms: float = 0.0) -> float:
         """
-        Computes on-device speech probability using energy RMS and zero-crossing dynamics.
+        Computes on-device speech probability using energy RMS, crest factor dynamics, and zero-crossing dynamics.
+        Robustly distinguishes speech from ambient room noise, fan hiss, and electrical mic floor.
         """
         import numpy as np
         if len(audio_chunk_16k) == 0:
@@ -62,20 +63,40 @@ class AmbientVadGate:
             samples = audio_chunk_16k.astype(np.float32)
             
         rms = float(np.sqrt(np.mean(samples ** 2)))
+        peak = float(np.max(np.abs(samples))) if len(samples) > 0 else 0.0
+        crest_factor = peak / (rms + 1e-6)
         
-        # Compute zero-crossing rate
+        # Pure silence threshold
+        if rms < 0.002:
+            return 0.02
+        
+        # Zero-crossing rate
         zero_crossings = np.nonzero(np.diff(samples > 0))[0]
         zcr = float(len(zero_crossings) / max(1, len(samples)))
         
-        # Ambient conversational speech RMS floor is ~0.0015 to 0.025
-        if rms < 0.0015:
-            return 0.02
+        # Relative contrast against background noise floor
+        if noise_floor_rms > 0.001:
+            snr_ratio = rms / noise_floor_rms
+            if snr_ratio < 1.4:
+                # Energy is near constant room noise
+                return 0.08
+            energy_score = min(1.0, max(0.0, (snr_ratio - 1.4) / 2.2))
+        else:
+            # Baseline absolute energy curve
+            energy_score = min(1.0, max(0.0, (rms - 0.004) / 0.025))
+            
+        # Human speech exhibits high dynamic crest factor (> 2.2) and zcr in voice range (0.015 - 0.40)
+        zcr_valid = (0.015 <= zcr <= 0.42)
+        crest_valid = (crest_factor >= 2.0)
         
-        # High sensitivity ambient energy curve
-        energy_score = min(1.0, (rms - 0.0015) / 0.015)
-        zcr_score = 1.0 if (0.012 <= zcr <= 0.45) else 0.35
+        if zcr_valid and crest_valid:
+            spectral_score = 1.0
+        elif zcr_valid or crest_valid:
+            spectral_score = 0.5
+        else:
+            spectral_score = 0.15
         
-        prob = (0.75 * energy_score) + (0.25 * zcr_score)
+        prob = (0.70 * energy_score) + (0.30 * spectral_score)
         return float(np.clip(prob, 0.0, 1.0))
 
     def evaluate_frame(self, timestamp_ms: float, speech_prob: float) -> Tuple[bool, str]:
