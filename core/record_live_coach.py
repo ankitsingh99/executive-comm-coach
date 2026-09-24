@@ -134,7 +134,9 @@ def prompt_for_communication_context(detected_count: int = 1, detected_tone: str
         speaker_name = default_name
         if sys.stdin.isatty():
             try:
-                custom_name = input(f"  Enter your name (optional, press Enter for '{default_name}'): ").strip()
+                custom_name = input(
+                    f"  Enter your name (to remember your voice for future auto-recognition, or Enter for '{default_name}'): "
+                ).strip()
                 if custom_name:
                     speaker_name = custom_name
             except (EOFError, KeyboardInterrupt):
@@ -147,7 +149,7 @@ def prompt_for_communication_context(detected_count: int = 1, detected_tone: str
     if sys.stdin.isatty():
         try:
             custom_name = input(
-                f"  Enter counterpart name/title (optional, press Enter for '{default_name}'): "
+                f"  Enter counterpart name/title (to remember their voice for future auto-recognition, or Enter for '{default_name}'): "
             ).strip()
             if custom_name:
                 counterpart_name = custom_name
@@ -424,24 +426,50 @@ def main():
         axis_enum, counterpart_name, counterpart_role = prompt_for_communication_context(
             detected_count=acoustic_result.detected_speaker_count, detected_tone=acoustic_result.overall_tone
         )
-        # Offer voiceprint enrollment for non-default names
-        if sys.stdin.isatty() and counterpart_name not in ["Counterpart", "Self (Solo Practice)", "Self"]:
+        # Proactively offer voiceprint biometric enrollment
+        if sys.stdin.isatty():
             try:
-                enroll_ans = (
-                    input(
-                        f"\n  [VOICEPRINT MEMORY] Would you like to remember {counterpart_name}'s voice for future auto-recognition? [Y/n]: "
+                if axis_enum == PowerAxis.SOLO:
+                    user_target = counterpart_name if counterpart_name not in ["Self (Solo Practice)", "Self"] else ""
+                    if not user_target and not recognized_voice:
+                        user_target = input(
+                            "\n  [VOICEPRINT ENROLLMENT] Enter your name to remember your voice for future auto-recognition (or Enter to skip): "
+                        ).strip()
+                    if user_target:
+                        voice_registry.enroll_speaker(
+                            name=user_target,
+                            role="Self",
+                            power_axis="SOLO",
+                            audio_signal_or_wav_path=wav_path,
+                        )
+                        counterpart_name = user_target
+                        current_user_name = user_target
+                        print(
+                            f"  >> [VOICEPRINT SAVED] Enrolled biometric voiceprint for '{user_target}' into local memory!\n"
+                        )
+                else:
+                    cp_target = (
+                        counterpart_name
+                        if counterpart_name
+                        not in ["Counterpart", "Colleague", "Peer Collaborator", "Friend / Colleague"]
+                        else ""
                     )
-                    .strip()
-                    .lower()
-                )
-                if enroll_ans in ["", "y", "yes"]:
-                    voice_registry.enroll_speaker(
-                        name=counterpart_name,
-                        role=counterpart_role,
-                        power_axis=axis_enum.value,
-                        audio_signal_or_wav_path=wav_path,
-                    )
-                    print(f"  >> Enrolled voiceprint for '{counterpart_name}' into local secure memory!\n")
+                    if not cp_target:
+                        cp_target = input(
+                            "\n  [VOICEPRINT ENROLLMENT] Enter counterpart's name to remember their voice for future auto-tagging (or Enter to skip): "
+                        ).strip()
+                    if cp_target:
+                        voice_registry.enroll_speaker(
+                            name=cp_target,
+                            role=counterpart_role,
+                            power_axis=axis_enum.value,
+                            audio_signal_or_wav_path=wav_path,
+                        )
+                        counterpart_name = cp_target
+                        current_counterpart_name = cp_target
+                        print(
+                            f"  >> [VOICEPRINT SAVED] Enrolled biometric voiceprint for '{cp_target}' ({counterpart_role}) into local memory!\n"
+                        )
             except (EOFError, KeyboardInterrupt):
                 pass
     else:
