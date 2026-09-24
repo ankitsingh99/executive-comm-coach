@@ -107,6 +107,10 @@ class LiveMicRecorder:
                     dur = len(chunk_flat) / float(self.sample_rate)
                     total_recorded_sec += dur
 
+                    # RMS calculation
+                    float_samples = chunk_flat.astype(np.float32) / 32768.0
+                    cur_rms = float(np.sqrt(np.mean(float_samples ** 2))) if len(float_samples) > 0 else 0.0
+
                     # Evaluate speech probability
                     speech_prob = gate.calculate_speech_probability(chunk_flat)
                     is_voice_active = (speech_prob >= 0.32 or cur_rms >= 0.0055)
