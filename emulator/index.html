@@ -688,6 +688,64 @@
               </div>
             </div>
 
+            <!-- Conversational Dynamics & Talk-Time Parity Card -->
+            <div class="dynamics-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--bg-card-border); border-radius: 12px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; cursor: pointer;" onclick="openInsightsModal()">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.66rem; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.04em;">TALK-TIME PARITY & PACING</span>
+                <span id="txt-vocal-tension" style="font-size: 0.62rem; color: #34d399; font-weight: 600;">Calm & Grounded</span>
+              </div>
+              
+              <!-- Parity Split Bar -->
+              <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.62rem; font-weight: 600;">
+                  <span id="txt-user-split" style="color: #a5b4fc;">YOU: 52%</span>
+                  <span id="txt-counterpart-split" style="color: #67e8f9;">COUNTERPART: 48%</span>
+                </div>
+                <div style="width: 100%; height: 6px; background: rgba(6, 182, 212, 0.25); border-radius: 999px; overflow: hidden; display: flex;">
+                  <div id="bar-user-split" style="width: 52%; height: 100%; background: linear-gradient(90deg, #6366f1, #818cf8); transition: width 0.4s ease;"></div>
+                  <div id="bar-counterpart-split" style="width: 48%; height: 100%; background: linear-gradient(90deg, #06b6d4, #22d3ee); transition: width 0.4s ease;"></div>
+                </div>
+              </div>
+
+              <!-- Pacing Quick Metrics Grid -->
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem;">
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.3rem; text-align: center;">
+                  <div id="dyn-latency" style="font-size: 0.74rem; font-weight: 700; color: #fff;">420ms</div>
+                  <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Latency</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.3rem; text-align: center;">
+                  <div id="dyn-ask-tell" style="font-size: 0.74rem; font-weight: 700; color: var(--cyan);">1.2x</div>
+                  <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Ask:Tell</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.3rem; text-align: center;">
+                  <div id="dyn-brevity" style="font-size: 0.74rem; font-weight: 700; color: var(--amber);">-15%</div>
+                  <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Brevity</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.3rem; text-align: center;">
+                  <div id="dyn-listening" style="font-size: 0.74rem; font-weight: 700; color: var(--emerald);">85</div>
+                  <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Listen Q</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alignment & Open Loops Summary Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem;">
+              <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 0.55rem; cursor: pointer;" onclick="openInsightsModal()">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.63rem; font-weight: 700; color: #a7f3d0;">✓ AGREEMENTS</span>
+                  <span id="badge-agreements-count" style="font-size: 0.64rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.2); padding: 0.05rem 0.35rem; border-radius: 999px;">1</span>
+                </div>
+                <div id="preview-agreements" style="font-size: 0.65rem; color: #cbd5e1; margin-top: 0.2rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Deploy caching policy</div>
+              </div>
+              <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 0.55rem; cursor: pointer;" onclick="openInsightsModal()">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.63rem; font-weight: 700; color: #fde68a;">⚠️ OPEN LOOPS</span>
+                  <span id="badge-loops-count" style="font-size: 0.64rem; font-weight: 800; color: #f59e0b; background: rgba(245, 158, 11, 0.2); padding: 0.05rem 0.35rem; border-radius: 999px;">0</span>
+                </div>
+                <div id="preview-loops" style="font-size: 0.65rem; color: #cbd5e1; margin-top: 0.2rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">All concerns aligned</div>
+              </div>
+            </div>
+
             <!-- Coached Rephrasing Box -->
             <div class="coached-card" onclick="openInsightsModal()" style="cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -700,7 +758,7 @@
 
             <!-- Full Insights Action Button -->
             <button class="primary-btn" onclick="openInsightsModal()" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe; padding: 0.55rem; font-size: 0.74rem;">
-              <span>[DETAILS] View Complete Feedback Insights & Linguistics</span>
+              <span>[DETAILS] View Complete Feedback Insights &amp; Dynamics</span>
             </button>
           </div>
 
@@ -733,19 +791,23 @@
               <span style="font-size: 0.62rem; color: var(--cyan);">DPDP Sec 12</span>
             </div>
 
-            <!-- Enroll New Speaker Quick Form -->
-            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.4rem;">
-              <div style="font-size: 0.68rem; font-weight: 700; color: #fff;">+ Enroll New Speaker Profile</div>
+            <!-- Enroll New Speaker Quick Form with Multi-User Self/Counterpart Profile Support -->
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem;">
+              <div style="font-size: 0.68rem; font-weight: 700; color: #fff;">+ Enroll Voiceprint Profile</div>
               <div style="display: flex; gap: 0.35rem;">
-                <input type="text" id="input-enroll-name" placeholder="Speaker Name (e.g. Vikram)" style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.7rem; color: #fff; outline: none;">
+                <input type="text" id="input-enroll-name" placeholder="Name (e.g. Ashish, Priya)" style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.7rem; color: #fff; outline: none;">
                 <select id="input-enroll-role" style="background: rgba(15,23,42,0.9); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.4rem; font-size: 0.65rem; color: #fff; outline: none;">
                   <option value="LATERAL">Lateral (Colleague)</option>
                   <option value="UPWARD">Upward (Executive)</option>
-                  <option value="SOLO">Solo Practice</option>
+                  <option value="SOLO">Solo Speaker</option>
                   <option value="CASUAL">Casual</option>
                 </select>
                 <button class="primary-btn" onclick="submitNewVoiceprint()" style="flex: 0 0 55px; padding: 0.35rem; font-size: 0.68rem;">Save</button>
               </div>
+              <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.64rem; color: #a5b4fc; cursor: pointer;">
+                <input type="checkbox" id="input-enroll-is-user" style="accent-color: var(--primary);">
+                <span>Mark as App User Profile (My Voice)</span>
+              </label>
             </div>
 
             <!-- List of Enrolled Voiceprints -->
@@ -757,14 +819,61 @@
           <!-- DETAILED FEEDBACK INSIGHTS MODAL DRAWER -->
           <div id="insights-modal" style="display: none; position: absolute; top: 18px; left: 0; right: 0; bottom: 0; background: rgba(11, 15, 29, 0.96); backdrop-filter: blur(16px); z-index: 50; flex-direction: column; padding: 1rem; overflow-y: auto; gap: 0.85rem; animation: fadeIn 0.2s ease-out;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-card-border); padding-bottom: 0.5rem;">
-              <div style="font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: #fff;">[SCORECARD] Comprehensive Feedback Insights</div>
+              <div style="font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: #fff;">[SCORECARD] Complete Intelligence Insights</div>
               <button onclick="closeInsightsModal()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 0.85rem;">X</button>
             </div>
 
             <!-- Longitudinal Takeaway -->
             <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 10px; padding: 0.75rem;">
-              <div style="font-size: 0.66rem; font-weight: 700; color: var(--cyan); text-transform: uppercase; margin-bottom: 0.25rem;">[SPEECH] Executive Takeaway & Synthesis</div>
+              <div style="font-size: 0.66rem; font-weight: 700; color: var(--cyan); text-transform: uppercase; margin-bottom: 0.25rem;">[SPEECH] Executive Takeaway &amp; Synthesis</div>
               <div id="modal-longitudinal" style="font-size: 0.76rem; color: #f1f5f9; line-height: 1.4;">Delivery is concise and structured around core milestones.</div>
+            </div>
+
+            <!-- Conversational Dynamics & Brevity Optimization -->
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.45rem;">
+              <div style="font-size: 0.66rem; font-weight: 700; color: var(--cyan); text-transform: uppercase;">[PACING] Dynamics &amp; Parity Breakdown</div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
+                <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 0.4rem; font-size: 0.68rem;">
+                  <span style="color: var(--text-muted);">Talk Parity:</span>
+                  <span id="modal-dyn-parity" style="color: #fff; font-weight: 700; margin-left: 0.2rem;">You 52% • Other 48%</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 0.4rem; font-size: 0.68rem;">
+                  <span style="color: var(--text-muted);">Turn Latency:</span>
+                  <span id="modal-dyn-latency" style="color: #fff; font-weight: 700; margin-left: 0.2rem;">420 ms</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 0.4rem; font-size: 0.68rem;">
+                  <span style="color: var(--text-muted);">Ask:Tell Ratio:</span>
+                  <span id="modal-dyn-asktell" style="color: #67e8f9; font-weight: 700; margin-left: 0.2rem;">1.2x (Inquiry balanced)</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 0.4rem; font-size: 0.68rem;">
+                  <span style="color: var(--text-muted);">Brevity Trim:</span>
+                  <span id="modal-dyn-brevity" style="color: var(--amber); font-weight: 700; margin-left: 0.2rem;">-15% Potential</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Emotional Trajectory & Tension Arc -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.65rem;">
+              <div style="font-size: 0.66rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase; margin-bottom: 0.35rem;">[EMOTION] Emotional Trajectory &amp; Tension Arc</div>
+              <div id="modal-emotional-trajectory-list" style="display: flex; flex-direction: column; gap: 0.35rem;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Consensus Agreements Finalized -->
+            <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 0.65rem;">
+              <div style="font-size: 0.66rem; font-weight: 700; color: #6ee7b7; text-transform: uppercase; margin-bottom: 0.35rem;">[CONSENSUS] Finalized Agreements &amp; Alignment</div>
+              <div id="modal-agreements-list" style="display: flex; flex-direction: column; gap: 0.35rem;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Unresolved Open Loops & Follow-up Actions -->
+            <div style="background: rgba(245, 158, 11, 0.04); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 0.65rem;">
+              <div style="font-size: 0.66rem; font-weight: 700; color: #fde68a; text-transform: uppercase; margin-bottom: 0.35rem;">[LOOPS] Unresolved Tensions &amp; Follow-up Actions</div>
+              <div id="modal-unresolved-loops-list" style="display: flex; flex-direction: column; gap: 0.35rem;">
+                <!-- Populated dynamically -->
+              </div>
             </div>
 
             <!-- Linguistic Metrics Breakdown -->
@@ -785,7 +894,7 @@
 
             <!-- Hesitations / Fillers List -->
             <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--bg-card-border); border-radius: 10px; padding: 0.65rem;">
-              <div style="font-size: 0.66rem; font-weight: 700; color: #fb7185; text-transform: uppercase; margin-bottom: 0.35rem;">[CRITIQUE] Detected Hesitation & Fillers</div>
+              <div style="font-size: 0.66rem; font-weight: 700; color: #fb7185; text-transform: uppercase; margin-bottom: 0.35rem;">[CRITIQUE] Detected Hesitation &amp; Fillers</div>
               <div id="modal-fillers-list" style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
                 <span style="font-size: 0.68rem; color: var(--text-muted);">None detected. Clean pacing!</span>
               </div>
@@ -801,7 +910,7 @@
 
             <!-- Areas for Improvement & Prescriptive Coached Phrasings -->
             <div>
-              <div style="font-size: 0.72rem; font-weight: 700; color: #fca5a5; text-transform: uppercase; margin-bottom: 0.35rem;">[2] Actionable Improvements & Coached Alternatives</div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: #fca5a5; text-transform: uppercase; margin-bottom: 0.35rem;">[2] Actionable Improvements &amp; Coached Alternatives</div>
               <div id="modal-improvements-list" style="display: flex; flex-direction: column; gap: 0.45rem;">
                 <!-- Populated dynamically -->
               </div>
@@ -833,7 +942,7 @@
   </main>
 
   <script>
-    // Scenario definitions
+    // Scenario definitions with complete Conversational Intelligence & Dynamics
     const scenarioData = {
       1: {
         speakerName: "Rahul Sharma",
@@ -845,6 +954,30 @@
         coached: "Let's review the 35% load savings on Thursday so we can align our production timeline.",
         critique: "Delivery is collaborative and aligned. Consider highlighting the bottom-line cost reduction first.",
         dialogueText: "RAHUL: Hey I am Rahul and today I want to sync on our quarterly deployment.\nUSER: Hi Rahul, our caching policy reduced load by 35%.\nRAHUL: Perfect, I will call you on 31 aug at 10 am to review the savings.\nUSER: Understood. We have decided to ship the release on Thursday morning.",
+        dynamics: {
+          user_talk_time_pct: 48.0,
+          counterpart_talk_time_pct: 52.0,
+          average_turn_latency_ms: 380.0,
+          ask_vs_tell_ratio: 1.0,
+          brevity_potential_pct: 8.0,
+          deep_listening_score: 88,
+          vocal_tension_index: "Calm & Grounded"
+        },
+        emotional_trajectory: [
+          { timestamp_sec: 0.0, speaker: "RAHUL", emotion_label: "Neutral & Inquiring", valence_score: 0.3, tension_level: "LOW", pacing_wpm: 135 },
+          { timestamp_sec: 3.5, speaker: "USER", emotion_label: "Assertive & Direct", valence_score: 0.6, tension_level: "LOW", pacing_wpm: 142 },
+          { timestamp_sec: 7.0, speaker: "RAHUL", emotion_label: "Enthusiastic & Aligned", valence_score: 0.7, tension_level: "LOW", pacing_wpm: 138 },
+          { timestamp_sec: 10.5, speaker: "USER", emotion_label: "Decisive & Grounded", valence_score: 0.5, tension_level: "LOW", pacing_wpm: 140 }
+        ],
+        agreements: [
+          {
+            headline: "Ship Release on Thursday",
+            agreed_solution: "Ship the deployment release on Thursday morning and review 35% savings",
+            speaker_turn: "USER",
+            quote: "We have decided to ship the release on Thursday morning."
+          }
+        ],
+        unresolved_loops: [],
         actions: [
           {
             owner: "RAHUL",
@@ -872,6 +1005,29 @@
         coached: "Our on-device speech engine eliminates external API latency through local acoustic processing.",
         critique: "Hesitation markers ('basically' 1x, 'matlab' 1x) weaken rehearsal rhythm. Action: Pause silently for 0.5s.",
         dialogueText: "USER: Hey I am Ashish and today I will present the architecture for our on-device speech engine.\nUSER: Basically, matlab we reduced external API latency to zero using local acoustic models.\nUSER: I will complete the initial benchmark by end of week.",
+        dynamics: {
+          user_talk_time_pct: 100.0,
+          counterpart_talk_time_pct: 0.0,
+          average_turn_latency_ms: 0.0,
+          ask_vs_tell_ratio: 0.0,
+          brevity_potential_pct: 22.0,
+          deep_listening_score: 92,
+          vocal_tension_index: "Moderate Rehearsal Tension"
+        },
+        emotional_trajectory: [
+          { timestamp_sec: 0.0, speaker: "USER", emotion_label: "Composed & Direct", valence_score: 0.4, tension_level: "LOW", pacing_wpm: 140 },
+          { timestamp_sec: 4.0, speaker: "USER", emotion_label: "Hesitant (Filler detected)", valence_score: 0.0, tension_level: "MEDIUM", pacing_wpm: 155 },
+          { timestamp_sec: 8.5, speaker: "USER", emotion_label: "Goal-Oriented", valence_score: 0.5, tension_level: "LOW", pacing_wpm: 138 }
+        ],
+        agreements: [],
+        unresolved_loops: [
+          {
+            concern_topic: "Filler Hesitations (basically, matlab)",
+            raised_by: "COACH",
+            context: "Filler words observed in monologue explanation.",
+            recommended_followup: "Practice intentional 0.5s pause before starting technical key points."
+          }
+        ],
         actions: [
           {
             owner: "ASHISH (Solo)",
@@ -892,6 +1048,38 @@
         coached: "I recommend deploying our caching policy on Thursday morning to reduce database spend by 35%.",
         critique: "Hedging qualifiers ('just think', 'maybe') dilute conviction in executive reviews. Action: Lead with the decision (BLUF).",
         dialogueText: "SANDEEP: Are we on track with reducing our cloud infrastructure bill?\nUSER: Yeah so basically, matlab we were looking at the logs and I just think maybe we could reduce spend by 15%.\nSANDEEP: Can you give me the exact numbers and the timeline for completion?\nUSER: Understood. Our data demonstrates that caching reduced database load by 35%. We have decided to deploy the policy on Thursday morning.\nSANDEEP: Please send me the updated latency metrics by Friday EOD.",
+        dynamics: {
+          user_talk_time_pct: 54.0,
+          counterpart_talk_time_pct: 46.0,
+          average_turn_latency_ms: 450.0,
+          ask_vs_tell_ratio: 0.5,
+          brevity_potential_pct: 18.0,
+          deep_listening_score: 74,
+          vocal_tension_index: "Executive Scrutiny"
+        },
+        emotional_trajectory: [
+          { timestamp_sec: 0.0, speaker: "SANDEEP", emotion_label: "Direct & Inquiring", valence_score: 0.0, tension_level: "MEDIUM", pacing_wpm: 128 },
+          { timestamp_sec: 3.5, speaker: "USER", emotion_label: "Hesitant & Hedging", valence_score: -0.2, tension_level: "HIGH", pacing_wpm: 160 },
+          { timestamp_sec: 8.0, speaker: "SANDEEP", emotion_label: "Probing & Demanding", valence_score: -0.1, tension_level: "HIGH", pacing_wpm: 132 },
+          { timestamp_sec: 12.0, speaker: "USER", emotion_label: "Decisive & Grounded", valence_score: 0.6, tension_level: "LOW", pacing_wpm: 140 },
+          { timestamp_sec: 17.0, speaker: "SANDEEP", emotion_label: "Satisfied Alignment", valence_score: 0.4, tension_level: "LOW", pacing_wpm: 125 }
+        ],
+        agreements: [
+          {
+            headline: "Deploy Caching Policy on Thursday",
+            agreed_solution: "Deploy caching policy on Thursday morning to lock in 35% database savings",
+            speaker_turn: "USER",
+            quote: "We have decided to deploy the policy on Thursday morning."
+          }
+        ],
+        unresolved_loops: [
+          {
+            concern_topic: "Updated Latency Metrics Delivery",
+            raised_by: "SANDEEP",
+            context: "Sandeep requested verified latency figures after initial hesitation.",
+            recommended_followup: "Send concise dashboard screenshot and metrics by Friday EOD."
+          }
+        ],
         actions: [
           {
             owner: "USER / YOU",
@@ -919,6 +1107,37 @@
         coached: "I recommend enabling caching immediately; our testing confirms it reduces latency by 35%.",
         critique: "Hedging markers ('matlab mujhe lagta hai', 'thoda doubt hai') dilute conviction. Action: State the caching decision directly.",
         dialogueText: "SANDEEP: Production latency ka status kya hai? Are we shipping on time?\nUSER: Dekho basically matlab mujhe lagta hai ki hume caching enable karni chahiye, par thoda doubt hai.\nSANDEEP: Aap please mujhe updated metrics bhej dena shaam tak.\nUSER: Bilkul sahi point hai. Hum kal 10 baje sync karenge aur final release ship kar denge.",
+        dynamics: {
+          user_talk_time_pct: 51.0,
+          counterpart_talk_time_pct: 49.0,
+          average_turn_latency_ms: 320.0,
+          ask_vs_tell_ratio: 0.8,
+          brevity_potential_pct: 14.0,
+          deep_listening_score: 86,
+          vocal_tension_index: "Dynamic Hinglish Alignment"
+        },
+        emotional_trajectory: [
+          { timestamp_sec: 0.0, speaker: "SANDEEP", emotion_label: "Prompt Status Inquiry", valence_score: 0.1, tension_level: "LOW", pacing_wpm: 136 },
+          { timestamp_sec: 3.5, speaker: "USER", emotion_label: "Hesitant & Searching", valence_score: -0.1, tension_level: "MEDIUM", pacing_wpm: 148 },
+          { timestamp_sec: 7.5, speaker: "SANDEEP", emotion_label: "Constructive Request", valence_score: 0.3, tension_level: "LOW", pacing_wpm: 130 },
+          { timestamp_sec: 11.0, speaker: "USER", emotion_label: "Receptive & Aligned", valence_score: 0.7, tension_level: "LOW", pacing_wpm: 142 }
+        ],
+        agreements: [
+          {
+            headline: "Sync Kal 10 Baje & Ship Final Release",
+            agreed_solution: "10 AM sync meeting finalized followed by shipment of production release",
+            speaker_turn: "USER",
+            quote: "Hum kal 10 baje sync karenge aur final release ship kar denge."
+          }
+        ],
+        unresolved_loops: [
+          {
+            concern_topic: "Latency Metrics Submission",
+            raised_by: "SANDEEP",
+            context: "Sandeep requested evening update on metrics before morning release.",
+            recommended_followup: "Share latest latency charts before 6 PM today."
+          }
+        ],
         actions: [
           {
             owner: "SANDEEP",
@@ -965,6 +1184,10 @@
         hedging_count: id === 3 || id === 4 ? 2 : (id === 2 ? 1 : 0),
         assertive_count: 2,
         fillers_detected: id === 2 ? [{token: "matlab", count: 1}, {token: "basically", count: 1}] : (id === 4 ? [{token: "matlab", count: 1}, {token: "basically", count: 1}] : []),
+        dynamics: data.dynamics,
+        emotional_trajectory: data.emotional_trajectory,
+        agreements: data.agreements,
+        unresolved_loops: data.unresolved_loops,
         top_strengths: [
           { observation: "Clear conversational rhythm and direct topical focus.", verbatim_quote: data.dialogueText.split('\n')[0] }
         ],
@@ -987,16 +1210,118 @@
       document.getElementById('val-assert').innerText = data.assertiveness;
       document.getElementById('val-recip').innerText = data.reciprocity;
 
-      // 3. Coached Alternatives
+      // 3. Conversational Dynamics & Parity
+      const dyn = data.dynamics || (latestInsightsData && latestInsightsData.dynamics) || {
+        user_talk_time_pct: 50.0,
+        counterpart_talk_time_pct: 50.0,
+        average_turn_latency_ms: 380.0,
+        ask_vs_tell_ratio: 1.0,
+        brevity_potential_pct: 10.0,
+        deep_listening_score: 80,
+        vocal_tension_index: "Calm & Grounded"
+      };
+
+      const userPct = Math.round(dyn.user_talk_time_pct ?? 50);
+      const otherPct = Math.round(dyn.counterpart_talk_time_pct ?? (100 - userPct));
+      
+      document.getElementById('txt-user-split').innerText = `YOU: ${userPct}%`;
+      document.getElementById('txt-counterpart-split').innerText = `COUNTERPART: ${otherPct}%`;
+      document.getElementById('bar-user-split').style.width = `${userPct}%`;
+      document.getElementById('bar-counterpart-split').style.width = `${otherPct}%`;
+      document.getElementById('txt-vocal-tension').innerText = dyn.vocal_tension_index || "Calm & Grounded";
+
+      document.getElementById('dyn-latency').innerText = `${Math.round(dyn.average_turn_latency_ms || 0)}ms`;
+      document.getElementById('dyn-ask-tell').innerText = `${Number(dyn.ask_vs_tell_ratio || 1.0).toFixed(1)}x`;
+      document.getElementById('dyn-brevity').innerText = `-${Math.round(dyn.brevity_potential_pct || 0)}%`;
+      document.getElementById('dyn-listening').innerText = `${Math.round(dyn.deep_listening_score || 80)}`;
+
+      // 4. Agreements & Loops Summary Row
+      const agreements = data.agreements || (latestInsightsData && latestInsightsData.agreements) || [];
+      const loops = data.unresolved_loops || (latestInsightsData && latestInsightsData.unresolved_loops) || [];
+
+      document.getElementById('badge-agreements-count').innerText = `${agreements.length}`;
+      document.getElementById('preview-agreements').innerText = agreements.length > 0 ? (agreements[0].headline || agreements[0].agreed_solution) : "Aligned on milestones";
+
+      document.getElementById('badge-loops-count').innerText = `${loops.length}`;
+      document.getElementById('preview-loops').innerText = loops.length > 0 ? (loops[0].concern_topic || loops[0].recommended_followup) : "All open loops resolved";
+
+      // 5. Coached Alternatives
       document.getElementById('txt-coached').innerText = `"${data.coached}"`;
       document.getElementById('txt-critique').innerText = `[CRITIQUE] ${data.critique}`;
 
-      // 4. Populate Insights Modal
+      // 6. Populate Insights Modal
       if (latestInsightsData) {
         document.getElementById('modal-longitudinal').innerText = latestInsightsData.longitudinal_summary || data.coached;
         document.getElementById('modal-wpm').innerText = latestInsightsData.speech_rate_wpm || 142;
         document.getElementById('modal-hedging').innerText = latestInsightsData.hedging_count ?? 1;
         document.getElementById('modal-assert').innerText = latestInsightsData.assertive_count ?? 2;
+
+        // Dynamics modal section
+        document.getElementById('modal-dyn-parity').innerText = `You ${userPct}% • Other ${otherPct}%`;
+        document.getElementById('modal-dyn-latency').innerText = `${Math.round(dyn.average_turn_latency_ms || 0)} ms`;
+        document.getElementById('modal-dyn-asktell').innerText = `${Number(dyn.ask_vs_tell_ratio || 1.0).toFixed(1)}x (Inquiry : Advocacy)`;
+        document.getElementById('modal-dyn-brevity').innerText = `-${Math.round(dyn.brevity_potential_pct || 0)}% Trim Potential`;
+
+        // Emotional Trajectory list
+        const emoList = document.getElementById('modal-emotional-trajectory-list');
+        emoList.innerHTML = '';
+        const emoPoints = latestInsightsData.emotional_trajectory || data.emotional_trajectory || [];
+        if (emoPoints.length === 0) {
+          emoList.innerHTML = '<div style="font-size: 0.68rem; color: var(--text-dim);">Emotional arc steady & composed across all turns.</div>';
+        } else {
+          emoPoints.forEach((pt, idx) => {
+            const item = document.createElement('div');
+            const tensionColor = pt.tension_level === 'HIGH' ? '#f43f5e' : (pt.tension_level === 'MEDIUM' ? '#f59e0b' : '#10b981');
+            item.style.cssText = 'background: rgba(0,0,0,0.25); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.4rem 0.55rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem;';
+            item.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-weight: 700; color: #a5b4fc;">Turn ${idx+1} [${pt.speaker}]</span>
+                <span style="color: #cbd5e1;">${pt.emotion_label}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 0.62rem; color: ${tensionColor}; font-weight: 700; background: rgba(255,255,255,0.05); padding: 0.1rem 0.35rem; border-radius: 4px;">${pt.tension_level}</span>
+                <span style="font-size: 0.6rem; color: var(--text-dim); font-family: var(--font-mono);">${Math.round(pt.pacing_wpm || 140)} WPM</span>
+              </div>
+            `;
+            emoList.appendChild(item);
+          });
+        }
+
+        // Consensus Agreements list
+        const agrList = document.getElementById('modal-agreements-list');
+        agrList.innerHTML = '';
+        if (agreements.length === 0) {
+          agrList.innerHTML = '<div style="font-size: 0.68rem; color: var(--text-dim);">No explicit decisions or solutions finalized yet.</div>';
+        } else {
+          agreements.forEach(ag => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.68rem; display: flex; flex-direction: column; gap: 0.15rem;';
+            item.innerHTML = `
+              <div style="font-weight: 700; color: #6ee7b7;">✓ ${ag.headline || 'Consensus Solution'}</div>
+              <div style="color: #e2e8f0;">${ag.agreed_solution}</div>
+              ${ag.quote ? `<div style="font-size: 0.62rem; color: var(--text-muted); font-style: italic;">"${ag.quote}"</div>` : ''}
+            `;
+            agrList.appendChild(item);
+          });
+        }
+
+        // Unresolved Open Loops list
+        const loopList = document.getElementById('modal-unresolved-loops-list');
+        loopList.innerHTML = '';
+        if (loops.length === 0) {
+          loopList.innerHTML = '<div style="font-size: 0.68rem; color: #34d399;">✓ Zero unresolved loops or open friction points!</div>';
+        } else {
+          loops.forEach(ol => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.68rem; display: flex; flex-direction: column; gap: 0.15rem;';
+            item.innerHTML = `
+              <div style="font-weight: 700; color: #fde68a;">⚠️ ${ol.concern_topic} <span style="font-size: 0.58rem; color: var(--text-muted); font-weight: 400;">(Raised by ${ol.raised_by})</span></div>
+              <div style="color: #e2e8f0;">${ol.context}</div>
+              <div style="font-size: 0.64rem; color: #67e8f9; font-weight: 600; margin-top: 0.1rem;">Follow-up: ${ol.recommended_followup}</div>
+            `;
+            loopList.appendChild(item);
+          });
+        }
 
         // Fillers
         const filList = document.getElementById('modal-fillers-list');
@@ -1049,7 +1374,7 @@
         }
       }
 
-      // 5. Action Items & Highlights
+      // 7. Action Items & Highlights
       const actList = document.getElementById('list-actions');
       actList.innerHTML = '';
       if (!data.actions || data.actions.length === 0) {
@@ -1076,7 +1401,7 @@
       }
       document.getElementById('txt-action-badge').innerText = `${data.actions ? data.actions.length : 0} Detected`;
 
-      // 6. Dialogue Turns
+      // 8. Dialogue Turns
       const diaList = document.getElementById('list-dialogue');
       diaList.innerHTML = '';
       const lines = data.dialogueText.trim().split('\n').filter(l => l.trim().length > 0);
@@ -1112,7 +1437,7 @@
       });
       document.getElementById('txt-turn-badge').innerText = `${lines.length} Turns`;
 
-      // 7. Dynamic Voiceprint Enrollment Prompt / Nudge
+      // 9. Dynamic Voiceprint Enrollment Prompt / Nudge
       const currentSpeaker = (data.speakerName || '').trim();
       const nudgeCard = document.getElementById('enrollment-nudge-card');
       if (nudgeCard) {
@@ -1141,7 +1466,8 @@
             speaker_name: name,
             role: "Collaborator",
             power_axis: "LATERAL",
-            mean_pitch_hz: 138.0
+            mean_pitch_hz: 138.0,
+            is_user: false
           })
         });
         if (resp.ok) {
@@ -1185,9 +1511,17 @@
           list.forEach(vp => {
             const row = document.createElement('div');
             row.className = 'voice-row';
+            const isUser = Boolean(vp.is_user || vp.role === 'App User' || vp.role === 'Solo Speaker');
+            const userBadge = isUser
+              ? `<span style="background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(16,185,129,0.3)); border: 1px solid #6366f1; color: #a5b4fc; font-size: 0.58rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.3rem;">[USER (SELF)]</span>`
+              : `<span style="background: rgba(6,182,212,0.15); border: 1px solid rgba(6,182,212,0.35); color: #67e8f9; font-size: 0.58rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.3rem;">[COUNTERPART]</span>`;
+
             row.innerHTML = `
               <div>
-                <div style="font-weight: 600; color: #fff;">[SPEAKER] ${vp.speaker_name}</div>
+                <div style="font-weight: 600; color: #fff; display: flex; align-items: center;">
+                  <span>[SPEAKER] ${vp.speaker_name}</span>
+                  ${userBadge}
+                </div>
                 <div style="font-size: 0.62rem; color: var(--cyan);">${vp.role} • ${vp.power_axis} Mode (${Math.round(vp.mean_pitch_hz)} Hz)</div>
               </div>
               <button class="erase-btn" onclick="eraseVoiceProfile('${vp.speaker_name}')">Erase</button>
@@ -1205,21 +1539,24 @@
       const name = prompt("Enter speaker name to enroll into Voiceprint Memory Vault:", spkText || "New Speaker");
       if (!name) return;
 
+      const isUser = confirm(`Is '${name}' the primary App User (Your Voice)?\nClick 'OK' for App User (Self) or 'Cancel' for Counterpart/Collaborator.`);
+
       try {
         const resp = await fetch('/api/enroll_voiceprint', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             speaker_name: name,
-            role: "Collaborator",
-            power_axis: "LATERAL",
-            mean_pitch_hz: 135.0
+            role: isUser ? "App User" : "Collaborator",
+            power_axis: isUser ? "SOLO" : "LATERAL",
+            mean_pitch_hz: 135.0,
+            is_user: isUser
           })
         });
         if (resp.ok) {
-          alert(`[OK] Voiceprint profile for '${name}' successfully enrolled!`);
+          alert(`[OK] Voiceprint profile for '${name}' (${isUser ? 'App User' : 'Counterpart'}) successfully enrolled!`);
           document.getElementById('txt-speaker-name').innerText = `Recognized: ${name}`;
-          document.getElementById('txt-speaker-sub').innerText = "Voiceprint Recalled & Enrolled • LATERAL Mode";
+          document.getElementById('txt-speaker-sub').innerText = `Voiceprint Recalled & Enrolled • ${isUser ? 'SOLO' : 'LATERAL'} Mode`;
           setAppTab('vault');
         }
       } catch (e) {
@@ -1230,6 +1567,8 @@
     async function submitNewVoiceprint() {
       const name = document.getElementById('input-enroll-name').value.trim();
       const role = document.getElementById('input-enroll-role').value;
+      const isUser = document.getElementById('input-enroll-is-user').checked || role === 'SOLO';
+
       if (!name) {
         alert("Please enter a speaker name.");
         return;
@@ -1240,14 +1579,16 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             speaker_name: name,
-            role: role === 'UPWARD' ? 'Executive' : (role === 'SOLO' ? 'Solo Speaker' : 'Colleague'),
+            role: isUser ? "App User" : (role === 'UPWARD' ? 'Executive' : (role === 'SOLO' ? 'Solo Speaker' : 'Colleague')),
             power_axis: role,
-            mean_pitch_hz: 130.0
+            mean_pitch_hz: 130.0,
+            is_user: isUser
           })
         });
         if (resp.ok) {
           document.getElementById('input-enroll-name').value = '';
-          alert(`[OK] Voiceprint profile for '${name}' enrolled successfully!`);
+          document.getElementById('input-enroll-is-user').checked = false;
+          alert(`[OK] Voiceprint profile for '${name}' (${isUser ? 'App User' : 'Counterpart'}) enrolled successfully!`);
           loadVoiceVault();
         }
       } catch (e) {
@@ -1306,7 +1647,7 @@
 
       const p2 = setTimeout(() => {
         if (barFill) barFill.style.width = '90%';
-        if (stepTxt) stepTxt.innerText = '[ACTIVE] Synthesizing BLUF takeaways & commitments...';
+        if (stepTxt) stepTxt.innerText = '[ACTIVE] Synthesizing dynamics, consensus & loops...';
       }, 700);
 
       try {

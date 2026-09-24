@@ -48,6 +48,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "mean_pitch_hz": (
                         s.get("mean_pitch_hz", 150.0) if isinstance(s, dict) else getattr(s, "mean_pitch_hz", 150.0)
                     ),
+                    "is_user": (s.get("is_user", False) if isinstance(s, dict) else getattr(s, "is_user", False)),
                 }
                 for s in speakers
             ]
@@ -97,12 +98,20 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                 registry = SpeakerVoiceprintRegistry()
                 if intro_counterpart and intro_counterpart not in registry.voiceprints:
                     registry.voiceprints[intro_counterpart] = SpeakerVoiceprint(
-                        speaker_name=intro_counterpart, role="Collaborator", power_axis="LATERAL", mean_pitch_hz=138.0
+                        speaker_name=intro_counterpart,
+                        role="Collaborator",
+                        power_axis="LATERAL",
+                        mean_pitch_hz=138.0,
+                        is_user=False,
                     )
                     registry.save_to_disk()
                 if intro_user and intro_user not in registry.voiceprints:
                     registry.voiceprints[intro_user] = SpeakerVoiceprint(
-                        speaker_name=intro_user, role="Solo Speaker", power_axis="SOLO", mean_pitch_hz=126.0
+                        speaker_name=intro_user,
+                        role="App User",
+                        power_axis="SOLO",
+                        mean_pitch_hz=126.0,
+                        is_user=True,
                     )
                     registry.save_to_disk()
 
@@ -168,6 +177,59 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     else "Maintain this structured communication style."
                 )
 
+                # Conversational dynamics metrics
+                dynamics_dict = None
+                if getattr(evaluation, "dynamics", None):
+                    d = evaluation.dynamics
+                    dynamics_dict = {
+                        "user_talk_time_pct": d.user_talk_time_pct,
+                        "counterpart_talk_time_pct": d.counterpart_talk_time_pct,
+                        "user_words_total": d.user_words_total,
+                        "counterpart_words_total": d.counterpart_words_total,
+                        "average_turn_latency_ms": d.average_turn_latency_ms,
+                        "ask_vs_tell_ratio": d.ask_vs_tell_ratio,
+                        "inquiry_count": d.inquiry_count,
+                        "directive_count": d.directive_count,
+                        "brevity_potential_pct": d.brevity_potential_pct,
+                        "deep_listening_score": d.deep_listening_score,
+                        "vocal_tension_index": d.vocal_tension_index,
+                    }
+
+                # Emotional trajectory timeline
+                emotional_trajectory_list = [
+                    {
+                        "timestamp_sec": pt.timestamp_sec,
+                        "speaker": pt.speaker,
+                        "emotion_label": pt.emotion_label,
+                        "valence_score": pt.valence_score,
+                        "tension_level": pt.tension_level,
+                        "pacing_wpm": pt.pacing_wpm,
+                    }
+                    for pt in getattr(evaluation, "emotional_trajectory", [])
+                ]
+
+                # Consensus agreements
+                agreements_list = [
+                    {
+                        "headline": ag.headline,
+                        "agreed_solution": ag.agreed_solution,
+                        "speaker_turn": ag.speaker_turn,
+                        "quote": ag.verbatim_quote,
+                    }
+                    for ag in getattr(evaluation, "agreements", [])
+                ]
+
+                # Unresolved open loops
+                unresolved_loops_list = [
+                    {
+                        "concern_topic": ul.concern_topic,
+                        "raised_by": ul.raised_by,
+                        "context": ul.context,
+                        "recommended_followup": ul.recommended_followup,
+                    }
+                    for ul in getattr(evaluation, "unresolved_loops", [])
+                ]
+
                 resp_data = {
                     "title": "Evaluated Dialogue",
                     "dialogue": dialogue_text,
@@ -196,11 +258,14 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     "key_highlights": key_highlights,
                     "action_items": action_items,
                     "rephrasing": {"critique": critique, "coached": coached},
+                    "dynamics": dynamics_dict,
+                    "emotional_trajectory": emotional_trajectory_list,
+                    "agreements": agreements_list,
+                    "unresolved_loops": unresolved_loops_list,
                 }
                 self._send_json(resp_data)
             except Exception:
                 # Safe fallback
-
                 self._send_json(
                     {
                         "title": "Evaluated Dialogue",
@@ -237,6 +302,22 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                             "critique": "Observation processed. Ensure bottom-line recommendation is stated upfront.",
                             "coached": "Let's align on the core action item to ensure delivery readiness.",
                         },
+                        "dynamics": {
+                            "user_talk_time_pct": 50.0,
+                            "counterpart_talk_time_pct": 50.0,
+                            "user_words_total": 20,
+                            "counterpart_words_total": 20,
+                            "average_turn_latency_ms": 350.0,
+                            "ask_vs_tell_ratio": 1.0,
+                            "inquiry_count": 1,
+                            "directive_count": 1,
+                            "brevity_potential_pct": 0.0,
+                            "deep_listening_score": 75,
+                            "vocal_tension_index": "Calm & Grounded",
+                        },
+                        "emotional_trajectory": [],
+                        "agreements": [],
+                        "unresolved_loops": [],
                     }
                 )
 
@@ -245,9 +326,14 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             role = payload.get("role", "Collaborator")
             power_axis = payload.get("power_axis", "LATERAL")
             pitch = float(payload.get("mean_pitch_hz", 135.0))
+            is_user = bool(payload.get("is_user", False)) or (
+                role.lower() in ["self", "user", "app user"] or power_axis.upper() == "SOLO"
+            )
 
             registry = SpeakerVoiceprintRegistry()
-            vp = SpeakerVoiceprint(speaker_name=name, role=role, power_axis=power_axis, mean_pitch_hz=pitch)
+            vp = SpeakerVoiceprint(
+                speaker_name=name, role=role, power_axis=power_axis, mean_pitch_hz=pitch, is_user=is_user
+            )
             registry.voiceprints[name] = vp
             registry.save_to_disk()
             self._send_json({"status": "success", "enrolled": vp.to_dict()})
