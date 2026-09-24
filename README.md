@@ -32,17 +32,28 @@ For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE
 
 ### Installation & Packaging
 
-#### Option A: Install directly from Git
+#### Option A: Install directly from Git / GitHub Releases
 ```bash
-pip install git+https://github.com/ankitsingh99/executive-comm-coach.git
+pip install git+https://github.com/ankitsingh99/executive-comm-coach.git@v0.1.0
 ```
-Once installed, run the coach from any terminal window:
+Once installed, run the coach directly:
 ```bash
 executive-comm-coach --axis UPWARD
 comm-coach-server 8080
 ```
 
-#### Option B: Developer Setup (Local Editable Mode)
+#### Option B: Install via GitHub Packages
+```bash
+pip install --index-url https://token:<GITHUB_TOKEN>@pypi.pkg.github.com/ankitsingh99/ executive-comm-coach
+```
+
+#### Option C: Run via GitHub Container Registry (Docker)
+```bash
+docker pull ghcr.io/ankitsingh99/executive-comm-coach:latest
+docker run -p 8080:8080 ghcr.io/ankitsingh99/executive-comm-coach:latest
+```
+
+#### Option D: Developer Setup (Local Editable Mode)
 ```bash
 # Clone the repository
 git clone https://github.com/ankitsingh99/executive-comm-coach.git
@@ -58,6 +69,7 @@ pip install -e .
 
 ### Run Live Terminal Microphone Coaching
 ```bash
+
 # Run live microphone coaching (records dynamically until silence after speech):
 ./record.sh
 
