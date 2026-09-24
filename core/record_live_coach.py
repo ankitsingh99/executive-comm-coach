@@ -439,16 +439,12 @@ def main():
         )
 
     # Step 5: Post-Transcription Context Resolution (Auto if Recognized/Introduced, else Prompt)
-    if recognized_voice is not None and args.axis is None:
+    if recognized_voice is not None and not recognized_voice.is_user and args.axis is None:
         try:
             axis_enum = PowerAxis(recognized_voice.power_axis.upper())
         except Exception:
-            axis_enum = PowerAxis.SOLO if recognized_voice.power_axis == "SOLO" else PowerAxis.LATERAL
-        counterpart_name = (
-            recognized_voice.speaker_name
-            if not recognized_voice.is_user
-            else (args.counterpart or "Self (Solo Practice)")
-        )
+            axis_enum = PowerAxis.LATERAL
+        counterpart_name = recognized_voice.speaker_name
         counterpart_role = recognized_voice.role
     elif intro_user and args.axis is None and acoustic_result.detected_speaker_count == 1:
         axis_enum = PowerAxis.SOLO
@@ -465,56 +461,6 @@ def main():
             utterances=utterances,
             acoustic_result=acoustic_result,
         )
-        # Proactively offer user & counterpart voiceprint biometric enrollment
-        if sys.stdin.isatty():
-            try:
-                # 1. Profile and name the USER's voice if not yet recognized/enrolled
-                if not current_user_name:
-                    user_target = input(
-                        "\n  [USER VOICE PROFILING] Enter YOUR name to remember your voice profile across sessions (or Enter to skip): "
-                    ).strip()
-                    if user_target:
-                        voice_registry.enroll_speaker(
-                            name=user_target,
-                            role="Self",
-                            power_axis="SOLO",
-                            audio_signal_or_wav_path=wav_path,
-                            is_user=True,
-                        )
-                        current_user_name = user_target
-                        if axis_enum == PowerAxis.SOLO:
-                            counterpart_name = user_target
-                        print(
-                            f"  >> [USER VOICE SAVED] Enrolled biometric voice profile for '{user_target}' (App User) into local memory!\n"
-                        )
-
-                # 2. Profile and name the COUNTERPART's voice in multi-speaker/relational mode
-                if axis_enum != PowerAxis.SOLO and acoustic_result.detected_speaker_count > 1:
-                    cp_target = (
-                        counterpart_name
-                        if counterpart_name
-                        not in ["Counterpart", "Colleague", "Peer Collaborator", "Friend / Colleague"]
-                        else ""
-                    )
-                    if not cp_target and not current_counterpart_name:
-                        cp_target = input(
-                            "  [COUNTERPART VOICE PROFILING] Enter counterpart's name to remember their voice for future auto-tagging (or Enter to skip): "
-                        ).strip()
-                    if cp_target and not current_counterpart_name:
-                        voice_registry.enroll_speaker(
-                            name=cp_target,
-                            role=counterpart_role,
-                            power_axis=axis_enum.value,
-                            audio_signal_or_wav_path=wav_path,
-                            is_user=False,
-                        )
-                        counterpart_name = cp_target
-                        current_counterpart_name = cp_target
-                        print(
-                            f"  >> [COUNTERPART VOICE SAVED] Enrolled biometric voiceprint for '{cp_target}' ({counterpart_role}) into local memory!\n"
-                        )
-            except (EOFError, KeyboardInterrupt):
-                pass
     else:
         axis_enum = (
             PowerAxis(args.axis.upper())
@@ -525,6 +471,56 @@ def main():
             "Self (Solo Practice)" if axis_enum == PowerAxis.SOLO else "Counterpart"
         )
         counterpart_role = args.role or ("Self" if axis_enum == PowerAxis.SOLO else "Colleague")
+
+    # Step 5.5: Proactive User & Counterpart Voice Profiling
+    if sys.stdin.isatty() and not args.non_interactive:
+        try:
+            # 1. Profile and name the ACTIVE USER's voice if not yet enrolled/recognized
+            if not current_user_name:
+                user_target = input(
+                    "\n  [USER VOICE PROFILING] Enter YOUR name to remember your voice profile across sessions (or Enter to skip): "
+                ).strip()
+                if user_target:
+                    voice_registry.enroll_speaker(
+                        name=user_target,
+                        role="Self",
+                        power_axis="SOLO",
+                        audio_signal_or_wav_path=wav_path,
+                        is_user=True,
+                    )
+                    current_user_name = user_target
+                    if axis_enum == PowerAxis.SOLO:
+                        counterpart_name = user_target
+                    print(
+                        f"  >> [USER VOICE SAVED] Enrolled biometric voice profile for '{user_target}' (App User) into local memory!\n"
+                    )
+
+            # 2. Profile and name the COUNTERPART's voice in multi-speaker / relational mode
+            if axis_enum != PowerAxis.SOLO and acoustic_result.detected_speaker_count > 1:
+                cp_target = (
+                    counterpart_name
+                    if counterpart_name not in ["Counterpart", "Colleague", "Peer Collaborator", "Friend / Colleague"]
+                    else ""
+                )
+                if not cp_target and not current_counterpart_name:
+                    cp_target = input(
+                        "  [COUNTERPART VOICE PROFILING] Enter counterpart's name to remember their voice for future auto-tagging (or Enter to skip): "
+                    ).strip()
+                if cp_target and not current_counterpart_name:
+                    voice_registry.enroll_speaker(
+                        name=cp_target,
+                        role=counterpart_role,
+                        power_axis=axis_enum.value,
+                        audio_signal_or_wav_path=wav_path,
+                        is_user=False,
+                    )
+                    counterpart_name = cp_target
+                    current_counterpart_name = cp_target
+                    print(
+                        f"  >> [COUNTERPART VOICE SAVED] Enrolled biometric voiceprint for '{cp_target}' ({counterpart_role}) into local memory!\n"
+                    )
+        except (EOFError, KeyboardInterrupt):
+            pass
 
     # Step 6: Dynamic Coaching Synthesis
     print(f"\n [COACHING ANALYSIS] Calibrating feedback for {axis_enum.value} context ({counterpart_name})...")

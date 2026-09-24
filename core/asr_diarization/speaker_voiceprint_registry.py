@@ -101,12 +101,28 @@ class SpeakerVoiceprintRegistry:
         self.load_from_disk()
 
     def load_from_disk(self):
-        """Loads enrolled voiceprints from local JSON vault."""
+        """Loads enrolled voiceprints from local JSON vault, filtering out corrupted/legacy names."""
         if os.path.exists(self.registry_file):
             try:
                 with open(self.registry_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    self.voiceprints = {k: SpeakerVoiceprint.from_dict(v) for k, v in data.items()}
+                    junk_names = {
+                        "saying hindi",
+                        "time",
+                        "it able",
+                        "important thing",
+                        "honey",
+                        "unknown",
+                        "speech",
+                        "the",
+                        "this",
+                        "that",
+                    }
+                    cleaned = {}
+                    for k, v in data.items():
+                        if k.strip().lower() not in junk_names and len(k.strip()) >= 2:
+                            cleaned[k] = SpeakerVoiceprint.from_dict(v)
+                    self.voiceprints = cleaned
             except Exception:
                 self.voiceprints = {}
         else:
@@ -323,7 +339,7 @@ class SpeakerVoiceprintRegistry:
         return voiceprint
 
     def identify_speaker(
-        self, audio_signal_or_wav_path: Any, sample_rate: int = 16000, threshold: float = 0.78
+        self, audio_signal_or_wav_path: Any, sample_rate: int = 16000, threshold: float = 0.84
     ) -> Optional[Tuple[SpeakerVoiceprint, float]]:
         """
         Matches incoming audio signal against enrolled voiceprints.

@@ -196,13 +196,38 @@ class LocalCoachingSynthesizer:
             flags=re.IGNORECASE,
         ).strip()
 
+        # Check for capitalized proper noun phrases (e.g. Election Commission, Gyanesh Kumar, Supreme Court, API Contract)
+        proper_nouns = re.findall(r"\b[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)*\b", full_quote)
+        filtered_proper_nouns = [
+            pn
+            for pn in proper_nouns
+            if pn.lower()
+            not in [
+                "this",
+                "that",
+                "what",
+                "where",
+                "when",
+                "how",
+                "kya",
+                "kyun",
+                "kaise",
+                "hamare",
+                "lekin",
+                "saalon",
+                "desh",
+            ]
+        ]
+
         topic_match = re.search(
-            r"(?:about|on|regarding|for|evaluate|explore|status of|news from|focus on|ke bare mein|par|ka status)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)",
+            r"(?:about|regarding|evaluate|explore|status of|news from|focus on|ke bare mein|ka status)\s+([a-zA-Z0-9_\-\s]{2,25}?)(?:\?|,|\.|$)",
             full_quote,
             re.IGNORECASE,
         )
 
-        if topic_match:
+        if filtered_proper_nouns:
+            extracted_topic = filtered_proper_nouns[0]
+        elif topic_match and len(topic_match.group(1).strip().split()) <= 3:
             extracted_topic = topic_match.group(1).strip()
         else:
             meaningful_words = [
@@ -249,6 +274,16 @@ class LocalCoachingSynthesizer:
                     "unke",
                     "hain",
                     "kare",
+                    "dekha",
+                    "bahut",
+                    "sirf",
+                    "baithne",
+                    "shuru",
+                    "pehle",
+                    "baad",
+                    "kisi",
+                    "hota",
+                    "hote",
                 ]
             ]
             extracted_topic = " ".join(meaningful_words[:3]) if meaningful_words else "the core deliverable"
