@@ -6,9 +6,10 @@ Operates 100% in-memory without spawning repetitive subprocesses, eliminating au
 
 import os
 import sys
+import select
 import time
 import queue
-import select
+import threading
 import tempfile
 import wave
 from typing import Optional
@@ -54,16 +55,19 @@ class LiveMicRecorder:
         print("      • Manual stop: Press Enter or Ctrl+C at any time to finish speaking immediately")
         print("      >> Speak now naturally...\n")
 
-        def _check_key_pressed() -> bool:
+        # Stdin listener thread to immediately capture Enter key press
+        stop_event = threading.Event()
+
+        def _stdin_listener():
             try:
-                if sys.stdin and sys.stdin.isatty():
-                    r, _, _ = select.select([sys.stdin], [], [], 0.0)
-                    if r:
-                        sys.stdin.readline()
-                        return True
+                if sys.stdin and not sys.stdin.closed:
+                    sys.stdin.readline()
+                    stop_event.set()
             except Exception:
                 pass
-            return False
+
+        stdin_thread = threading.Thread(target=_stdin_listener, daemon=True)
+        stdin_thread.start()
 
         gate = AmbientVadGate(speech_prob_threshold=speech_prob_threshold)
         audio_queue = queue.Queue()
@@ -88,10 +92,25 @@ class LiveMicRecorder:
                 samplerate=self.sample_rate, channels=1, dtype="int16", blocksize=block_size, callback=audio_callback
             ):
                 while total_recorded_sec < max_duration_sec:
-                    # Check for manual stop (Enter key)
-                    if _check_key_pressed():
+                    # Check for manual stop (Enter key) via Event or direct select check
+                    if stop_event.is_set():
                         print("\n\n  [MANUAL STOP] Enter pressed. Concluding recording immediately...")
                         break
+
+                    if sys.stdin and hasattr(sys.stdin, "fileno"):
+                        try:
+                            if sys.stdin.isatty():
+                                r, _, _ = select.select([sys.stdin], [], [], 0)
+                                if r:
+                                    stop_event.set()
+                                    try:
+                                        sys.stdin.readline()
+                                    except Exception:
+                                        pass
+                                    print("\n\n  [MANUAL STOP] Enter pressed. Concluding recording immediately...")
+                                    break
+                        except Exception:
+                            pass
 
                     try:
                         chunk_raw = audio_queue.get(timeout=0.5)
@@ -266,8 +285,23 @@ class LiveMicRecorder:
         """
         import sounddevice as sd
 
-        print("\n  [AMBIENT SENSING ACTIVE] Passively listening for spoken dialogue (High Sensitivity)...")
-        print("  (Privacy protected: Audio evaluated in memory & purged immediately if below threshold)")
+        print("\n  [AMBIENT SENSING ACTIVE] Passively listening for spoken dialogue...")
+        print("  • Speak naturally when you begin, or press [Enter] to start recording immediately.")
+        print("  • Privacy protected: Audio evaluated in-memory and purged immediately if below threshold.\n")
+
+        # Stdin listener thread to immediately capture Enter key press
+        trigger_event = threading.Event()
+
+        def _ambient_stdin_listener():
+            try:
+                if sys.stdin and not sys.stdin.closed:
+                    sys.stdin.readline()
+                    trigger_event.set()
+            except Exception:
+                pass
+
+        stdin_thread = threading.Thread(target=_ambient_stdin_listener, daemon=True)
+        stdin_thread.start()
 
         start_time = time.time()
         gate = AmbientVadGate(speech_prob_threshold=speech_prob_threshold)
@@ -287,12 +321,34 @@ class LiveMicRecorder:
                 samplerate=self.sample_rate, channels=1, dtype="int16", blocksize=block_size, callback=audio_callback
             ):
                 while True:
+                    # Check for manual trigger (Enter key)
+                    if trigger_event.is_set():
+                        print("\n\n  [MANUAL TRIGGER] Enter pressed. Starting conversation recording immediately...\n")
+                        return True
+
+                    if sys.stdin and hasattr(sys.stdin, "fileno"):
+                        try:
+                            if sys.stdin.isatty():
+                                r, _, _ = select.select([sys.stdin], [], [], 0)
+                                if r:
+                                    trigger_event.set()
+                                    try:
+                                        sys.stdin.readline()
+                                    except Exception:
+                                        pass
+                                    print(
+                                        "\n\n  [MANUAL TRIGGER] Enter pressed. Starting conversation recording immediately...\n"
+                                    )
+                                    return True
+                        except Exception:
+                            pass
+
                     if max_wait_seconds and (time.time() - start_time) > max_wait_seconds:
                         print("\n  [AMBIENT TIMEOUT] No speech detected within window.")
                         return False
 
                     print(
-                        f"  {spinners[spin_idx % len(spinners)]} Ambient Ear Active... (Waiting for dialogue to start)",
+                        f"  {spinners[spin_idx % len(spinners)]} Ambient Ear Active... (Waiting for dialogue or press Enter to record)",
                         end="\r",
                         flush=True,
                     )
