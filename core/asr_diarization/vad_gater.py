@@ -67,36 +67,28 @@ class AmbientVadGate:
         crest_factor = peak / (rms + 1e-6)
         
         # Pure silence threshold
-        if rms < 0.002:
+        if rms < 0.0025:
             return 0.02
         
         # Zero-crossing rate
         zero_crossings = np.nonzero(np.diff(samples > 0))[0]
         zcr = float(len(zero_crossings) / max(1, len(samples)))
         
-        # Relative contrast against background noise floor
-        if noise_floor_rms > 0.001:
-            snr_ratio = rms / noise_floor_rms
-            if snr_ratio < 1.4:
-                # Energy is near constant room noise
-                return 0.08
-            energy_score = min(1.0, max(0.0, (snr_ratio - 1.4) / 2.2))
-        else:
-            # Baseline absolute energy curve
-            energy_score = min(1.0, max(0.0, (rms - 0.004) / 0.025))
-            
-        # Human speech exhibits high dynamic crest factor (> 2.2) and zcr in voice range (0.015 - 0.40)
-        zcr_valid = (0.015 <= zcr <= 0.42)
-        crest_valid = (crest_factor >= 2.0)
+        # Absolute and relative energy scoring
+        energy_score = min(1.0, max(0.0, (rms - 0.003) / 0.022))
+        
+        # Human speech exhibits high dynamic crest factor (> 2.0) and zcr in voice range (0.012 - 0.45)
+        zcr_valid = (0.012 <= zcr <= 0.45)
+        crest_valid = (crest_factor >= 1.8)
         
         if zcr_valid and crest_valid:
             spectral_score = 1.0
         elif zcr_valid or crest_valid:
-            spectral_score = 0.5
+            spectral_score = 0.6
         else:
-            spectral_score = 0.15
+            spectral_score = 0.2
         
-        prob = (0.70 * energy_score) + (0.30 * spectral_score)
+        prob = (0.75 * energy_score) + (0.25 * spectral_score)
         return float(np.clip(prob, 0.0, 1.0))
 
     def evaluate_frame(self, timestamp_ms: float, speech_prob: float) -> Tuple[bool, str]:

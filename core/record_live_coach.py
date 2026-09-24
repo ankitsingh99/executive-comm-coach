@@ -169,7 +169,7 @@ def main():
 """)
 
     silence_threshold = getattr(args, "silence_sec", 2.0)
-    max_duration = args.duration if (args.duration and args.duration > 0) else 180
+    max_duration = args.duration if (args.duration and args.duration > 0) else 300
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     recorder = LiveMicRecorder()
 

@@ -107,33 +107,25 @@ class LiveMicRecorder:
                     dur = len(chunk_flat) / float(self.sample_rate)
                     total_recorded_sec += dur
 
-                    # RMS calculation
-                    float_samples = chunk_flat.astype(np.float32) / 32768.0
-                    cur_rms = float(np.sqrt(np.mean(float_samples ** 2)))
+                    # Evaluate speech probability
+                    speech_prob = gate.calculate_speech_probability(chunk_flat)
+                    is_voice_active = (speech_prob >= 0.32 or cur_rms >= 0.0055)
 
-                    # Adaptively estimate noise floor
-                    if noise_floor_rms == 0.0:
-                        noise_floor_rms = cur_rms
-                    elif not has_spoken or silence_elapsed > 0.4:
-                        noise_floor_rms = 0.85 * noise_floor_rms + 0.15 * min(cur_rms, noise_floor_rms * 1.3)
-
-                    speech_prob = gate.calculate_speech_probability(chunk_flat, noise_floor_rms=noise_floor_rms)
-
-                    if speech_prob >= speech_prob_threshold:
+                    if is_voice_active:
                         has_spoken = True
                         silence_elapsed = 0.0
                         print(f"  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%) [Press Enter to finish]    ", end="\r", flush=True)
                     else:
                         if has_spoken:
                             silence_elapsed += dur
-                            print(f"  [SILENCE DETECTED] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s [Press Enter to finish]   ", end="\r", flush=True)
+                            print(f"  [PAUSE/SILENCE] {total_recorded_sec:.1f}s recorded | Paused: {silence_elapsed:.1f}s / {silence_threshold_sec:.1f}s [Press Enter to finish]   ", end="\r", flush=True)
                             
                             if silence_elapsed >= silence_threshold_sec and total_recorded_sec >= min_speech_duration_sec:
                                 print(f"\n\n  [CONVERSATION CONCLUDED] End of conversation detected ({silence_threshold_sec:.1f}s silence after speech).")
                                 break
                         else:
-                            if total_recorded_sec >= idle_timeout_sec:
-                                print(f"\n\n  [IDLE TIMEOUT] No speech detected after {idle_timeout_sec:.0f}s. Concluding session.")
+                            if total_recorded_sec >= 30.0:
+                                print(f"\n\n  [IDLE TIMEOUT] No speech detected after 30s. Concluding session.")
                                 break
                             print(f"  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin... [Press Enter to finish]          ", end="\r", flush=True)
 
