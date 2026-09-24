@@ -10,9 +10,11 @@ from typing import List, Optional, Tuple, Dict, Any
 try:
     from .schema import Utterance, ActionItem
     from .temporal_resolver import TemporalResolver, TemporalResolution
+    from ..asr_diarization.indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
     from engine.schema import Utterance, ActionItem
     from engine.temporal_resolver import TemporalResolver, TemporalResolution
+    from asr_diarization.indic_normalizer import IndicNormalizer
 
 
 # Regex for temporal dates, days, times, and deadlines (English + Hinglish)
@@ -104,7 +106,7 @@ class ActionItemExtractor:
     ) -> List[ActionItem]:
         """Analyzes a single utterance and extracts action items with resolved times if present."""
         action_items: List[ActionItem] = []
-        text = utterance.transcript.strip()
+        text = IndicNormalizer.normalize_text(utterance.transcript.strip())
         if not text or len(text) < 8:
             return []
 

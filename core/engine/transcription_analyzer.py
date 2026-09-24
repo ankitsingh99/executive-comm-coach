@@ -27,6 +27,7 @@ try:
     from .temporal_resolver import TemporalResolver, TemporalResolution
     from ..privacy.pii_redactor import PIIRedactor
     from ..config import get_gemini_api_key, GEMINI_MODEL
+    from ..asr_diarization.indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
     from engine.schema import (
         Utterance,
@@ -40,6 +41,7 @@ except (ImportError, ValueError):
     from engine.temporal_resolver import TemporalResolver, TemporalResolution
     from privacy.pii_redactor import PIIRedactor
     from config import get_gemini_api_key, GEMINI_MODEL
+    from asr_diarization.indic_normalizer import IndicNormalizer
 
 
 # Strategic Highlight & Decision Heuristics (English + Hinglish)
@@ -155,7 +157,7 @@ class TranscriptionAnalyzer:
         seen_quotes = set()
 
         for u in utterances:
-            text = u.transcript.strip()
+            text = IndicNormalizer.normalize_text(u.transcript.strip())
             if not text:
                 continue
 

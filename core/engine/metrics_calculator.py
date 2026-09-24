@@ -1,14 +1,20 @@
 """
 Deterministic Metrics Calculator for Executive Communication Analysis.
 Calculates presence, assertiveness, active listening, and filler word statistics.
+Supports bilingual English, Hindi, and code-mixed Hinglish.
 """
 
 import re
 from typing import List, Dict, Tuple
 from .schema import Utterance, FillerWordMetric, CommunicationMetrics
 
+try:
+    from ..asr_diarization.indic_normalizer import IndicNormalizer
+except (ImportError, ValueError):
+    from asr_diarization.indic_normalizer import IndicNormalizer
 
-# Multi-word phrase fillers (English + Hinglish)
+
+# Multi-word phrase fillers (English + Hinglish + Devanagari)
 PHRASE_FILLER_PATTERNS = [
     (r"\byou know\b", "you know"),
     (r"\bi mean\b", "i mean"),
@@ -19,19 +25,29 @@ PHRASE_FILLER_PATTERNS = [
     (r"\bmatlab ki\b", "matlab ki"),
     (r"\baisa hai ki\b", "aisa hai ki"),
     (r"\bdekha jaye toh\b", "dekha jaye toh"),
+    (r"\bkya bolte ho\b", "kya bolte ho"),
+    (r"\barre yaar\b", "arre yaar"),
+    (r"\bactually matlab\b", "actually matlab"),
+    (r"\bbasically yaar\b", "basically yaar"),
+    (r"\b(matlab\s+ki\s+dekho)\b", "matlab ki dekho"),
 ]
 
-# Single-token word & phonetic hesitation patterns
+# Single-token word, phonetic hesitation, & non-verbal sound patterns (English + Hinglish + Devanagari)
 TOKEN_FILLER_PATTERNS = [
-    # Phonetic hesitation sounds
+    # Non-verbal vocal sounds, tongue clicks, & tut-tuts
+    r"\b(?:tch|tsk|tck|tskk)(?:[- ](?:tch|tsk|tck|tskk))*\b", # tch, tsk, tch-tch, tsk-tsk...
+    r"\b(?:uff|oof|ugh|argh|ahem|pfft|pshh|shh)\b",           # sigh, exhalation, throat clearing
+    r"\b(?:huh|hunh)\b",                                       # vocal confusion / query sound
+
+    # Phonetic hesitation sounds & vocal elongations
     r"\bu+m+\b",          # um, umm, ummm...
-    r"\bu+h+m*\b",        # uh, uhh, uhhh...
+    r"\bu+h+m*\b",        # uh, uhh, uhhh, uhm...
     r"\be+r+m*\b",        # er, err, erm...
     r"\be+r+\b",          # er, err...
     r"\bh+m+\b",          # hm, hmm, hmmm...
     r"\bm+h+m*\b",        # mhm, mmhmm...
     r"\ba+h+\b",          # ah, ahh, ahhh...
-    r"\ba{2,}\b",         # aa, aaa...
+    r"\ba{2,}\b",         # aa, aaa, aaaa...
     r"\ba+a+h*\b",        # aah, aaah...
     r"\be+h+\b",          # eh, ehh...
     r"\bo+h+\b",          # oh, ohh...
@@ -51,10 +67,14 @@ TOKEN_FILLER_PATTERNS = [
     r"\bhaina\b",
     r"\bhaan\b",
     r"\bacha\b",
+    r"\baccha\b",
     r"\btoh\b",
     r"\byaar\b",
     r"\bbhai\b",
     r"\bwaise\b",
+    r"\bdekho\b",
+    r"\bsuno\b",
+    r"\bna\b",
 ]
 
 # Consolidated filler patterns
@@ -79,6 +99,7 @@ HEDGING_PATTERNS = [
     
     # Hinglish
     r"\bmujhe\s+(?:bhi\s+)?lagta\s+hai\b",
+    r"\bmujhe\s+aisa\s+lagta\s+hai\b",
     r"\blag\s+raha\s+hai(?:\s+ki)?\b",
     r"\bshayad\b",
     r"\bagar\s+possible\s+ho\s+toh\b",
@@ -90,6 +111,8 @@ HEDGING_PATTERNS = [
     r"\bmere\s+khayal\s+se\b",
     r"\baisa\s+lag\s+raha\s+tha\b",
     r"\bthoda\s+time\s+lag\s+sakta\s+hai\b",
+    r"\bgalat\s+ho\s+sakta\s+hu\b",
+    r"\bshyd\b",
 ]
 
 # Strong definitive assertion markers (English + Hinglish)
@@ -115,6 +138,7 @@ ASSERTIVE_PATTERNS = [
     r"\bmera\s+recommendation\s+hai\b",
     r"\bhumara\s+recommendation\s+hai\b",
     r"\bdata\s+dikhata\s+hai\b",
+    r"\bdata\s+saaf\s+dikhata\s+hai\b",
     r"\bnumbers\s+clear\s+hai\b",
     r"\bfinal\s+decision\s+ye\s+hai\b",
     r"\bhum\s+ship\s+karenge\b",
@@ -122,6 +146,8 @@ ASSERTIVE_PATTERNS = [
     r"\bpriority\s+ye\s+honi\s+chahiye\b",
     r"\bblocker\s+ye\s+hai\b",
     r"\bhum\s+achieve\s+karenge\b",
+    r"\bhume\s+karna\s+hi\s+hoga\b",
+    r"\byeh\s+zaroori\s+hai\b",
 ]
 
 # Active listening & validation markers (English + Hinglish)
@@ -142,6 +168,7 @@ ACTIVE_LISTENING_PATTERNS = [
     # Hinglish
     r"\bsahi\s+point\s+hai\b",
     r"\bsahi\s+baat\s+hai\b",
+    r"\bsahi\s+bol\s+rahe\s+ho\b",
     r"\baapka\s+point\s+samajh\s+aaya\b",
     r"\baapka\s+point\s+clear\s+hai\b",
     r"\bbilkul\s+sahi\b",
@@ -160,7 +187,7 @@ class MetricsCalculator:
     def detect_fillers(cls, text: str) -> List[FillerWordMetric]:
         """Detects and tallies verbal and phonetic filler words."""
         counts: Dict[str, int] = {}
-        working_text = text
+        working_text = IndicNormalizer.normalize_text(text)
 
         # 1. Match multi-word phrases first
         for pattern, label in PHRASE_FILLER_PATTERNS:
@@ -186,12 +213,13 @@ class MetricsCalculator:
     @classmethod
     def calculate_hedging_vs_assertion(cls, text: str) -> Tuple[int, int]:
         """Returns (hedging_count, assertive_count)."""
+        norm_text = IndicNormalizer.normalize_text(text)
         hedging_count = sum(
-            len(re.findall(pat, text, flags=re.IGNORECASE))
+            len(re.findall(pat, norm_text, flags=re.IGNORECASE))
             for pat in HEDGING_PATTERNS
         )
         assertive_count = sum(
-            len(re.findall(pat, text, flags=re.IGNORECASE))
+            len(re.findall(pat, norm_text, flags=re.IGNORECASE))
             for pat in ASSERTIVE_PATTERNS
         )
         return hedging_count, assertive_count
@@ -199,8 +227,9 @@ class MetricsCalculator:
     @classmethod
     def calculate_active_listening_signals(cls, user_text: str, counterpart_text: str) -> int:
         """Counts instances of validation, inquiry, and acknowledgment."""
+        norm_user = IndicNormalizer.normalize_text(user_text)
         return sum(
-            len(re.findall(pat, user_text, flags=re.IGNORECASE))
+            len(re.findall(pat, norm_user, flags=re.IGNORECASE))
             for pat in ACTIVE_LISTENING_PATTERNS
         )
 
@@ -210,8 +239,8 @@ class MetricsCalculator:
         user_utterances = [u for u in utterances if u.speaker.upper() == target_speaker.upper()]
         counterpart_utterances = [u for u in utterances if u.speaker.upper() != target_speaker.upper()]
 
-        user_text = " ".join(u.transcript for u in user_utterances)
-        counterpart_text = " ".join(u.transcript for u in counterpart_utterances)
+        user_text = IndicNormalizer.normalize_text(" ".join(u.transcript for u in user_utterances))
+        counterpart_text = IndicNormalizer.normalize_text(" ".join(u.transcript for u in counterpart_utterances))
         total_words = len(user_text.split()) or 1
 
         # 1. Filler words

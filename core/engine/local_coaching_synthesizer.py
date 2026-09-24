@@ -39,6 +39,7 @@ try:
     from .action_item_extractor import ActionItemExtractor
     from .transcription_analyzer import TranscriptionAnalyzer
     from ..privacy.pii_redactor import PIIRedactor
+    from ..asr_diarization.indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
     from engine.schema import (
         Utterance,
@@ -66,6 +67,7 @@ except (ImportError, ValueError):
     from engine.action_item_extractor import ActionItemExtractor
     from engine.transcription_analyzer import TranscriptionAnalyzer
     from privacy.pii_redactor import PIIRedactor
+    from asr_diarization.indic_normalizer import IndicNormalizer
 
 
 class LocalCoachingSynthesizer:
@@ -89,7 +91,8 @@ class LocalCoachingSynthesizer:
         """
         redacted_dialogue: List[Utterance] = []
         for u in session.dialogue:
-            red_text, _ = PIIRedactor.redact_text(u.transcript)
+            norm_text = IndicNormalizer.normalize_text(u.transcript)
+            red_text, _ = PIIRedactor.redact_text(norm_text)
             redacted_dialogue.append(
                 Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text)
             )

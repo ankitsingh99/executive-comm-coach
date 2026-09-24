@@ -20,12 +20,17 @@ STOP_WORDS = {
     'fine', 'good', 'thinking', 'trying', 'going', 'ready', 'sure', 'happy',
     'excited', 'working', 'sorry', 'back', 'done', 'there', 'just', 'really',
     'not', 'great', 'cool', 'looking', 'wondering', 'hoping', 'a', 'an', 'also',
-    'so', 'now', 'we', 'i', 'our', 'all', 'welcome', 'thanks', 'thank'
+    'so', 'now', 'we', 'i', 'our', 'all', 'welcome', 'thanks', 'thank',
+    'thing', 'things', 'point', 'points', 'issue', 'issues', 'problem', 'problems',
+    'case', 'step', 'way', 'more', 'most', 'important', 'crucial', 'main', 'key',
+    'clear', 'right', 'over', 'out', 'up', 'down', 'first', 'second', 'time',
+    'people', 'someone', 'everyone', 'anyone', 'something', 'anything', 'nothing',
+    'fact', 'reason', 'part', 'side'
 }
 
 SELF_INTRO_PATTERNS = [
     re.compile(r"\b(?:hey|hi|hello|namaste|good\s+morning|good\s+afternoon|good\s+evening)?\s*(?:,\s*)?(?:i\s*am|i['’]m|this\s+is|my\s+name\s+is|myself|it['’]s)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\b", re.IGNORECASE),
-    re.compile(r"\b([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:here|this\s+side|speaking)\b", re.IGNORECASE),
+    re.compile(r"(?:^|[.?!;]\s*|\b(?:hey|hi|hello|namaste)\s+)([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(?:here|this\s+side|speaking)\b", re.IGNORECASE),
     re.compile(r"\b(?:hey|hi|hello)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+here\b", re.IGNORECASE),
 ]
 
@@ -158,8 +163,12 @@ class DiarizationEngine:
         is_solo = len(unique_spks) <= 1
 
         for u in utterances:
-            start_m, start_s = divmod(int(u.start_time), 60)
-            end_m, end_s = divmod(int(u.end_time), 60)
+            st = u.start_time
+            et = u.end_time
+            if et <= st:
+                et = st + max(1.0, round(len(u.transcript.split()) / 2.5, 1))
+            start_m, start_s = divmod(int(round(st)), 60)
+            end_m, end_s = divmod(int(round(et)), 60)
             time_tag = f"[{start_m:02d}:{start_s:02d} - {end_m:02d}:{end_s:02d}]"
 
             if u.speaker in ["USER", "Self"] or (user_name and u.speaker == user_name):

@@ -70,6 +70,18 @@ class GeminiAudioEngine:
             if len(audio_bytes) < 1000:
                 return [], AcousticAnalysisResult()
 
+            # Read actual audio duration from WAV header
+            audio_duration_sec = 0.0
+            try:
+                import wave
+                with wave.open(audio_wav_path, "rb") as wf:
+                    n_frames = wf.getnframes()
+                    sr = wf.getframerate()
+                    if sr > 0:
+                        audio_duration_sec = round(n_frames / float(sr), 2)
+            except Exception:
+                pass
+
             audio_part = types.Part.from_bytes(
                 data=audio_bytes,
                 mime_type="audio/wav"
@@ -84,13 +96,13 @@ Return pure JSON with the following structure:
       "speaker": "USER",
       "start_time": 0.0,
       "end_time": 3.5,
-      "transcript": "Exact verbatim spoken words here, including fillers like um, ah, basically, etc."
+      "transcript": "Exact verbatim spoken words here in Romanized script, including fillers like um, ah, basically, matlab, yaani, etc."
     },
     {
       "speaker": "COUNTERPART",
       "start_time": 3.6,
       "end_time": 7.0,
-      "transcript": "Exact verbatim reply from the second speaker."
+      "transcript": "Exact verbatim reply from the second speaker in Romanized script."
     }
   ],
   "speaker_count": 2,
@@ -114,8 +126,17 @@ Return pure JSON with the following structure:
 }
 
 Instructions:
-1. Capture every spoken word VERBATIM. Do NOT omit filler vocalizations (um, umm, uh, hmm, aaah, matlab, yaani, etc.).
-2. SPEAKER DIARIZATION (MANDATORY):
+1. MULTILINGUAL & HINGLISH CODE-MIXING:
+   - If the audio contains Hindi, Indian English, or code-mixed Hinglish (e.g. 'Dekho basically matlab hume kal 10 baje sync karna chahiye'), transcribe verbatim in Romanized / Latin script (e.g. 'matlab', 'hume', 'kal 10 baje', 'deploy kar denge', 'theek hai').
+   - Do NOT translate Hindi to English; preserve the exact code-switched words as spoken.
+   - Do NOT omit or sanitize non-verbal sounds, phonetic hesitations, or tongue clicks:
+     * Transcribe elongated vowels and hesitations accurately: 'ummm', 'aaaa', 'uhhh', 'aaah', 'hmmm', 'err'.
+     * Transcribe tongue clicks and tut-tuts: 'tch', 'tsk', 'tch-tch'.
+     * Transcribe sigh/exhalation sounds: 'uff', 'oof', 'ugh', 'ahem'.
+     * Transcribe South Asian discourse particles: 'matlab', 'yaani', 'haina', 'arre', 'bhai', 'dekho', 'suno'.
+2. ACCURATE TIMESTAMPS:
+   - Provide realistic floating-point start_time and end_time (in seconds) for each dialogue turn, reflecting when that sentence was spoken in the audio.
+3. SPEAKER DIARIZATION (MANDATORY):
    - You MUST accurately tag which person said what for every single utterance.
    - If only 1 person speaks in the audio, label their speaker as "USER".
    - If multiple distinct voices/people speak:
@@ -123,8 +144,8 @@ Instructions:
      * Label other interlocutors as "COUNTERPART" (or "SPEAKER_02", "SPEAKER_03" if 3+ people).
      * Split every change in speaker into a separate turn in "transcription".
    - NEVER combine different speakers' speech into one utterance.
-3. For each detected speaker, provide their tone_label, estimated pitch_hz, and talk_time_percentage.
-4. Return ONLY valid JSON without markdown wrapping.
+4. For each detected speaker, provide their tone_label, estimated pitch_hz, and talk_time_percentage.
+5. Return ONLY valid JSON without markdown wrapping.
 """
 
             config_kwargs = {"response_mime_type": "application/json"}
@@ -145,6 +166,26 @@ Instructions:
 
             data = json.loads(raw_text)
 
+            def _parse_time(val: Any) -> float:
+                if val is None:
+                    return 0.0
+                if isinstance(val, (int, float)):
+                    return float(val)
+                val_str = str(val).strip().rstrip("sS")
+                if ":" in val_str:
+                    parts = val_str.split(":")
+                    try:
+                        if len(parts) == 2:
+                            return float(parts[0]) * 60 + float(parts[1])
+                        elif len(parts) == 3:
+                            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+                    except Exception:
+                        return 0.0
+                try:
+                    return float(val_str)
+                except Exception:
+                    return 0.0
+
             # Parse Utterances with speaker normalization
             utterances: List[Utterance] = []
             for item in data.get("transcription", []):
@@ -157,11 +198,29 @@ Instructions:
                 else:
                     spk = raw_spk.upper()
 
-                start = float(item.get("start_time", 0.0))
-                end = float(item.get("end_time", 0.0))
+                start = _parse_time(item.get("start_time", 0.0))
+                end = _parse_time(item.get("end_time", 0.0))
                 text = item.get("transcript", "").strip()
                 if text:
                     utterances.append(Utterance(speaker=spk, start_time=start, end_time=end, transcript=text))
+
+            # Synthesize realistic sequential timestamps if missing, equal, or zeroed out
+            if utterances:
+                all_zeroes = all(u.start_time == 0.0 and u.end_time == 0.0 for u in utterances)
+                not_advancing = len(utterances) > 1 and all(u.start_time == utterances[0].start_time for u in utterances)
+                if all_zeroes or not_advancing:
+                    total_words = sum(max(1, len(u.transcript.split())) for u in utterances)
+                    effective_duration = audio_duration_sec if audio_duration_sec > 0.5 else max(3.0, total_words * 0.45)
+                    
+                    cur_t = 0.0
+                    for idx, u in enumerate(utterances):
+                        w_count = max(1, len(u.transcript.split()))
+                        seg_dur = max(1.2, round((w_count / total_words) * effective_duration, 1))
+                        u.start_time = round(cur_t, 1)
+                        u.end_time = round(min(effective_duration, cur_t + seg_dur), 1)
+                        if u.end_time <= u.start_time:
+                            u.end_time = round(u.start_time + 1.2, 1)
+                        cur_t = u.end_time
 
             # Parse Acoustic & Tone profiles
             spk_count = int(data.get("speaker_count", max(1, len(data.get("speakers", [])))))

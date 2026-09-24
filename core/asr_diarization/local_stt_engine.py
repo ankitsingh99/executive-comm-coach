@@ -1,6 +1,7 @@
 """
 Local On-Device Speech Recognition & Diarization Engine.
-Powered by NVIDIA Parakeet STT as primary acoustic model with Faster-Whisper fallback.
+Powered by Google Gemini and Sarvam AI Saaras for Indic/Hinglish,
+with NVIDIA Parakeet and Faster-Whisper local fallbacks.
 """
 
 import os
@@ -11,16 +12,20 @@ try:
     from ..engine.schema import Utterance
     from .nvidia_parakeet_engine import NvidiaParakeetEngine
     from .gemini_audio_engine import GeminiAudioEngine
+    from .sarvam_client import SarvamSpeechClient
+    from .indic_normalizer import IndicNormalizer
 except (ImportError, ValueError):
     from engine.schema import Utterance
     from asr_diarization.nvidia_parakeet_engine import NvidiaParakeetEngine
     from asr_diarization.gemini_audio_engine import GeminiAudioEngine
+    from asr_diarization.sarvam_client import SarvamSpeechClient
+    from asr_diarization.indic_normalizer import IndicNormalizer
 
 
 class LocalSTTEngine:
     """
     Speech recognizer and speaker diarizer.
-    Utilizes Google Gemini as primary multimodal engine when available,
+    Utilizes Google Gemini and Sarvam AI as primary engines for bilingual Hinglish,
     with local NVIDIA Parakeet and Whisper fallbacks.
     """
 
@@ -29,6 +34,7 @@ class LocalSTTEngine:
         self.use_parakeet = use_parakeet
         self.model_size = model_size
         self._gemini_engine = GeminiAudioEngine()
+        self._sarvam_client = SarvamSpeechClient()
         self._parakeet_engine = None
         self._whisper_model = None
 
@@ -51,45 +57,71 @@ class LocalSTTEngine:
 
     def transcribe_audio_file(self, audio_wav_path: str, speaker_id: str = "USER") -> List[Utterance]:
         """
-        Transcribes a recorded WAV audio file using Gemini (or Parakeet / Whisper fallback).
+        Transcribes a recorded WAV audio file using Gemini / Sarvam (or Parakeet / Whisper fallback).
+        Applies Indic and Hinglish normalizations to ensure accurate downstream NLP.
         """
         if not os.path.exists(audio_wav_path):
             return []
 
-        # 1. Primary Engine: Google Gemini (Highest accuracy & verbatim phonetic hesitations)
+        # 1. Primary Engine: Google Gemini (Highest multimodal accuracy & verbatim phonetic hesitations)
         if self._gemini_engine.is_available():
             try:
                 gemini_utterances, _ = self._gemini_engine.process_audio(audio_wav_path, speaker_id=speaker_id)
                 if gemini_utterances and any(u.transcript.strip() for u in gemini_utterances):
+                    for u in gemini_utterances:
+                        u.transcript = IndicNormalizer.normalize_text(u.transcript)
                     return gemini_utterances
             except Exception:
                 pass
 
-        # 2. Secondary Engine: NVIDIA Parakeet
+        # 2. Indic / Hinglish Specialized Engine: Sarvam AI Saaras
+        if self._sarvam_client.is_available():
+            try:
+                sarvam_utterances = self._sarvam_client.transcribe_audio_chunk(
+                    audio_wav_path,
+                    language_code="hi-IN",
+                    with_diarization=True
+                )
+                if sarvam_utterances and any(u.transcript.strip() for u in sarvam_utterances):
+                    for u in sarvam_utterances:
+                        u.transcript = IndicNormalizer.normalize_text(u.transcript)
+                    return sarvam_utterances
+            except Exception:
+                pass
+
+        # 3. Secondary Engine: NVIDIA Parakeet
         parakeet = self._get_parakeet_engine()
         if parakeet is not None:
             try:
                 results = parakeet.transcribe_audio_file(audio_wav_path, speaker_id=speaker_id)
                 if results and results[0].transcript.strip():
+                    for u in results:
+                        u.transcript = IndicNormalizer.normalize_text(u.transcript)
                     return results
             except Exception:
                 pass
 
-        # 3. Fallback Engine: Faster-Whisper
+        # 4. Fallback Engine: Faster-Whisper with Bilingual Code-Mixed Prompt
         whisper_model = self._get_whisper_model()
         if whisper_model is not None:
             try:
-                segments, info = whisper_model.transcribe(audio_wav_path, beam_size=3)
+                initial_prompt = "English, Hindi, and Hinglish dialogue. Transcribe code-mixed words verbatim like matlab, kal, deploy, sync."
+                segments, info = whisper_model.transcribe(
+                    audio_wav_path,
+                    beam_size=3,
+                    initial_prompt=initial_prompt
+                )
                 utterances = []
                 for seg in segments:
                     text = seg.text.strip()
                     if text:
+                        norm_text = IndicNormalizer.normalize_text(text)
                         utterances.append(
                             Utterance(
                                 speaker=speaker_id,
                                 start_time=round(seg.start, 2),
                                 end_time=round(seg.end, 2),
-                                transcript=text
+                                transcript=norm_text
                             )
                         )
                 if utterances:
@@ -106,7 +138,7 @@ class LocalSTTEngine:
         counterpart_speaker_id: str = "COUNTERPART"
     ) -> List[Utterance]:
         """
-        Parses multi-line script format into timestamped Utterances.
+        Parses multi-line script format into timestamped Utterances with Indic normalization.
         """
         utterances: List[Utterance] = []
         lines = [line.strip() for line in raw_text.strip().split("\n") if line.strip()]
@@ -122,7 +154,8 @@ class LocalSTTEngine:
                 speaker = "USER" if len(utterances) % 2 == 0 else "COUNTERPART"
                 text = line
 
-            words = len(text.split())
+            clean_text = IndicNormalizer.normalize_text(text.strip())
+            words = len(clean_text.split())
             duration = max(1.5, round(words / 2.5, 1))
             end_time = round(current_time + duration, 1)
 
@@ -131,9 +164,10 @@ class LocalSTTEngine:
                     speaker=speaker,
                     start_time=current_time,
                     end_time=end_time,
-                    transcript=text.strip()
+                    transcript=clean_text
                 )
             )
             current_time = round(end_time + 0.4, 1)
 
         return utterances
+
