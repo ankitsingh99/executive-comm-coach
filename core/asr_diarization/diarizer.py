@@ -110,6 +110,61 @@ class DiarizationEngine:
         return updated, detected_counterpart, detected_user
 
     @classmethod
+    def compute_overlapping_speech(
+        cls,
+        utterances: List[Utterance]
+    ) -> Tuple[List[Utterance], int, float, int]:
+        """
+        Detects temporal overlaps (simultaneous speech / cross-talk) between distinct speakers.
+        Identifies who interrupted whom when a speaker starts talking before the prior speaker stops.
+        Returns (updated_utterances, total_overlap_events, total_overlap_duration_sec, total_interruptions).
+        """
+        if len(utterances) < 2:
+            return utterances, 0, 0.0, 0
+
+        # Sort utterances by start_time
+        sorted_utts = sorted(utterances, key=lambda x: (x.start_time, x.end_time))
+        total_overlap_events = 0
+        total_overlap_duration_sec = 0.0
+        total_interruptions = 0
+
+        # Compare pairs of utterances for temporal overlap
+        for i in range(len(sorted_utts)):
+            u_i = sorted_utts[i]
+            for j in range(i + 1, len(sorted_utts)):
+                u_j = sorted_utts[j]
+
+                # Stop searching ahead if the next utterance starts after current one ends
+                if u_j.start_time >= u_i.end_time:
+                    break
+
+                # Overlap only counts if spoken by different individuals
+                if u_i.speaker.strip().upper() != u_j.speaker.strip().upper():
+                    overlap_start = max(u_i.start_time, u_j.start_time)
+                    overlap_end = min(u_i.end_time, u_j.end_time)
+                    overlap_dur = max(0.0, overlap_end - overlap_start)
+
+                    # Threshold: 150ms minimum simultaneous speech to count as meaningful overlap
+                    if overlap_dur >= 0.15:
+                        total_overlap_events += 1
+                        total_overlap_duration_sec += overlap_dur
+
+                        u_i.is_overlapping = True
+                        u_j.is_overlapping = True
+                        u_i.overlap_duration_sec = max(u_i.overlap_duration_sec, round(overlap_dur, 2))
+                        u_j.overlap_duration_sec = max(u_j.overlap_duration_sec, round(overlap_dur, 2))
+
+                        # Determine interruption: if u_j started while u_i was still speaking
+                        if u_j.start_time > u_i.start_time + 0.1:
+                            u_j.interrupted_speaker = u_i.speaker
+                            total_interruptions += 1
+                        elif u_i.start_time > u_j.start_time + 0.1:
+                            u_i.interrupted_speaker = u_j.speaker
+                            total_interruptions += 1
+
+        return sorted_utts, total_overlap_events, round(total_overlap_duration_sec, 2), total_interruptions
+
+    @classmethod
     def assign_roles(
         cls,
         raw_utterances: List[Utterance],
@@ -118,7 +173,8 @@ class DiarizationEngine:
         recognized_user_name: Optional[str] = None
     ) -> List[Utterance]:
         """
-        Maps acoustic speaker clusters (e.g. SPEAKER_01, speaker_0, USER) to USER/Name and COUNTERPART/Name.
+        Maps acoustic speaker clusters (e.g. SPEAKER_01, speaker_0, USER) to USER/Name and COUNTERPART/Name,
+        and computes overlapping speech intervals.
         """
         user_synonyms = {user_speaker_id.upper(), "USER", "SPEAKER_01", "SPEAKER_0", "SPEAKER 1", "SPEAKER_1", "SELF"}
         if recognized_user_name:
@@ -143,10 +199,16 @@ class DiarizationEngine:
                     speaker=speaker_label,
                     start_time=round(u.start_time, 2),
                     end_time=round(u.end_time, 2),
-                    transcript=u.transcript.strip()
+                    transcript=u.transcript.strip(),
+                    is_overlapping=getattr(u, "is_overlapping", False),
+                    overlap_duration_sec=getattr(u, "overlap_duration_sec", 0.0),
+                    interrupted_speaker=getattr(u, "interrupted_speaker", None)
                 )
             )
-        return normalized
+
+        # Run overlap analysis
+        processed_utterances, _, _, _ = cls.compute_overlapping_speech(normalized)
+        return processed_utterances
 
     @classmethod
     def format_dialogue_cli(
@@ -156,7 +218,7 @@ class DiarizationEngine:
         counterpart_name: Optional[str] = None
     ) -> str:
         """
-        Formats dialogue turns into visually aligned CLI output with speaker tags and timestamps.
+        Formats dialogue turns into visually aligned CLI output with speaker tags, timestamps, and overlap indicators.
         """
         lines = []
         unique_spks = {u.speaker for u in utterances}
@@ -181,16 +243,30 @@ class DiarizationEngine:
             else:
                 tag = f"[{u.speaker}]"
 
-            lines.append(f"    • {tag:<24} {time_tag}: \"{u.transcript}\"")
+            # Overlap / Interruption visual indicators
+            overlap_annotation = ""
+            if getattr(u, "is_overlapping", False):
+                if getattr(u, "interrupted_speaker", None):
+                    overlap_annotation = f" \033[93m⚡ [INTERRUPTED {u.interrupted_speaker}]\033[0m"
+                else:
+                    overlap_annotation = f" \033[93m⚡ [OVERLAP {u.overlap_duration_sec:.1f}s]\033[0m"
+
+            lines.append(f"    • {tag:<24} {time_tag}{overlap_annotation}: \"{u.transcript}\"")
         return "\n".join(lines)
 
     @classmethod
     def format_dialogue_markdown(cls, utterances: List[Utterance]) -> str:
-        """Formats the dialogue into clean Markdown turns with timestamps."""
+        """Formats the dialogue into clean Markdown turns with timestamps and overlap badges."""
         lines = []
         for u in utterances:
             start_m, start_s = divmod(int(u.start_time), 60)
             end_m, end_s = divmod(int(u.end_time), 60)
             time_tag = f"[{start_m:02d}:{start_s:02d} - {end_m:02d}:{end_s:02d}]"
-            lines.append(f"**{u.speaker}** {time_tag}: \"{u.transcript}\"")
+            overlap_badge = ""
+            if getattr(u, "is_overlapping", False):
+                if getattr(u, "interrupted_speaker", None):
+                    overlap_badge = f" *(⚡ Interrupted {u.interrupted_speaker})*"
+                else:
+                    overlap_badge = f" *(⚡ Overlapping Speech {u.overlap_duration_sec:.1f}s)*"
+            lines.append(f"**{u.speaker}** {time_tag}{overlap_badge}: \"{u.transcript}\"")
         return "\n\n".join(lines)

@@ -254,14 +254,21 @@ class MetricsCalculator:
         raw_assertiveness = 75 - (hedging_count * 8) + (assertive_count * 6)
         assertiveness_score = max(10, min(100, int(raw_assertiveness)))
 
-        # 3. Active Listening
+        # 3. Active Listening & Turn-taking / Overlap dynamics
         listening_signals = cls.calculate_active_listening_signals(user_text, counterpart_text)
-        # Check turn alternation and question asking
         question_count = user_text.count("?")
-        raw_listening = 60 + (listening_signals * 10) + (question_count * 5)
+
+        # Interruption and overlap metrics
+        user_interruptions = sum(1 for u in user_utterances if getattr(u, "interrupted_speaker", None))
+        counterpart_interruptions = sum(1 for u in counterpart_utterances if getattr(u, "interrupted_speaker", None))
+        total_overlaps = sum(1 for u in utterances if getattr(u, "is_overlapping", False))
+
+        # Base listening score 60 + signals/questions - interruption penalty (7 pts per premature cut-in)
+        interruption_penalty = min(28, user_interruptions * 7)
+        raw_listening = 60 + (listening_signals * 10) + (question_count * 5) - interruption_penalty
         active_listening_score = max(10, min(100, int(raw_listening)))
 
-        # 4. Presence Score (Combines brevity, low filler rate, and assertiveness)
+        # 4. Presence Score (Combines brevity, low filler rate, assertiveness, and smooth turn-taking)
         filler_penalty = min(35, int(filler_rate_per_100_words * 5))
         raw_presence = (assertiveness_score * 0.5) + (active_listening_score * 0.3) + 20 - filler_penalty
         presence_score = max(10, min(100, int(raw_presence)))
@@ -270,5 +277,7 @@ class MetricsCalculator:
             presence_score=presence_score,
             assertiveness_score=assertiveness_score,
             active_listening_score=active_listening_score,
-            filler_words_detected=fillers
+            filler_words_detected=fillers,
+            interruption_count=user_interruptions,
+            overlap_count=total_overlaps
         )

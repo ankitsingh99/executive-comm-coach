@@ -94,7 +94,15 @@ class LocalCoachingSynthesizer:
             norm_text = IndicNormalizer.normalize_text(u.transcript)
             red_text, _ = PIIRedactor.redact_text(norm_text)
             redacted_dialogue.append(
-                Utterance(speaker=u.speaker, start_time=u.start_time, end_time=u.end_time, transcript=red_text)
+                Utterance(
+                    speaker=u.speaker,
+                    start_time=u.start_time,
+                    end_time=u.end_time,
+                    transcript=red_text,
+                    is_overlapping=getattr(u, "is_overlapping", False),
+                    overlap_duration_sec=getattr(u, "overlap_duration_sec", 0.0),
+                    interrupted_speaker=getattr(u, "interrupted_speaker", None)
+                )
             )
 
         try:
@@ -298,6 +306,14 @@ class LocalCoachingSynthesizer:
                 coached = f"Based on the latest {extracted_topic}, I recommend we prioritize rollout readiness."
 
             improvements.append(AreaForImprovement(critique=critique, verbatim_quote=full_quote, coached_phrasing=coached))
+
+        # Check for interruption / cross-talk friction
+        if getattr(metrics, "interruption_count", 0) > 0:
+            interrupted_utt = next((u for u in user_turns if getattr(u, "interrupted_speaker", None)), None)
+            quote_text = interrupted_utt.transcript if interrupted_utt else full_quote
+            critique_int = f"Premature cross-talk detected ({metrics.interruption_count}x). Starting before interlocutor completes can signal impatience."
+            coached_int = f"Allow a 1.0s deliberate pause after counterpart finishes, then bridge: 'To build directly on that point...'"
+            improvements.insert(0, AreaForImprovement(critique=critique_int, verbatim_quote=quote_text, coached_phrasing=coached_int))
 
         # Check for unquantified narrative if relevant
         if len(improvements) == 1 and not has_hedging and not is_question:

@@ -103,6 +103,8 @@ class AcousticAnalysisResult(BaseModel):
     speakers: List[SpeakerAcousticProfile] = []
     overall_tone: str = "Calm & Measured"
     turn_taking_events: int = 0
+    overlapping_speech_events: int = 0
+    overlap_duration_total_sec: float = 0.0
 
     def __init__(
         self,
@@ -111,6 +113,8 @@ class AcousticAnalysisResult(BaseModel):
         speakers: Optional[List[SpeakerAcousticProfile]] = None,
         overall_tone: str = "Calm & Measured",
         turn_taking_events: int = 0,
+        overlapping_speech_events: int = 0,
+        overlap_duration_total_sec: float = 0.0,
         **kwargs
     ):
         super().__init__(
@@ -119,6 +123,8 @@ class AcousticAnalysisResult(BaseModel):
             speakers=speakers or [],
             overall_tone=overall_tone,
             turn_taking_events=turn_taking_events,
+            overlapping_speech_events=overlapping_speech_events,
+            overlap_duration_total_sec=overlap_duration_total_sec,
             **kwargs
         )
         self.detected_speaker_count = int(detected_speaker_count)
@@ -126,6 +132,8 @@ class AcousticAnalysisResult(BaseModel):
         self.speakers = speakers or []
         self.overall_tone = overall_tone
         self.turn_taking_events = int(turn_taking_events)
+        self.overlapping_speech_events = int(overlapping_speech_events)
+        self.overlap_duration_total_sec = float(overlap_duration_total_sec)
 
 
 class CommunicationMetrics(BaseModel):
@@ -134,6 +142,8 @@ class CommunicationMetrics(BaseModel):
     assertiveness_score: int = 0
     active_listening_score: int = 0
     filler_words_detected: List[FillerWordMetric] = []
+    interruption_count: int = 0
+    overlap_count: int = 0
     acoustic_analysis: Optional[AcousticAnalysisResult] = None
 
     def __init__(
@@ -142,6 +152,8 @@ class CommunicationMetrics(BaseModel):
         assertiveness_score: int = 0,
         active_listening_score: int = 0,
         filler_words_detected: Optional[List[FillerWordMetric]] = None,
+        interruption_count: int = 0,
+        overlap_count: int = 0,
         **kwargs
     ):
         super().__init__(
@@ -149,12 +161,16 @@ class CommunicationMetrics(BaseModel):
             assertiveness_score=assertiveness_score,
             active_listening_score=active_listening_score,
             filler_words_detected=filler_words_detected or [],
+            interruption_count=interruption_count,
+            overlap_count=overlap_count,
             **kwargs
         )
         self.presence_score = max(0, min(100, int(presence_score)))
         self.assertiveness_score = max(0, min(100, int(assertiveness_score)))
         self.active_listening_score = max(0, min(100, int(active_listening_score)))
         self.filler_words_detected = filler_words_detected or []
+        self.interruption_count = int(interruption_count)
+        self.overlap_count = int(overlap_count)
 
 
 class TopStrength(BaseModel):
@@ -366,6 +382,9 @@ class Utterance(BaseModel):
     start_time: float = 0.0
     end_time: float = 0.0
     transcript: str = ""
+    is_overlapping: bool = False
+    overlap_duration_sec: float = 0.0
+    interrupted_speaker: Optional[str] = None
 
     def __init__(
         self,
@@ -373,6 +392,9 @@ class Utterance(BaseModel):
         start_time: float = 0.0,
         end_time: float = 0.0,
         transcript: str = "",
+        is_overlapping: bool = False,
+        overlap_duration_sec: float = 0.0,
+        interrupted_speaker: Optional[str] = None,
         **kwargs
     ):
         super().__init__(
@@ -380,12 +402,18 @@ class Utterance(BaseModel):
             start_time=start_time,
             end_time=end_time,
             transcript=transcript,
+            is_overlapping=is_overlapping,
+            overlap_duration_sec=overlap_duration_sec,
+            interrupted_speaker=interrupted_speaker,
             **kwargs
         )
         self.speaker = speaker
         self.start_time = float(start_time)
         self.end_time = float(end_time)
         self.transcript = transcript
+        self.is_overlapping = bool(is_overlapping)
+        self.overlap_duration_sec = float(overlap_duration_sec)
+        self.interrupted_speaker = interrupted_speaker
 
 
 class ConversationSession(BaseModel):

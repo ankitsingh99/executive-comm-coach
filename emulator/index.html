@@ -432,6 +432,7 @@
     .bubble-tag { font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; }
     .tag-user { background: rgba(99, 102, 241, 0.25); color: #c7d2fe; }
     .tag-other { background: rgba(6, 182, 212, 0.2); color: #a5f3fc; }
+    .tag-overlap { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.6rem; padding: 0.1rem 0.35rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.2rem; }
     .bubble-txt { font-size: 0.75rem; color: var(--text-main); line-height: 1.35; }
 
     /* Voice Vault */
@@ -1080,6 +1081,14 @@
       diaList.innerHTML = '';
       const lines = data.dialogueText.trim().split('\n').filter(l => l.trim().length > 0);
       lines.forEach((l, idx) => {
+        let isOverlap = l.includes('⚡') || l.toLowerCase().includes('overlap') || l.toLowerCase().includes('interrupted');
+        let overlapNote = '';
+        if (l.includes('INTERRUPTED')) {
+          overlapNote = '<span class="tag-overlap">⚡ Interruption</span>';
+        } else if (l.includes('OVERLAP') || l.includes('⚡')) {
+          overlapNote = '<span class="tag-overlap">⚡ Cross-Talk</span>';
+        }
+
         const parts = l.split(': ');
         const spk = parts.length > 1 ? parts[0].trim() : 'SPEAKER';
         const txt = parts.length > 1 ? parts.slice(1).join(': ') : l;
@@ -1091,7 +1100,10 @@
         el.className = 'dialogue-bubble';
         el.innerHTML = `
           <div class="bubble-head">
-            <span class="bubble-tag ${tagClass}">[${spk}]</span>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span class="bubble-tag ${tagClass}">[${spk}]</span>
+              ${overlapNote}
+            </div>
             <span style="font-size: 0.62rem; color: var(--text-dim); font-family: var(--font-mono);">00:${(idx*4).toString().padStart(2,'0')} - 00:${((idx+1)*4).toString().padStart(2,'0')}</span>
           </div>
           <div class="bubble-txt">"${txt}"</div>

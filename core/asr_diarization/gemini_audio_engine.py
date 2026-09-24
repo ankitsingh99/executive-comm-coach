@@ -17,9 +17,11 @@ warnings.filterwarnings("ignore", message=".*automatic function calling.*")
 try:
     from ..engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
     from ..config import get_gemini_api_key, GEMINI_MODEL
+    from .diarizer import DiarizationEngine
 except (ImportError, ValueError):
     from engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
     from config import get_gemini_api_key, GEMINI_MODEL
+    from asr_diarization.diarizer import DiarizationEngine
 
 
 class GeminiAudioEngine:
@@ -87,7 +89,7 @@ class GeminiAudioEngine:
                 mime_type="audio/wav"
             )
 
-            prompt = """Analyze this audio recording with high precision for speech-to-text, speaker diarization, and acoustic tone.
+            prompt = """Analyze this audio recording with high precision for speech-to-text, speaker diarization, overlapping cross-talk, and acoustic tone.
 
 Return pure JSON with the following structure:
 {
@@ -100,9 +102,9 @@ Return pure JSON with the following structure:
     },
     {
       "speaker": "COUNTERPART",
-      "start_time": 3.6,
+      "start_time": 3.0,
       "end_time": 7.0,
-      "transcript": "Exact verbatim reply from the second speaker in Romanized script."
+      "transcript": "Exact verbatim reply from the second speaker in Romanized script (note start_time overlaps with previous if they interrupted or spoke simultaneously)."
     }
   ],
   "speaker_count": 2,
@@ -134,9 +136,13 @@ Instructions:
      * Transcribe tongue clicks and tut-tuts: 'tch', 'tsk', 'tch-tch'.
      * Transcribe sigh/exhalation sounds: 'uff', 'oof', 'ugh', 'ahem'.
      * Transcribe South Asian discourse particles: 'matlab', 'yaani', 'haina', 'arre', 'bhai', 'dekho', 'suno'.
-2. ACCURATE TIMESTAMPS:
+2. OVERLAPPING SPEECH & CROSS-TALK:
+   - If two or more people speak at the same time (e.g. one person interrupts another before the first finishes, or simultaneous background speaking), output distinct utterance entries for each speaker with their true start_time and end_time.
+   - For example, if USER speaks from 0.0 to 4.0 and COUNTERPART cuts in at 3.0 to 6.0, specify start_time: 3.0 for COUNTERPART so the 1.0s overlap is captured.
+   - Never omit overlapping words or merge different speakers together into one line.
+3. ACCURATE TIMESTAMPS:
    - Provide realistic floating-point start_time and end_time (in seconds) for each dialogue turn, reflecting when that sentence was spoken in the audio.
-3. SPEAKER DIARIZATION (MANDATORY):
+4. SPEAKER DIARIZATION (MANDATORY):
    - You MUST accurately tag which person said what for every single utterance.
    - If only 1 person speaks in the audio, label their speaker as "USER".
    - If multiple distinct voices/people speak:
@@ -144,8 +150,8 @@ Instructions:
      * Label other interlocutors as "COUNTERPART" (or "SPEAKER_02", "SPEAKER_03" if 3+ people).
      * Split every change in speaker into a separate turn in "transcription".
    - NEVER combine different speakers' speech into one utterance.
-4. For each detected speaker, provide their tone_label, estimated pitch_hz, and talk_time_percentage.
-5. Return ONLY valid JSON without markdown wrapping.
+5. For each detected speaker, provide their tone_label, estimated pitch_hz, and talk_time_percentage.
+6. Return ONLY valid JSON without markdown wrapping.
 """
 
             config_kwargs = {"response_mime_type": "application/json"}
@@ -222,6 +228,9 @@ Instructions:
                             u.end_time = round(u.start_time + 1.2, 1)
                         cur_t = u.end_time
 
+            # Compute overlapping voice events and simultaneous speech durations
+            processed_utts, overlap_events, total_overlap_dur, _ = DiarizationEngine.compute_overlapping_speech(utterances)
+
             # Parse Acoustic & Tone profiles
             spk_count = int(data.get("speaker_count", max(1, len(data.get("speakers", [])))))
             overall_tone = data.get("overall_tone", "Natural & Conversational")
@@ -256,10 +265,12 @@ Instructions:
                 is_multi_speaker=(spk_count > 1),
                 speakers=speaker_profiles,
                 overall_tone=overall_tone,
-                turn_taking_events=max(0, spk_count - 1)
+                turn_taking_events=max(0, spk_count - 1),
+                overlapping_speech_events=overlap_events,
+                overlap_duration_total_sec=total_overlap_dur
             )
 
-            return utterances, acoustic_res
+            return processed_utts, acoustic_res
 
         except Exception as e:
             return [], AcousticAnalysisResult()
