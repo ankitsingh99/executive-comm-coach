@@ -22,13 +22,15 @@ class LiveMicRecorder:
         silence_threshold_sec: float = 2.2,
         min_speech_duration_sec: float = 1.5,
         max_duration_sec: int = 180,
-        chunk_duration_sec: float = 1.0,
-        speech_prob_threshold: float = 0.50,
+        chunk_duration_sec: float = 0.8,
+        speech_prob_threshold: float = 0.35,
+        gain_boost: float = 2.5,
         output_wav_path: Optional[str] = None
     ) -> str:
         """
         Dynamically records microphone audio until the conversation end is detected
         by analyzing silence after the last spoken word.
+        Equipped with digital gain boost for high-sensitivity ambient room capture.
         """
         import numpy as np
         import wave
@@ -60,6 +62,7 @@ class LiveMicRecorder:
                     "ffmpeg", "-y",
                     "-f", "avfoundation",
                     "-i", ":0",
+                    "-af", f"volume={gain_boost}",
                     "-t", str(chunk_duration_sec),
                     "-ar", str(self.sample_rate),
                     "-ac", "1",
@@ -165,13 +168,14 @@ class LiveMicRecorder:
 
     def listen_for_speech_and_nudge(
         self,
-        poll_interval_sec: float = 1.0,
-        speech_prob_threshold: float = 0.65,
+        poll_interval_sec: float = 0.8,
+        speech_prob_threshold: float = 0.35,
+        gain_boost: float = 2.5,
         max_wait_seconds: Optional[int] = None,
         on_speech_detected_callback: Optional[callable] = None
     ) -> bool:
         """
-        Passively monitors the ambient microphone stream with ultra-low compute.
+        Passively monitors the ambient microphone stream with ultra-low compute and high sensitivity.
         As soon as human speech / spoken dialogue is detected, triggers a consent nudge
         prompting the user if they wish to start recording for communication coaching analysis.
         """
@@ -179,7 +183,7 @@ class LiveMicRecorder:
         import subprocess
         from .vad_gater import AmbientVadGate
 
-        print("\n  [AMBIENT SENSING ACTIVE] Passively listening for spoken dialogue...")
+        print("\n  [AMBIENT SENSING ACTIVE] Passively listening for spoken dialogue (High Sensitivity)...")
         print("  (Privacy protected: Audio evaluated in memory & purged immediately if below threshold)")
 
         start_time = time.time()
@@ -197,11 +201,12 @@ class LiveMicRecorder:
 
             temp_chunk_path = os.path.join(tempfile.gettempdir(), f"vad_sample_{int(time.time() * 1000)}.wav")
             try:
-                # Capture a short probe chunk via ffmpeg avfoundation
+                # Capture a short probe chunk via ffmpeg avfoundation with digital gain boost
                 cmd = [
                     "ffmpeg", "-y",
                     "-f", "avfoundation",
                     "-i", ":0",
+                    "-af", f"volume={gain_boost}",
                     "-t", str(poll_interval_sec),
                     "-ar", str(self.sample_rate),
                     "-ac", "1",

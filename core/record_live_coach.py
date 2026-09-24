@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("duration", type=int, nargs="?", default=None, help="Optional maximum recording duration in seconds (default: dynamic until silence)")
     parser.add_argument("--silence-sec", type=float, default=2.2, help="Silence pause duration in seconds after last word to conclude conversation (default: 2.2s)")
     parser.add_argument("--fixed-duration", action="store_true", help="Force fixed duration recording without waiting for silence")
+    parser.add_argument("--sensitivity", type=str, default="high", choices=["high", "medium", "low"], help="Microphone ambient pickup sensitivity (default: high)")
     parser.add_argument("--axis", type=str, default=None, choices=["SOLO", "CASUAL", "LATERAL", "UPWARD", "DOWNWARD", "CONFLICT"], help="Power Axis / Communication Mode")
     parser.add_argument("--counterpart", type=str, default=None, help="Counterpart Name / Title")
     parser.add_argument("--role", type=str, default=None, help="Counterpart Role")
@@ -171,9 +172,17 @@ def main():
     compliance_mgr = DPDPComplianceManager(storage_root=DATA_DIR)
     recorder = LiveMicRecorder()
 
+    sensitivity_level = getattr(args, "sensitivity", "high").lower()
+    sens_map = {
+        "high": (0.35, 2.5),
+        "medium": (0.50, 1.8),
+        "low": (0.65, 1.0)
+    }
+    speech_prob_thresh, gain_val = sens_map.get(sensitivity_level, (0.35, 2.5))
+
     # Step 0: Ambient Conversation Auto-Detection & Nudge (Default)
     if not getattr(args, "direct", False):
-        print(" [AMBIENT CONVERSATION DETECTOR ACTIVE]")
+        print(f" [AMBIENT CONVERSATION DETECTOR ACTIVE - Sensitivity: {sensitivity_level.upper()}]")
         print("    Passively monitoring microphone for conversation onset (< 2.5% CPU)...")
         print("    Speak naturally when your conversation starts.\n")
         
@@ -183,7 +192,11 @@ def main():
             return True
 
         # Passively listen until conversation start is detected
-        recorder.listen_for_speech_and_nudge(on_speech_detected_callback=on_nudge_callback)
+        recorder.listen_for_speech_and_nudge(
+            speech_prob_threshold=speech_prob_thresh,
+            gain_boost=gain_val,
+            on_speech_detected_callback=on_nudge_callback
+        )
 
     # Step 1: DPDP Chime & Consent
     session_id = f"live_mic_{int(time.time())}"
@@ -199,7 +212,9 @@ def main():
     else:
         wav_path = recorder.record_until_silence(
             silence_threshold_sec=silence_threshold,
-            max_duration_sec=max_duration
+            max_duration_sec=max_duration,
+            speech_prob_threshold=speech_prob_thresh,
+            gain_boost=gain_val
         )
 
     # Step 3: Transcription & Acoustic Voice Analysis

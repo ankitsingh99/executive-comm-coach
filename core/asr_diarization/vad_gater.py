@@ -67,14 +67,15 @@ class AmbientVadGate:
         zero_crossings = np.nonzero(np.diff(samples > 0))[0]
         zcr = float(len(zero_crossings) / max(1, len(samples)))
         
-        # Human speech typical RMS (> 0.015) and ZCR (0.02 - 0.35)
-        if rms < 0.008:
-            return 0.05
+        # Ambient conversational speech RMS floor is ~0.0015 to 0.025
+        if rms < 0.0015:
+            return 0.02
         
-        energy_score = min(1.0, (rms - 0.008) / 0.04)
-        zcr_score = 1.0 if (0.02 <= zcr <= 0.38) else 0.4
+        # High sensitivity ambient energy curve
+        energy_score = min(1.0, (rms - 0.0015) / 0.015)
+        zcr_score = 1.0 if (0.012 <= zcr <= 0.45) else 0.35
         
-        prob = (0.7 * energy_score) + (0.3 * zcr_score)
+        prob = (0.75 * energy_score) + (0.25 * zcr_score)
         return float(np.clip(prob, 0.0, 1.0))
 
     def evaluate_frame(self, timestamp_ms: float, speech_prob: float) -> Tuple[bool, str]:
