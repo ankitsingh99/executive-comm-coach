@@ -88,17 +88,18 @@ class AmbientVadGate:
         else:
             spectral_score = 0.15
 
-        # Adaptive Energy / SNR Scoring:
+        # Adaptive Energy / SNR Scoring (multiplied by spectral plausibility so silence is strictly 0.0):
         if noise_floor_rms > 0.0002:
             # Dynamic SNR relative to tracked noise floor
             snr_db = float(20.0 * np.log10(max(1e-5, rms) / max(1e-5, noise_floor_rms)))
-            # +3dB SNR is early speech onset; +12dB SNR is full speech
-            snr_score = float(np.clip((snr_db - 2.5) / 10.0, 0.0, 1.0))
-            prob = (0.65 * snr_score) + (0.35 * spectral_score)
+            # If SNR <= 2.0 dB (ambient room noise equal to floor), snr_score is 0.0
+            # If SNR >= 12.0 dB, snr_score is 1.0
+            snr_score = float(np.clip((snr_db - 2.0) / 10.0, 0.0, 1.0))
+            prob = snr_score * (0.35 + 0.65 * spectral_score)
         else:
-            # Absolute sensitive energy scoring for quiet environments
-            energy_score = float(np.clip((rms - 0.0012) / 0.018, 0.0, 1.0))
-            prob = (0.70 * energy_score) + (0.30 * spectral_score)
+            # Absolute energy scoring for quiet environments
+            energy_score = float(np.clip((rms - 0.0010) / 0.015, 0.0, 1.0))
+            prob = energy_score * (0.35 + 0.65 * spectral_score)
 
         return float(np.clip(prob, 0.0, 1.0))
 

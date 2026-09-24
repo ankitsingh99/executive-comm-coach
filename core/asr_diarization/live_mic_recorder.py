@@ -110,10 +110,8 @@ class LiveMicRecorder:
                         noise_floor_rms = 0.985 * noise_floor_rms + 0.015 * cur_raw_rms
                     noise_floor_rms = float(np.clip(noise_floor_rms, 0.0003, 0.035))
 
-                    # 2. Dynamic SNR and Adaptive RMS Threshold
+                    # 2. Dynamic SNR Calculation
                     snr_db = float(20.0 * np.log10(max(1e-5, cur_raw_rms) / max(1e-5, noise_floor_rms)))
-                    # In quiet rooms, threshold drops dynamically down to 0.0010 to pick up faint/whispered speech
-                    dyn_rms_threshold = max(0.0010, noise_floor_rms * 1.35 + 0.0004)
 
                     # 3. Dynamic Voice Probability Calculation
                     speech_prob = gate.calculate_speech_probability(
@@ -121,11 +119,7 @@ class LiveMicRecorder:
                     )
 
                     # 4. Adaptive Voice Activity Gate
-                    is_voice_active = (
-                        speech_prob >= 0.28
-                        or (cur_raw_rms >= dyn_rms_threshold and speech_prob >= 0.12)
-                        or (snr_db >= 3.5 and speech_prob >= 0.15)
-                    )
+                    is_voice_active = (speech_prob >= 0.35) or (snr_db >= 4.0 and speech_prob >= 0.22)
 
                     # 5. Adaptive Automatic Gain Control (AGC)
                     if is_voice_active:
