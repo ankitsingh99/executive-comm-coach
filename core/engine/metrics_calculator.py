@@ -5,7 +5,7 @@ Supports bilingual English, Hindi, and code-mixed Hinglish.
 """
 
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional, Any
 from .schema import Utterance, FillerWordMetric, CommunicationMetrics
 
 try:
@@ -219,7 +219,12 @@ class MetricsCalculator:
         return sum(len(re.findall(pat, norm_user, flags=re.IGNORECASE)) for pat in ACTIVE_LISTENING_PATTERNS)
 
     @classmethod
-    def analyze_dialogue(cls, utterances: List[Utterance], target_speaker: str = "USER") -> CommunicationMetrics:
+    def analyze_dialogue(
+        cls,
+        utterances: List[Utterance],
+        target_speaker: str = "USER",
+        acoustic_fillers: Optional[List[Any]] = None,
+    ) -> CommunicationMetrics:
         """Computes dynamic [0-100] communication metrics across dialogue."""
         if not utterances:
             return CommunicationMetrics(
@@ -251,6 +256,19 @@ class MetricsCalculator:
 
         # 1. Filler words & phonetic hesitation
         fillers = cls.detect_fillers(user_text)
+
+        # Merge acoustic non-phonetic fillers if supplied
+        if acoustic_fillers:
+            filler_dict = {f.token: f.count for f in fillers}
+            for af in acoustic_fillers:
+                spk = getattr(af, "speaker", "USER").upper()
+                if spk in user_synonyms or is_solo:
+                    tok = getattr(af, "token", "umm").lower()
+                    # Add acoustic filler count if not already reflected in text
+                    filler_dict[tok] = filler_dict.get(tok, 0) + 1
+            sorted_f = sorted(filler_dict.items(), key=lambda x: x[1], reverse=True)
+            fillers = [FillerWordMetric(token=k, count=v) for k, v in sorted_f]
+
         total_fillers = sum(f.count for f in fillers)
         filler_rate_per_100_words = (total_fillers / total_words) * 100
 

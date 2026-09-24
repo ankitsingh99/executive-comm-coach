@@ -19,6 +19,7 @@ from engine.coaching_engine import ExecutiveCoachingEngine
 from asr_diarization.live_mic_recorder import LiveMicRecorder
 from asr_diarization.local_stt_engine import LocalSTTEngine
 from asr_diarization.acoustic_speaker_detector import AcousticSpeakerToneDetector
+from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
 from asr_diarization.gemini_audio_engine import GeminiAudioEngine
 from asr_diarization.diarizer import DiarizationEngine
 from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry
@@ -259,6 +260,21 @@ def main():
             gain_boost=gain_val,
         )
 
+    # Step 2.5: Acoustic Non-Phonetic Filler & Vocal Hesitation Scan
+    print("\n [ACOUSTIC FILLER SCAN] Parsing audio for non-phonetic vocal hesitations (umm, aah, aaaaa, uhh)...")
+    filler_detector = AcousticFillerDetector()
+    acoustic_fillers = filler_detector.detect_fillers_from_wav(wav_path)
+    if acoustic_fillers:
+        filler_summary = ", ".join(
+            [
+                f"{af.token} ({af.duration_sec:.1f}s @ {int(af.start_time // 60):02d}:{int(af.start_time % 60):02d})"
+                for af in acoustic_fillers
+            ]
+        )
+        print(f"  • Non-Phonetic Hesitations Detected: {len(acoustic_fillers)} [{filler_summary}]")
+    else:
+        print("  • Non-Phonetic Hesitations: 0 (Continuous fluent vocalization)")
+
     # Step 3: Transcription & Acoustic Voice Analysis
     utterances = []
     acoustic_result = None
@@ -279,6 +295,10 @@ def main():
         stt_engine = LocalSTTEngine()
         utterances = stt_engine.transcribe_audio_file(wav_path, speaker_id="USER")
 
+    # Merge acoustic non-phonetic fillers into transcribed utterances
+    if utterances and acoustic_fillers:
+        utterances = AcousticFillerDetector.inject_fillers_into_utterances(utterances, acoustic_fillers)
+
     if not utterances or not any(u.transcript.strip() for u in utterances):
         print("\n [NOTICE] No speech was detected during the recording window.")
         print(" Please verify your microphone volume and speak closer to the mic.")
@@ -288,6 +308,9 @@ def main():
 
     if acoustic_result is None:
         acoustic_result = AcousticSpeakerToneDetector().analyze_wav_file(wav_path)
+
+    if acoustic_fillers and acoustic_result:
+        acoustic_result.acoustic_fillers = acoustic_fillers
 
     print("\n  +--------------------------------------------------------------+")
     print("  |              ACOUSTIC VOICE & TONE DETECTION                 |")

@@ -14,12 +14,14 @@ try:
     from .gemini_audio_engine import GeminiAudioEngine
     from .sarvam_client import SarvamSpeechClient
     from .indic_normalizer import IndicNormalizer
+    from .acoustic_filler_detector import AcousticFillerDetector
 except (ImportError, ValueError):
     from engine.schema import Utterance
     from asr_diarization.nvidia_parakeet_engine import NvidiaParakeetEngine
     from asr_diarization.gemini_audio_engine import GeminiAudioEngine
     from asr_diarization.sarvam_client import SarvamSpeechClient
     from asr_diarization.indic_normalizer import IndicNormalizer
+    from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
 
 
 class LocalSTTEngine:
@@ -96,7 +98,10 @@ class LocalSTTEngine:
                 if results and results[0].transcript.strip():
                     for u in results:
                         u.transcript = IndicNormalizer.normalize_text(u.transcript)
-                    return results
+                    acoustic_fillers = AcousticFillerDetector().detect_fillers_from_wav(
+                        audio_wav_path, speaker_segments=results
+                    )
+                    return AcousticFillerDetector.inject_fillers_into_utterances(results, acoustic_fillers)
             except Exception:
                 pass
 
@@ -120,7 +125,10 @@ class LocalSTTEngine:
                             )
                         )
                 if utterances:
-                    return utterances
+                    acoustic_fillers = AcousticFillerDetector().detect_fillers_from_wav(
+                        audio_wav_path, speaker_segments=utterances
+                    )
+                    return AcousticFillerDetector.inject_fillers_into_utterances(utterances, acoustic_fillers)
             except Exception:
                 pass
 

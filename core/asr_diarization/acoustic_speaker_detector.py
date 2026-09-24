@@ -12,8 +12,10 @@ from typing import List, Tuple
 
 try:
     from ..engine.schema import SpeakerAcousticProfile, AcousticAnalysisResult
+    from .acoustic_filler_detector import AcousticFillerDetector
 except (ImportError, ValueError):
     from engine.schema import SpeakerAcousticProfile, AcousticAnalysisResult
+    from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
 
 
 class AcousticSpeakerToneDetector:
@@ -178,12 +180,18 @@ class AcousticSpeakerToneDetector:
 
         overall_tone = speaker_profiles[0].tone_label if speaker_profiles else "Calm & Measured"
 
+        # Detect non-phonetic acoustic hesitations (umm, aah, aaaaa, uhh) directly from signal
+        acoustic_fillers = AcousticFillerDetector(sample_rate=sample_rate).detect_fillers_from_signal(
+            signal, sample_rate
+        )
+
         return AcousticAnalysisResult(
             detected_speaker_count=detected_count,
             is_multi_speaker=(detected_count > 1),
             speakers=speaker_profiles,
             overall_tone=overall_tone,
             turn_taking_events=max(0, detected_count - 1),
+            acoustic_fillers=acoustic_fillers,
         )
 
     def _cluster_voices(

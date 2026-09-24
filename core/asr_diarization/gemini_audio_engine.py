@@ -18,10 +18,12 @@ try:
     from ..engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
     from ..config import get_gemini_api_key, GEMINI_MODEL
     from .diarizer import DiarizationEngine
+    from .acoustic_filler_detector import AcousticFillerDetector
 except (ImportError, ValueError):
     from engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
     from config import get_gemini_api_key, GEMINI_MODEL
     from asr_diarization.diarizer import DiarizationEngine
+    from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
 
 
 class GeminiAudioEngine:
@@ -261,6 +263,12 @@ Instructions:
                     )
                 ]
 
+            # Acoustic filler detection & injection for non-phonetic hesitations (umm, aah, aaaaa, uhh)
+            acoustic_fillers = AcousticFillerDetector().detect_fillers_from_wav(
+                audio_wav_path, speaker_segments=processed_utts
+            )
+            processed_utts = AcousticFillerDetector.inject_fillers_into_utterances(processed_utts, acoustic_fillers)
+
             acoustic_res = AcousticAnalysisResult(
                 detected_speaker_count=spk_count,
                 is_multi_speaker=(spk_count > 1),
@@ -269,6 +277,7 @@ Instructions:
                 turn_taking_events=max(0, spk_count - 1),
                 overlapping_speech_events=overlap_events,
                 overlap_duration_total_sec=total_overlap_dur,
+                acoustic_fillers=acoustic_fillers,
             )
 
             return processed_utts, acoustic_res

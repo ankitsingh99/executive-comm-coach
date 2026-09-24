@@ -101,8 +101,49 @@ class SpeakerAcousticProfile(BaseModel):
         self.confidence_score = float(confidence_score)
 
 
+class AcousticFillerEvent(BaseModel):
+    """Detected non-phonetic acoustic vocal hesitation event from raw audio waveforms."""
+
+    token: str = "umm"  # umm, aah, aaaaa, uhh, hmm, err
+    start_time: float = 0.0
+    end_time: float = 0.0
+    duration_sec: float = 0.0
+    confidence: float = 0.90
+    speaker: str = "USER"
+    acoustic_type: str = "nasal_murmur"  # nasal_murmur, vowel_elongation, open_pause, vocal_hesitation
+
+    def __init__(
+        self,
+        token: str = "umm",
+        start_time: float = 0.0,
+        end_time: float = 0.0,
+        duration_sec: float = 0.0,
+        confidence: float = 0.90,
+        speaker: str = "USER",
+        acoustic_type: str = "nasal_murmur",
+        **kwargs,
+    ):
+        super().__init__(
+            token=token,
+            start_time=start_time,
+            end_time=end_time,
+            duration_sec=duration_sec,
+            confidence=confidence,
+            speaker=speaker,
+            acoustic_type=acoustic_type,
+            **kwargs,
+        )
+        self.token = str(token)
+        self.start_time = float(start_time)
+        self.end_time = float(end_time)
+        self.duration_sec = float(duration_sec)
+        self.confidence = float(confidence)
+        self.speaker = str(speaker)
+        self.acoustic_type = str(acoustic_type)
+
+
 class AcousticAnalysisResult(BaseModel):
-    """Aggregate acoustic voice and speaker detection analysis."""
+    """Aggregate acoustic voice, speaker detection, and hesitation analysis."""
 
     detected_speaker_count: int = 1
     is_multi_speaker: bool = False
@@ -111,6 +152,7 @@ class AcousticAnalysisResult(BaseModel):
     turn_taking_events: int = 0
     overlapping_speech_events: int = 0
     overlap_duration_total_sec: float = 0.0
+    acoustic_fillers: List[AcousticFillerEvent] = []
 
     def __init__(
         self,
@@ -121,6 +163,7 @@ class AcousticAnalysisResult(BaseModel):
         turn_taking_events: int = 0,
         overlapping_speech_events: int = 0,
         overlap_duration_total_sec: float = 0.0,
+        acoustic_fillers: Optional[List[AcousticFillerEvent]] = None,
         **kwargs,
     ):
         super().__init__(
@@ -131,6 +174,7 @@ class AcousticAnalysisResult(BaseModel):
             turn_taking_events=turn_taking_events,
             overlapping_speech_events=overlapping_speech_events,
             overlap_duration_total_sec=overlap_duration_total_sec,
+            acoustic_fillers=acoustic_fillers or [],
             **kwargs,
         )
         self.detected_speaker_count = int(detected_speaker_count)
@@ -140,6 +184,7 @@ class AcousticAnalysisResult(BaseModel):
         self.turn_taking_events = int(turn_taking_events)
         self.overlapping_speech_events = int(overlapping_speech_events)
         self.overlap_duration_total_sec = float(overlap_duration_total_sec)
+        self.acoustic_fillers = acoustic_fillers or []
 
 
 class CommunicationMetrics(BaseModel):
