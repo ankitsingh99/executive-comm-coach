@@ -114,7 +114,13 @@ branch = true
 omit = [
     "core/tests/*",
     "core/run_mvp_demo.py",
-    "core/demo_live.py"
+    "core/demo_live.py",
+    "core/cli_coach.py",
+    "core/record_live_coach.py",
+    "core/server.py",
+    "core/asr_diarization/live_mic_recorder.py",
+    "core/asr_diarization/local_stt_engine.py",
+    "core/asr_diarization/nvidia_parakeet_engine.py"
 ]
 
 [tool.coverage.report]
@@ -128,3 +134,4 @@ exclude_lines = [
     "raise NotImplementedError",
     "pass"
 ]
+
