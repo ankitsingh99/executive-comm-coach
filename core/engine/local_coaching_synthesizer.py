@@ -189,7 +189,16 @@ class LocalCoachingSynthesizer:
         Actionable NLP coaching engine.
         Identifies concrete communication friction points and generates concise, prescriptive advice.
         """
-        user_turns = [u for u in dialogue if u.speaker.upper() == "USER"]
+        unique_spks = list(dict.fromkeys(u.speaker for u in dialogue))
+        is_solo = len(unique_spks) <= 1
+        user_synonyms = {"USER", "SELF", "YOU", "ASHISH"}
+        user_turns = [u for u in dialogue if u.speaker.strip().upper() in user_synonyms]
+        if not user_turns and dialogue:
+            if is_solo or profile.power_axis == PowerAxis.SOLO:
+                user_turns = list(dialogue)
+            else:
+                user_turns = [u for u in dialogue if u.speaker == unique_spks[0]]
+
         raw_text = " ".join([u.transcript.strip() for u in user_turns])
 
         raw_sentences = [s.strip() for s in re.split(r"[.!?\n]+", raw_text) if len(s.strip()) > 3]

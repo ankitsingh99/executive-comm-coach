@@ -235,43 +235,76 @@ class MetricsCalculator:
 
     @classmethod
     def analyze_dialogue(cls, utterances: List[Utterance], target_speaker: str = "USER") -> CommunicationMetrics:
-        """Computes baseline [0-100] communication metrics across dialogue."""
-        user_utterances = [u for u in utterances if u.speaker.upper() == target_speaker.upper()]
-        counterpart_utterances = [u for u in utterances if u.speaker.upper() != target_speaker.upper()]
+        """Computes dynamic [0-100] communication metrics across dialogue."""
+        if not utterances:
+            return CommunicationMetrics(
+                presence_score=75,
+                assertiveness_score=75,
+                active_listening_score=70,
+                filler_words_detected=[]
+            )
+
+        # Identify user utterances with support for voiceprint/intro names
+        target_up = (target_speaker or "USER").strip().upper()
+        user_synonyms = {target_up, "USER", "SELF", "YOU", "ASHISH"}
+
+        user_utterances = [u for u in utterances if u.speaker.strip().upper() in user_synonyms]
+        counterpart_utterances = [u for u in utterances if u.speaker.strip().upper() not in user_synonyms]
+
+        unique_spks = list(dict.fromkeys(u.speaker for u in utterances))
+        is_solo = len(unique_spks) <= 1
+
+        # If no utterances matched user_synonyms, map based on dialogue structure
+        if not user_utterances and utterances:
+            if is_solo:
+                user_utterances = list(utterances)
+                counterpart_utterances = []
+            else:
+                user_utterances = [u for u in utterances if u.speaker == unique_spks[0]]
+                counterpart_utterances = [u for u in utterances if u.speaker != unique_spks[0]]
 
         user_text = IndicNormalizer.normalize_text(" ".join(u.transcript for u in user_utterances))
         counterpart_text = IndicNormalizer.normalize_text(" ".join(u.transcript for u in counterpart_utterances))
         total_words = len(user_text.split()) or 1
 
-        # 1. Filler words
+        # 1. Filler words & phonetic hesitation
         fillers = cls.detect_fillers(user_text)
         total_fillers = sum(f.count for f in fillers)
         filler_rate_per_100_words = (total_fillers / total_words) * 100
 
-        # 2. Assertiveness
+        # 2. Assertiveness (conviction vs hedging)
         hedging_count, assertive_count = cls.calculate_hedging_vs_assertion(user_text)
-        # Base score 75. Penalize hedging (-8 each), reward assertions (+6 each)
-        raw_assertiveness = 75 - (hedging_count * 8) + (assertive_count * 6)
-        assertiveness_score = max(10, min(100, int(raw_assertiveness)))
+        if assertive_count > 0 or hedging_count > 0:
+            raw_assertiveness = 75 - (hedging_count * 8) + (assertive_count * 6)
+        else:
+            # Baseline certainty for clean declarative speech without hedging
+            raw_assertiveness = 80 if total_words > 8 else 75
+        assertiveness_score = max(15, min(98, int(raw_assertiveness)))
 
-        # 3. Active Listening & Turn-taking / Overlap dynamics
+        # 3. Active Listening & Inquiry / Turn-taking dynamics
         listening_signals = cls.calculate_active_listening_signals(user_text, counterpart_text)
         question_count = user_text.count("?")
 
-        # Interruption and overlap metrics
         user_interruptions = sum(1 for u in user_utterances if getattr(u, "interrupted_speaker", None))
-        counterpart_interruptions = sum(1 for u in counterpart_utterances if getattr(u, "interrupted_speaker", None))
         total_overlaps = sum(1 for u in utterances if getattr(u, "is_overlapping", False))
-
-        # Base listening score 60 + signals/questions - interruption penalty (7 pts per premature cut-in)
         interruption_penalty = min(28, user_interruptions * 7)
-        raw_listening = 60 + (listening_signals * 10) + (question_count * 5) - interruption_penalty
-        active_listening_score = max(10, min(100, int(raw_listening)))
 
-        # 4. Presence Score (Combines brevity, low filler rate, assertiveness, and smooth turn-taking)
-        filler_penalty = min(35, int(filler_rate_per_100_words * 5))
+        if is_solo:
+            # In Solo Practice: measures structured inquiry, self-prompting questions, and clear pacing
+            if question_count > 0:
+                raw_listening = 80 + min(15, question_count * 5)
+            else:
+                raw_listening = 72
+        else:
+            # In Multi-Speaker: measures validation signals, question asking, and avoidance of interruptions
+            raw_listening = 65 + (listening_signals * 10) + (question_count * 5) - interruption_penalty
+
+        active_listening_score = max(15, min(98, int(raw_listening)))
+
+        # 4. Presence Score (Combines brevity, filler freedom, assertiveness, and delivery cadence)
+        filler_penalty = min(35, int(filler_rate_per_100_words * 6))
         raw_presence = (assertiveness_score * 0.5) + (active_listening_score * 0.3) + 20 - filler_penalty
-        presence_score = max(10, min(100, int(raw_presence)))
+        presence_score = max(15, min(98, int(raw_presence)))
 
         return CommunicationMetrics(
             presence_score=presence_score,
