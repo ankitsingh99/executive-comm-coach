@@ -52,11 +52,9 @@ class AmbientVadGate:
     @staticmethod
     def calculate_speech_probability(audio_chunk_16k: "np.ndarray", noise_floor_rms: float = 0.0) -> float:
         """
-        Computes on-device speech probability using energy RMS, crest factor dynamics, and zero-crossing dynamics.
-        Robustly distinguishes speech from ambient room noise, fan hiss, and electrical mic floor.
+        Computes on-device speech probability using adaptive SNR, energy RMS, crest factor dynamics,
+        and zero-crossing dynamics. Adapts dynamically to capture both feeble/whispered speech and loud speech.
         """
-        import numpy as np
-
         if len(audio_chunk_16k) == 0:
             return 0.0
 
@@ -70,29 +68,38 @@ class AmbientVadGate:
         peak = float(np.max(np.abs(samples))) if len(samples) > 0 else 0.0
         crest_factor = peak / (rms + 1e-6)
 
-        # Pure silence threshold
-        if rms < 0.0025:
-            return 0.02
+        # Pure electrical silence floor
+        if rms < 0.0008:
+            return 0.01
 
         # Zero-crossing rate
         zero_crossings = np.nonzero(np.diff(samples > 0))[0]
         zcr = float(len(zero_crossings) / max(1, len(samples)))
 
-        # Absolute and relative energy scoring
-        energy_score = min(1.0, max(0.0, (rms - 0.003) / 0.022))
+        # Human vocal frequency zero-crossing range (roughly 85Hz - 3400Hz at 16kHz)
+        zcr_valid = 0.008 <= zcr <= 0.48
+        crest_valid = crest_factor >= 1.7
 
-        # Human speech exhibits high dynamic crest factor (> 2.0) and zcr in voice range (0.012 - 0.45)
-        zcr_valid = 0.012 <= zcr <= 0.45
-        crest_valid = crest_factor >= 1.8
-
+        # Spectral harmony & formant structure score
         if zcr_valid and crest_valid:
             spectral_score = 1.0
         elif zcr_valid or crest_valid:
-            spectral_score = 0.6
+            spectral_score = 0.65
         else:
-            spectral_score = 0.2
+            spectral_score = 0.15
 
-        prob = (0.75 * energy_score) + (0.25 * spectral_score)
+        # Adaptive Energy / SNR Scoring:
+        if noise_floor_rms > 0.0002:
+            # Dynamic SNR relative to tracked noise floor
+            snr_db = float(20.0 * np.log10(max(1e-5, rms) / max(1e-5, noise_floor_rms)))
+            # +3dB SNR is early speech onset; +12dB SNR is full speech
+            snr_score = float(np.clip((snr_db - 2.5) / 10.0, 0.0, 1.0))
+            prob = (0.65 * snr_score) + (0.35 * spectral_score)
+        else:
+            # Absolute sensitive energy scoring for quiet environments
+            energy_score = float(np.clip((rms - 0.0012) / 0.018, 0.0, 1.0))
+            prob = (0.70 * energy_score) + (0.30 * spectral_score)
+
         return float(np.clip(prob, 0.0, 1.0))
 
     def evaluate_frame(self, timestamp_ms: float, speech_prob: float) -> Tuple[bool, str]:

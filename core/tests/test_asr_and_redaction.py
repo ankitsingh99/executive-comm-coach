@@ -140,3 +140,25 @@ def test_pii_redactor_all_categories():
     assert counts["AADHAAR"] == 1
     assert counts["FINANCIAL"] == 1
     assert counts["CREDENTIAL"] == 1
+
+
+def test_adaptive_mic_sensitivity_feeble_and_loud_speech():
+    import numpy as np
+
+    # 1. Pure quiet electrical floor
+    silence = np.zeros(1600, dtype=np.int16)
+    prob_silence = AmbientVadGate.calculate_speech_probability(silence, noise_floor_rms=0.0005)
+    assert prob_silence < 0.10
+
+    # 2. Faint / Feeble vocal whisper in quiet room (noise floor = 0.0008, speech RMS = 0.0028)
+    t = np.linspace(0, 0.1, 1600)
+    # Synthetic harmonic vocal signal (150Hz + 300Hz harmonic) with low amplitude (feeble speech)
+    feeble_vocal = ((np.sin(2 * np.pi * 150 * t) + 0.5 * np.sin(2 * np.pi * 300 * t)) * 120.0).astype(np.int16)
+    prob_feeble = AmbientVadGate.calculate_speech_probability(feeble_vocal, noise_floor_rms=0.0008)
+    # Adaptive SNR should capture feeble speech with confidence
+    assert prob_feeble > 0.25
+
+    # 3. Loud direct speech (amplitude ~ 20000)
+    loud_vocal = ((np.sin(2 * np.pi * 180 * t) + 0.4 * np.sin(2 * np.pi * 360 * t)) * 20000.0).astype(np.int16)
+    prob_loud = AmbientVadGate.calculate_speech_probability(loud_vocal, noise_floor_rms=0.0020)
+    assert prob_loud >= 0.85

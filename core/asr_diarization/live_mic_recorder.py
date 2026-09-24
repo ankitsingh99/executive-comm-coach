@@ -73,6 +73,11 @@ class LiveMicRecorder:
         total_recorded_sec = 0.0
         block_size = int(self.sample_rate * chunk_duration_sec)
 
+        # Adaptive Acoustic Sensitivity & Automatic Gain Control (AGC) State
+        noise_floor_rms = 0.0015
+        adaptive_gain = float(gain_boost)
+        target_speech_rms = 0.040
+
         def audio_callback(indata, frames, time_info, status):
             if status:
                 pass
@@ -93,30 +98,58 @@ class LiveMicRecorder:
                     except queue.Empty:
                         continue
 
-                    # Apply digital gain boost in memory
-                    if gain_boost != 1.0:
-                        boosted = np.clip(chunk_raw.astype(np.float32) * gain_boost, -32768.0, 32767.0).astype(np.int16)
-                    else:
-                        boosted = chunk_raw
+                    raw_float = chunk_raw.astype(np.float32) / 32768.0
+                    cur_raw_rms = float(np.sqrt(np.mean(raw_float**2))) if len(raw_float) > 0 else 0.0
 
+                    # 1. Asymmetric Background Noise Floor Tracker
+                    if cur_raw_rms < noise_floor_rms:
+                        # Drop floor fast when room gets quieter
+                        noise_floor_rms = 0.80 * noise_floor_rms + 0.20 * cur_raw_rms
+                    elif cur_raw_rms < noise_floor_rms * 2.2:
+                        # Rise floor very slowly to prevent speech from elevating the noise floor
+                        noise_floor_rms = 0.985 * noise_floor_rms + 0.015 * cur_raw_rms
+                    noise_floor_rms = float(np.clip(noise_floor_rms, 0.0003, 0.035))
+
+                    # 2. Dynamic SNR and Adaptive RMS Threshold
+                    snr_db = float(20.0 * np.log10(max(1e-5, cur_raw_rms) / max(1e-5, noise_floor_rms)))
+                    # In quiet rooms, threshold drops dynamically down to 0.0010 to pick up faint/whispered speech
+                    dyn_rms_threshold = max(0.0010, noise_floor_rms * 1.35 + 0.0004)
+
+                    # 3. Dynamic Voice Probability Calculation
+                    speech_prob = gate.calculate_speech_probability(
+                        chunk_raw.flatten(), noise_floor_rms=noise_floor_rms
+                    )
+
+                    # 4. Adaptive Voice Activity Gate
+                    is_voice_active = (
+                        speech_prob >= 0.28
+                        or (cur_raw_rms >= dyn_rms_threshold and speech_prob >= 0.12)
+                        or (snr_db >= 3.5 and speech_prob >= 0.15)
+                    )
+
+                    # 5. Adaptive Automatic Gain Control (AGC)
+                    if is_voice_active:
+                        # Scale feeble/faint speech up to 4.0x; throttle loud speech down to prevent distortion
+                        desired_gain = float(np.clip(target_speech_rms / max(0.006, cur_raw_rms), 0.75, 4.0)) * (
+                            gain_boost / 1.35 if gain_boost else 1.0
+                        )
+                        adaptive_gain = 0.82 * adaptive_gain + 0.18 * desired_gain
+                    else:
+                        adaptive_gain = 0.96 * adaptive_gain + 0.04 * gain_boost
+
+                    # Apply Adaptive Gain with soft limiter
+                    boosted = np.clip(chunk_raw.astype(np.float32) * adaptive_gain, -32768.0, 32767.0).astype(np.int16)
                     chunk_flat = boosted.flatten()
                     recorded_frames.append(chunk_flat)
                     dur = len(chunk_flat) / float(self.sample_rate)
                     total_recorded_sec += dur
 
-                    # RMS calculation
-                    float_samples = chunk_flat.astype(np.float32) / 32768.0
-                    cur_rms = float(np.sqrt(np.mean(float_samples**2))) if len(float_samples) > 0 else 0.0
-
-                    # Evaluate speech probability
-                    speech_prob = gate.calculate_speech_probability(chunk_flat)
-                    is_voice_active = speech_prob >= 0.32 or cur_rms >= 0.0055
-
                     if is_voice_active:
                         has_spoken = True
                         silence_elapsed = 0.0
+                        snr_sign = "+" if snr_db >= 0 else ""
                         print(
-                            f"  [SPEAKING] {total_recorded_sec:.1f}s recorded | Active Dialogue (Voice: {int(speech_prob*100)}%) [Press Enter to finish]    ",
+                            f"  [SPEAKING] {total_recorded_sec:.1f}s | Active (Voice: {int(speech_prob*100)}% | Gain: {adaptive_gain:.1f}x | SNR: {snr_sign}{snr_db:.0f}dB) [Press Enter to finish]    ",
                             end="\r",
                             flush=True,
                         )
@@ -143,7 +176,7 @@ class LiveMicRecorder:
                                 break
 
                             print(
-                                f"  [LISTENING] {total_recorded_sec:.1f}s | Waiting for dialogue to begin... [Press Enter to finish]          ",
+                                f"  [LISTENING] {total_recorded_sec:.1f}s | Adaptive Sens (Floor: {noise_floor_rms*1000:.1f}m | Gain: {adaptive_gain:.1f}x) [Press Enter to finish]   ",
                                 end="\r",
                                 flush=True,
                             )
@@ -157,6 +190,16 @@ class LiveMicRecorder:
 
         # Concatenate and write directly to WAV
         full_audio = np.concatenate(recorded_frames)
+
+        # 6. Final Waveform Normalization for Crystal-Clear ASR Audio
+        if len(full_audio) > 0:
+            audio_f = full_audio.astype(np.float32)
+            peak_amp = np.max(np.abs(audio_f))
+            if peak_amp > 100.0:
+                # Target peak at 85% of full scale (27850 / 32768)
+                norm_gain = min(3.5, 27850.0 / peak_amp)
+                full_audio = np.clip(audio_f * norm_gain, -32768.0, 32767.0).astype(np.int16)
+
         with wave.open(output_wav_path, "wb") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
