@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -48,6 +49,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Ensure system status & nav bars match dark background theme
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        window.statusBarColor = 0xFF070A13.toInt()
+        window.navigationBarColor = 0xFF0E1424.toInt()
 
         // Pre-request microphone permission on Android 10+
         requestAudioPermissions()
@@ -80,19 +86,22 @@ class MainActivity : ComponentActivity() {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                setBackgroundColor(0xFF070A13.toInt()) // Match dark theme background
+                setBackgroundColor(0xFF070A13.toInt())
+                isVerticalScrollBarEnabled = false
+                isHorizontalScrollBarEnabled = false
 
                 settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
-                    databaseEnabled = true
                     mediaPlaybackRequiresUserGesture = false
                     allowFileAccess = true
                     allowContentAccess = true
-                    useWideViewPort = true
-                    loadWithOverviewMode = true
+                    // Ensure accurate mobile viewport scaling for Google Pixel
+                    useWideViewPort = false
+                    loadWithOverviewMode = false
                     cacheMode = WebSettings.LOAD_DEFAULT
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    textZoom = 100
                 }
 
                 webViewClient = object : WebViewClient() {
