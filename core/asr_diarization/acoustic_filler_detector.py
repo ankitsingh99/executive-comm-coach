@@ -7,13 +7,14 @@ spectral flux, zero-crossing rate, and formant/nasal resonance band energy ratio
 
 import os
 import wave
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-from typing import List, Optional, Dict, Any
 
 try:
-    from ..engine.schema import Utterance, AcousticFillerEvent
+    from ..engine.schema import AcousticFillerEvent, Utterance
 except (ImportError, ValueError):
-    from engine.schema import Utterance, AcousticFillerEvent
+    from engine.schema import AcousticFillerEvent, Utterance
 
 
 class AcousticFillerDetector:

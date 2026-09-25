@@ -5,14 +5,15 @@ Operates 100% in-memory without spawning repetitive subprocesses, eliminating au
 """
 
 import os
-import sys
-import select
-import time
 import queue
-import threading
+import select
+import sys
 import tempfile
+import threading
+import time
 import wave
 from typing import Optional
+
 import numpy as np
 
 from .vad_gater import AmbientVadGate

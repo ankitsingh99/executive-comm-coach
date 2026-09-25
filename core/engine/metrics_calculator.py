@@ -5,8 +5,9 @@ Supports bilingual English, Hindi, and code-mixed Hinglish.
 """
 
 import re
-from typing import List, Dict, Tuple, Optional, Any
-from .schema import Utterance, FillerWordMetric, CommunicationMetrics
+from typing import Any, Dict, List, Optional, Tuple
+
+from .schema import CommunicationMetrics, FillerWordMetric, Utterance
 
 try:
     from ..asr_diarization.indic_normalizer import IndicNormalizer

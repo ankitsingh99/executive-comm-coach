@@ -2,10 +2,10 @@
 Unit tests for Multilingual & Hinglish Coaching, Takeaways, and Feedback.
 """
 
-from engine.schema import Utterance, ConversationSession
+from engine.action_item_extractor import ActionItemExtractor
 from engine.coaching_engine import ExecutiveCoachingEngine
 from engine.metrics_calculator import MetricsCalculator
-from engine.action_item_extractor import ActionItemExtractor
+from engine.schema import ConversationSession, Utterance
 
 
 def test_hinglish_fillers_and_hedging_detection():

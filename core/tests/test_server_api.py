@@ -4,9 +4,10 @@ Unit tests for Emulator Server API Endpoints including Transcription Analysis.
 
 import json
 from datetime import datetime
+from unittest.mock import MagicMock
+
 from engine.transcription_analyzer import TranscriptionAnalyzer
 from server import EmulatorHandler
-from unittest.mock import MagicMock
 
 
 def test_server_detect_actions_api():
@@ -72,8 +73,8 @@ def test_server_transcription_analysis_payload_structure():
 
 def test_server_evaluate_payload_conversational_intelligence():
     """Verify that server evaluation pipeline produces complete conversational intelligence."""
-    from engine.schema import ConversationSession, Utterance
     from engine.coaching_engine import ExecutiveCoachingEngine
+    from engine.schema import ConversationSession, Utterance
 
     session = ConversationSession(
         session_id="test_server_eval",

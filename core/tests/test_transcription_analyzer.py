@@ -3,9 +3,10 @@ Unit tests for Transcription Analyzer Engine (Key Highlights & Potential Tasks).
 """
 
 from datetime import datetime
-from engine.schema import Utterance, ConversationSession
-from engine.transcription_analyzer import TranscriptionAnalyzer
+
 from engine.action_item_extractor import ActionItemExtractor
+from engine.schema import ConversationSession, Utterance
+from engine.transcription_analyzer import TranscriptionAnalyzer
 
 
 def test_transcription_analyzer_key_highlights():
@@ -93,10 +94,12 @@ def test_transcription_analyzer_full_analysis():
 def test_transcription_analyzer_gemini_mock():
     """Test LLM-based analysis with Gemini response mocking and fallback."""
     import json
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     dialogue = [
-        Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="We will deploy the caching subsystem on Friday.")
+        Utterance(
+            speaker="USER", start_time=0.0, end_time=4.0, transcript="We will deploy the caching subsystem on Friday."
+        )
     ]
 
     mock_llm_json = {
@@ -108,7 +111,7 @@ def test_transcription_analyzer_gemini_mock():
                 "speaker": "USER",
                 "verbatim_quote": "We will deploy the caching subsystem on Friday.",
                 "category": "Milestone",
-                "importance": "High"
+                "importance": "High",
             }
         ],
         "potential_tasks": [
@@ -120,11 +123,11 @@ def test_transcription_analyzer_gemini_mock():
                 "target_time_inferred_ampm": "PM",
                 "verbatim_quote": "We will deploy the caching subsystem on Friday.",
                 "category": "Deliverable / Commitment",
-                "urgency": "High"
+                "urgency": "High",
             }
         ],
         "topics_discussed": ["Caching Subsystem", "Deployment Schedule"],
-        "sentiment_tone": "Decisive & Collaborative"
+        "sentiment_tone": "Decisive & Collaborative",
     }
 
     analyzer = TranscriptionAnalyzer(api_key="mock_key")
@@ -133,8 +136,10 @@ def test_transcription_analyzer_gemini_mock():
     mock_resp.text = f"```json\n{json.dumps(mock_llm_json)}\n```"
     mock_client.models.generate_content.return_value = mock_resp
 
-    with patch.object(analyzer, "_get_client", return_value=mock_client), \
-         patch.object(analyzer, "is_gemini_available", return_value=True):
+    with (
+        patch.object(analyzer, "_get_client", return_value=mock_client),
+        patch.object(analyzer, "is_gemini_available", return_value=True),
+    ):
         res = analyzer.analyze(dialogue, use_gemini=True)
         assert len(res.key_highlights) == 1
         assert res.key_highlights[0].category == "Milestone"
@@ -153,7 +158,7 @@ def test_transcription_analyzer_gemini_mock():
         session_id="session_test",
         power_axis="LATERAL",
         target_speaker="USER",
-        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Let's sync up later today.")]
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Let's sync up later today.")],
     )
     res_session = analyzer.analyze(session, use_gemini=False)
     assert res_session.session_id == "transcription_analysis" or res_session.session_id == "session_test"
@@ -165,13 +170,16 @@ def test_transcription_analyzer_helper_branches():
     analyzer = TranscriptionAnalyzer()
 
     # 1. Sentiment tones
-    assert analyzer._detect_sentiment_tone("We have a major blocker and risk in deployment.") == "Urgent & Issue-Focused"
+    assert (
+        analyzer._detect_sentiment_tone("We have a major blocker and risk in deployment.") == "Urgent & Issue-Focused"
+    )
     assert analyzer._detect_sentiment_tone("This is great and we are perfectly aligned.") == "Positive & Collaborative"
     assert analyzer._detect_sentiment_tone("We will ship and deliver on Thursday.") == "Decisive & Action-Oriented"
     assert analyzer._detect_sentiment_tone("Hello, how is the weather today?") == "Calm & Constructive"
 
     # 2. Summary variations
     from engine.schema import ActionItem, KeyHighlight
+
     utts = [Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Test")]
     # Highlights only
     hl = [KeyHighlight(headline="H", takeaway="Core architecture.", speaker="USER", verbatim_quote="q")]
@@ -209,7 +217,7 @@ def test_transcription_analyzer_helper_branches():
 
 def test_transcription_analyzer_client_and_gemini_fallbacks():
     """Test client error handling, is_gemini_available, and fallback when Gemini throws exception."""
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     analyzer = TranscriptionAnalyzer(api_key="test_key")
 
@@ -222,9 +230,13 @@ def test_transcription_analyzer_client_and_gemini_fallbacks():
     mock_client = MagicMock()
     mock_client.models.generate_content.side_effect = Exception("API 500 error")
 
-    utts = [Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="I will send the report by 5 PM tomorrow.")]
-    with patch.object(analyzer, "_get_client", return_value=mock_client), \
-         patch.object(analyzer, "is_gemini_available", return_value=True):
+    utts = [
+        Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="I will send the report by 5 PM tomorrow.")
+    ]
+    with (
+        patch.object(analyzer, "_get_client", return_value=mock_client),
+        patch.object(analyzer, "is_gemini_available", return_value=True),
+    ):
         res = analyzer.analyze(utts, use_gemini=True)
         # Should gracefully fallback to deterministic NLP analysis
         assert res is not None
@@ -236,10 +248,11 @@ def test_transcription_analyzer_client_and_gemini_fallbacks():
     mock_client.models.generate_content.side_effect = None
     mock_client.models.generate_content.return_value = mock_response
 
-    with patch.object(analyzer, "_get_client", return_value=mock_client), \
-         patch.object(analyzer, "is_gemini_available", return_value=True):
+    with (
+        patch.object(analyzer, "_get_client", return_value=mock_client),
+        patch.object(analyzer, "is_gemini_available", return_value=True),
+    ):
         res_no_tasks = analyzer.analyze(utts, use_gemini=True)
         assert res_no_tasks is not None
         # Tasks should have been extracted via deterministic fallback
         assert len(res_no_tasks.potential_tasks) >= 1
-

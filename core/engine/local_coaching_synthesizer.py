@@ -5,50 +5,50 @@ Performs deep semantic intent classification, grammatical transformation,
 and generates customized, contextual Executive BLUF coaching for real speech.
 """
 
-import re
 import json
-import urllib.request
+import re
 import urllib.error
+import urllib.request
 from typing import List, Optional
 
 try:
-    from .schema import (
-        Utterance,
-        ConversationSession,
-        ExecutiveCoachingEvaluation,
-        CommunicationMetrics,
-        TopStrength,
-        AreaForImprovement,
+    from ..asr_diarization.indic_normalizer import IndicNormalizer
+    from ..privacy.pii_redactor import PIIRedactor
+    from .conversational_intelligence_engine import ConversationalIntelligenceEngine
+    from .metrics_calculator import (
+        ASSERTIVE_PATTERNS,
+        HEDGING_PATTERNS,
+        MetricsCalculator,
     )
     from .persona_ontology import PersonaOntologyEngine, PersonaProfile, PowerAxis
-    from .metrics_calculator import (
-        MetricsCalculator,
-        HEDGING_PATTERNS,
-        ASSERTIVE_PATTERNS,
-    )
-    from .transcription_analyzer import TranscriptionAnalyzer
-    from .conversational_intelligence_engine import ConversationalIntelligenceEngine
-    from ..privacy.pii_redactor import PIIRedactor
-    from ..asr_diarization.indic_normalizer import IndicNormalizer
-except (ImportError, ValueError):
-    from engine.schema import (
-        Utterance,
+    from .schema import (
+        AreaForImprovement,
+        CommunicationMetrics,
         ConversationSession,
         ExecutiveCoachingEvaluation,
-        CommunicationMetrics,
         TopStrength,
-        AreaForImprovement,
+        Utterance,
+    )
+    from .transcription_analyzer import TranscriptionAnalyzer
+except (ImportError, ValueError):
+    from asr_diarization.indic_normalizer import IndicNormalizer
+    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
+    from engine.metrics_calculator import (
+        ASSERTIVE_PATTERNS,
+        HEDGING_PATTERNS,
+        MetricsCalculator,
     )
     from engine.persona_ontology import PersonaOntologyEngine, PersonaProfile, PowerAxis
-    from engine.metrics_calculator import (
-        MetricsCalculator,
-        HEDGING_PATTERNS,
-        ASSERTIVE_PATTERNS,
+    from engine.schema import (
+        AreaForImprovement,
+        CommunicationMetrics,
+        ConversationSession,
+        ExecutiveCoachingEvaluation,
+        TopStrength,
+        Utterance,
     )
     from engine.transcription_analyzer import TranscriptionAnalyzer
-    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
     from privacy.pii_redactor import PIIRedactor
-    from asr_diarization.indic_normalizer import IndicNormalizer
 
 
 class LocalCoachingSynthesizer:

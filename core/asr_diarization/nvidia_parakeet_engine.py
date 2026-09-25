@@ -7,8 +7,8 @@ import os
 from typing import List
 
 try:
-    import torch
     import librosa
+    import torch
 
     TORCH_AVAILABLE = True
 except ImportError:
@@ -39,7 +39,7 @@ class NvidiaParakeetEngine:
 
     def _load_model(self):
         if self._model is None or self._processor is None:
-            from transformers import AutoProcessor, AutoModelForCTC
+            from transformers import AutoModelForCTC, AutoProcessor
 
             self._processor = AutoProcessor.from_pretrained(self.model_id)
             self._model = AutoModelForCTC.from_pretrained(self.model_id).to(self.device)

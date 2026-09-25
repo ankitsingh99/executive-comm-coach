@@ -5,17 +5,18 @@ emotional trajectory, consensus agreement extraction, and open loops detection.
 """
 
 import pytest
-from core.engine.schema import (
-    Utterance,
-    ConversationSession,
-    AcousticAnalysisResult,
-    ConversationalDynamicsMetric,
-    EmotionalTrajectoryPoint,
-    AgreementPoint,
-    UnresolvedOpenLoop,
-)
+
 from core.engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
 from core.engine.local_coaching_synthesizer import LocalCoachingSynthesizer
+from core.engine.schema import (
+    AcousticAnalysisResult,
+    AgreementPoint,
+    ConversationalDynamicsMetric,
+    ConversationSession,
+    EmotionalTrajectoryPoint,
+    UnresolvedOpenLoop,
+    Utterance,
+)
 
 
 def test_conversational_dynamics_talk_time_and_latency():
@@ -169,25 +170,30 @@ def test_conversational_intelligence_acoustic_tones_and_edge_cases():
     assert dyn_empty.user_talk_time_pct == 50.0
 
     # 2. Vocal tension acoustic branches
-    from engine.schema import AcousticAnalysisResult
     utts = [
         Utterance(speaker="USER", start_time=0.0, end_time=0.0, transcript="ok"),
-        Utterance(speaker="COUNTERPART", start_time=0.0, end_time=0.0, transcript="sure")
+        Utterance(speaker="COUNTERPART", start_time=0.0, end_time=0.0, transcript="sure"),
     ]
 
     # Tense
     ac_tense = AcousticAnalysisResult(overall_tone="Tense & Strained")
-    dyn_tense = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts, target_speaker="USER", acoustic_result=ac_tense)
+    dyn_tense = ConversationalIntelligenceEngine.compute_conversational_dynamics(
+        utts, target_speaker="USER", acoustic_result=ac_tense
+    )
     assert dyn_tense.vocal_tension_index == "Elevated Tension / High Strain"
 
     # Monotone
     ac_mono = AcousticAnalysisResult(overall_tone="Monotone / Flat")
-    dyn_mono = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts, target_speaker="USER", acoustic_result=ac_mono)
+    dyn_mono = ConversationalIntelligenceEngine.compute_conversational_dynamics(
+        utts, target_speaker="USER", acoustic_result=ac_mono
+    )
     assert dyn_mono.vocal_tension_index == "Subdued / Guarded"
 
     # Vibrant
     ac_vib = AcousticAnalysisResult(overall_tone="Vibrant & Expressive")
-    dyn_vib = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts, target_speaker="USER", acoustic_result=ac_vib)
+    dyn_vib = ConversationalIntelligenceEngine.compute_conversational_dynamics(
+        utts, target_speaker="USER", acoustic_result=ac_vib
+    )
     assert dyn_vib.vocal_tension_index == "High Energy & Expressive"
 
     # Zero user words (counterpart speaks only)

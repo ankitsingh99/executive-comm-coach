@@ -6,17 +6,17 @@ to automatically gauge and calibrate the relational communication context (Power
 """
 
 import re
-from typing import List, Dict, Optional
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 try:
-    from .schema import Utterance, AcousticAnalysisResult
-    from .persona_ontology import PowerAxis
     from ..asr_diarization.indic_normalizer import IndicNormalizer
+    from .persona_ontology import PowerAxis
+    from .schema import AcousticAnalysisResult, Utterance
 except (ImportError, ValueError):
-    from engine.schema import Utterance, AcousticAnalysisResult
-    from engine.persona_ontology import PowerAxis
     from asr_diarization.indic_normalizer import IndicNormalizer
+    from engine.persona_ontology import PowerAxis
+    from engine.schema import AcousticAnalysisResult, Utterance
 
 
 @dataclass

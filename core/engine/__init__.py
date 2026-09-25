@@ -1,35 +1,34 @@
 """Core Executive Communication Engine package."""
 
-from .schema import (
-    FillerWordMetric,
-    CommunicationMetrics,
-    TopStrength,
-    AreaForImprovement,
-    ActionItem,
-    KeyHighlight,
-    PotentialTask,
-    TranscriptionAnalysisResult,
-    ExecutiveCoachingEvaluation,
-    Utterance,
-    ConversationSession,
-)
-from .persona_ontology import (
-    PowerAxis,
-    PersonaProfile,
-    EvaluationRubricDimension,
-    PersonaOntologyEngine,
-    UPWARD_RUBRIC,
-    LATERAL_RUBRIC,
-    DOWNWARD_RUBRIC,
-)
-from .metrics_calculator import MetricsCalculator
-from .temporal_resolver import TemporalResolver, TemporalResolution
 from .action_item_extractor import ActionItemExtractor
-from .transcription_analyzer import TranscriptionAnalyzer
 from .coaching_engine import ExecutiveCoachingEngine
 from .gemini_coaching_engine import GeminiCoachingSynthesizer
-
 from .local_coaching_synthesizer import LocalCoachingSynthesizer
+from .metrics_calculator import MetricsCalculator
+from .persona_ontology import (
+    DOWNWARD_RUBRIC,
+    LATERAL_RUBRIC,
+    UPWARD_RUBRIC,
+    EvaluationRubricDimension,
+    PersonaOntologyEngine,
+    PersonaProfile,
+    PowerAxis,
+)
+from .schema import (
+    ActionItem,
+    AreaForImprovement,
+    CommunicationMetrics,
+    ConversationSession,
+    ExecutiveCoachingEvaluation,
+    FillerWordMetric,
+    KeyHighlight,
+    PotentialTask,
+    TopStrength,
+    TranscriptionAnalysisResult,
+    Utterance,
+)
+from .temporal_resolver import TemporalResolution, TemporalResolver
+from .transcription_analyzer import TranscriptionAnalyzer
 
 PersonaOntology = PersonaOntologyEngine
 

@@ -3,17 +3,17 @@ Automated unit tests for LLM Executive Coaching Engine and Schemas.
 """
 
 import pytest
+from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.persona_ontology import PowerAxis
 from engine.schema import (
-    Utterance,
+    AreaForImprovement,
+    CommunicationMetrics,
     ConversationSession,
     ExecutiveCoachingEvaluation,
-    CommunicationMetrics,
-    TopStrength,
-    AreaForImprovement,
     FillerWordMetric,
+    TopStrength,
+    Utterance,
 )
-from engine.persona_ontology import PowerAxis
-from engine.coaching_engine import ExecutiveCoachingEngine
 
 
 @pytest.fixture
@@ -115,22 +115,28 @@ def test_phonetic_and_vocal_fillers_detection():
 
 def test_coaching_engine_gemini_synthesis_flow(sample_session):
     """Test ExecutiveCoachingEngine routing to Gemini synthesizer when available."""
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     engine = ExecutiveCoachingEngine(use_local_only=False)
     mock_gemini_eval = ExecutiveCoachingEvaluation(
         persona_context="UPWARD Executive Leadership",
         metrics=CommunicationMetrics(presence_score=92),
         top_strengths=[TopStrength(observation="Decisive presence", verbatim_quote="We have decided.")],
-        areas_for_improvement=[AreaForImprovement(critique="Direct opening", verbatim_quote="I just think", coached_phrasing="We will ship.")],
+        areas_for_improvement=[
+            AreaForImprovement(
+                critique="Direct opening", verbatim_quote="I just think", coached_phrasing="We will ship."
+            )
+        ],
         action_items=[],
         key_highlights=[],
         longitudinal_summary="High-impact delivery.",
-        persona_alignment_notes="Optimal BLUF alignment."
+        persona_alignment_notes="Optimal BLUF alignment.",
     )
 
-    with patch.object(engine.gemini_synthesizer, "is_available", return_value=True), \
-         patch.object(engine.gemini_synthesizer, "synthesize", return_value=mock_gemini_eval):
+    with (
+        patch.object(engine.gemini_synthesizer, "is_available", return_value=True),
+        patch.object(engine.gemini_synthesizer, "synthesize", return_value=mock_gemini_eval),
+    ):
         res = engine.evaluate_session(sample_session, use_llm=True)
         assert res.metrics.presence_score == 92
         assert res.longitudinal_summary == "High-impact delivery."
@@ -154,7 +160,7 @@ def test_metrics_calculator_phrase_fillers_and_fallbacks():
     # Multi-speaker fallback (maps unique_spks[0])
     utts_multi = [
         Utterance(speaker="UNKNOWN_A", start_time=0.0, end_time=2.0, transcript="We should deploy now."),
-        Utterance(speaker="UNKNOWN_B", start_time=2.5, end_time=4.0, transcript="Agreed.")
+        Utterance(speaker="UNKNOWN_B", start_time=2.5, end_time=4.0, transcript="Agreed."),
     ]
     m_multi = MetricsCalculator.analyze_dialogue(utts_multi, target_speaker="CUSTOM_USER")
     assert m_multi.presence_score > 0

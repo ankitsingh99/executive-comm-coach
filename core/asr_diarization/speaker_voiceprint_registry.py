@@ -4,13 +4,14 @@ Extracts on-device acoustic voice embeddings (pitch contours, spectral timbre, f
 to enroll, identify, and recall known speakers across conversations without manual re-tagging.
 """
 
-import os
 import json
+import os
 import wave
-import numpy as np
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Tuple, Optional, Any
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 try:
     from ..config import DATA_DIR

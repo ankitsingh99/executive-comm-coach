@@ -6,7 +6,7 @@ and assigns rich speaker tags for both dialogue and solo speeches.
 """
 
 import re
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 try:
     from ..engine.schema import Utterance

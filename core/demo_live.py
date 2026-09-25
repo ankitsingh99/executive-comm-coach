@@ -3,21 +3,21 @@ Executive Communication Coach - First Live Interactive Demo.
 Walks through a realistic corporate Hinglish conversation step-by-step on local device.
 """
 
-import sys
 import os
+import sys
 import time
 
 # Ensure path resolution
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from engine.schema import ConversationSession, Utterance
-from engine.persona_ontology import PowerAxis
-from engine.coaching_engine import ExecutiveCoachingEngine
-from asr_diarization.vad_gater import AmbientVadGate
 from asr_diarization.local_stt_engine import LocalSTTEngine
-from privacy.pii_redactor import PIIRedactor
-from privacy.dpdp_compliance import DPDPComplianceManager
+from asr_diarization.vad_gater import AmbientVadGate
 from config import DATA_DIR
+from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.persona_ontology import PowerAxis
+from engine.schema import ConversationSession, Utterance
+from privacy.dpdp_compliance import DPDPComplianceManager
+from privacy.pii_redactor import PIIRedactor
 
 
 def print_step_header(step_num: int, title: str):

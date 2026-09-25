@@ -5,16 +5,16 @@ from dialogue turns with ownership, temporal anchors, and urgency classification
 """
 
 import re
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 try:
-    from .schema import Utterance, ActionItem
-    from .temporal_resolver import TemporalResolver
     from ..asr_diarization.indic_normalizer import IndicNormalizer
+    from .schema import ActionItem, Utterance
+    from .temporal_resolver import TemporalResolver
 except (ImportError, ValueError):
-    from engine.schema import Utterance, ActionItem
-    from engine.temporal_resolver import TemporalResolver
     from asr_diarization.indic_normalizer import IndicNormalizer
+    from engine.schema import ActionItem, Utterance
+    from engine.temporal_resolver import TemporalResolver
 
 
 # Regex for temporal dates, days, times, and deadlines (English + Hinglish)

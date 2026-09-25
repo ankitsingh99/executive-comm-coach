@@ -2,11 +2,11 @@
 Automated tests for ASR, Diarization, VAD Acoustic Gating, and Privacy Redaction.
 """
 
-from asr_diarization.vad_gater import AmbientVadGate
 from asr_diarization.diarizer import DiarizationEngine
 from asr_diarization.sarvam_client import SarvamSpeechClient
-from privacy.pii_redactor import PIIRedactor
+from asr_diarization.vad_gater import AmbientVadGate
 from engine.schema import Utterance
+from privacy.pii_redactor import PIIRedactor
 
 
 def test_vad_acoustic_gater_trigger():

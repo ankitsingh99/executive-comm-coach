@@ -1,9 +1,9 @@
 import pytest
 from asr_diarization.indic_normalizer import IndicNormalizer
-from engine.metrics_calculator import MetricsCalculator
 from engine.action_item_extractor import ActionItemExtractor
-from engine.schema import Utterance, ConversationSession
 from engine.local_coaching_synthesizer import LocalCoachingSynthesizer
+from engine.metrics_calculator import MetricsCalculator
+from engine.schema import ConversationSession, Utterance
 
 
 def test_devanagari_detection_and_transliteration():

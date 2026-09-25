@@ -5,6 +5,7 @@ and 3-second non-speech buffer purging.
 """
 
 from typing import List, Tuple
+
 import numpy as np
 
 try:

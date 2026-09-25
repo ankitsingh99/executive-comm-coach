@@ -10,8 +10,8 @@ Demonstrates:
   7. DPDP Statutory Erasure Wipe
 """
 
-import sys
 import os
+import sys
 from datetime import datetime, timezone
 
 # Ensure package is resolvable
@@ -20,9 +20,9 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, current_dir)
 sys.path.insert(0, parent_dir)
 
-from engine import ExecutiveCoachingEngine, ConversationSession, Utterance, PowerAxis
-from asr_diarization import AmbientVadGate, SarvamSpeechClient, DiarizationEngine
-from privacy import PIIRedactor, DPDPComplianceManager
+from asr_diarization import AmbientVadGate, DiarizationEngine, SarvamSpeechClient
+from engine import ConversationSession, ExecutiveCoachingEngine, PowerAxis, Utterance
+from privacy import DPDPComplianceManager, PIIRedactor
 
 
 def run_pipeline_demo():

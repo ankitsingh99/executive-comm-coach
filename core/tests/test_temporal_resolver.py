@@ -3,6 +3,7 @@ Unit tests for Smart Temporal & AM/PM Next-Occurrence Resolver Engine.
 """
 
 from datetime import datetime
+
 from engine.temporal_resolver import TemporalResolver
 
 
@@ -158,7 +159,9 @@ def test_temporal_resolver_extended_deadlines_and_calendar_dates():
     assert "Next Week" in res_nw.formatted_label
 
     # 4. Tonight
-    res_tonight = TemporalResolver.resolve_time_expression("call you tonight at 8", ref_dt=datetime(2026, 9, 12, 10, 0, 0))
+    res_tonight = TemporalResolver.resolve_time_expression(
+        "call you tonight at 8", ref_dt=datetime(2026, 9, 12, 10, 0, 0)
+    )
     assert res_tonight is not None
     assert res_tonight.inferred_ampm == "PM"
 

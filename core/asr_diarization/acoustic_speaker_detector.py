@@ -7,15 +7,16 @@ classify vocal tone dynamics across all communication modes.
 
 import os
 import wave
-import numpy as np
 from typing import List, Tuple
 
+import numpy as np
+
 try:
-    from ..engine.schema import SpeakerAcousticProfile, AcousticAnalysisResult
+    from ..engine.schema import AcousticAnalysisResult, SpeakerAcousticProfile
     from .acoustic_filler_detector import AcousticFillerDetector
 except (ImportError, ValueError):
-    from engine.schema import SpeakerAcousticProfile, AcousticAnalysisResult
     from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
+    from engine.schema import AcousticAnalysisResult, SpeakerAcousticProfile
 
 
 class AcousticSpeakerToneDetector:

@@ -4,15 +4,16 @@ NLP heuristics, Hinglish synthesis, BLUF generation, and Ollama fallbacks.
 """
 
 import json
-from unittest.mock import patch, MagicMock
-from engine.schema import (
-    Utterance,
-    ConversationSession,
-    CommunicationMetrics,
-    FillerWordMetric,
-)
-from engine.persona_ontology import PowerAxis, PersonaProfile
+from unittest.mock import MagicMock, patch
+
 from engine.local_coaching_synthesizer import LocalCoachingSynthesizer
+from engine.persona_ontology import PersonaProfile, PowerAxis
+from engine.schema import (
+    CommunicationMetrics,
+    ConversationSession,
+    FillerWordMetric,
+    Utterance,
+)
 
 
 def test_local_synthesizer_all_power_axes_english():
@@ -34,8 +35,13 @@ def test_local_synthesizer_all_power_axes_english():
             power_axis=axis.value,
             target_speaker="USER",
             dialogue=[
-                Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="I basically think we should deploy the feature tomorrow.")
-            ]
+                Utterance(
+                    speaker="USER",
+                    start_time=0.0,
+                    end_time=4.0,
+                    transcript="I basically think we should deploy the feature tomorrow.",
+                )
+            ],
         )
         eval_res = synthesizer.synthesize(session, try_local_ollama=False)
         assert eval_res is not None
@@ -64,8 +70,13 @@ def test_local_synthesizer_all_power_axes_hinglish():
             power_axis=axis.value,
             target_speaker="USER",
             dialogue=[
-                Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="Dekho basically mujhe lagta hai hume caching deploy karni chahiye.")
-            ]
+                Utterance(
+                    speaker="USER",
+                    start_time=0.0,
+                    end_time=4.0,
+                    transcript="Dekho basically mujhe lagta hai hume caching deploy karni chahiye.",
+                )
+            ],
         )
         eval_res = synthesizer.synthesize(session, try_local_ollama=False)
         assert eval_res is not None
@@ -86,8 +97,10 @@ def test_local_synthesizer_inquiry_and_learning_modes():
         power_axis="UPWARD",
         target_speaker="USER",
         dialogue=[
-            Utterance(speaker="USER", start_time=0.0, end_time=3.5, transcript="How do I start the benchmark evaluation?")
-        ]
+            Utterance(
+                speaker="USER", start_time=0.0, end_time=3.5, transcript="How do I start the benchmark evaluation?"
+            )
+        ],
     )
     eval_q = synthesizer.synthesize(session_q, try_local_ollama=False)
     assert eval_q is not None
@@ -99,8 +112,13 @@ def test_local_synthesizer_inquiry_and_learning_modes():
         power_axis="DOWNWARD",
         target_speaker="USER",
         dialogue=[
-            Utterance(speaker="USER", start_time=0.0, end_time=3.5, transcript="I want to understand and explore the system architecture.")
-        ]
+            Utterance(
+                speaker="USER",
+                start_time=0.0,
+                end_time=3.5,
+                transcript="I want to understand and explore the system architecture.",
+            )
+        ],
     )
     eval_learn = synthesizer.synthesize(session_learn, try_local_ollama=False)
     assert eval_learn is not None
@@ -112,14 +130,30 @@ def test_local_synthesizer_helpers_coverage():
     synthesizer = LocalCoachingSynthesizer()
 
     # _generate_crisp_bluf
-    for axis in [PowerAxis.SOLO, PowerAxis.CASUAL, PowerAxis.CONFLICT, PowerAxis.UPWARD, PowerAxis.LATERAL, PowerAxis.DOWNWARD]:
-        bluf_en = synthesizer._generate_crisp_bluf("I think caching is good", "caching latency", axis, is_hinglish=False)
+    for axis in [
+        PowerAxis.SOLO,
+        PowerAxis.CASUAL,
+        PowerAxis.CONFLICT,
+        PowerAxis.UPWARD,
+        PowerAxis.LATERAL,
+        PowerAxis.DOWNWARD,
+    ]:
+        bluf_en = synthesizer._generate_crisp_bluf(
+            "I think caching is good", "caching latency", axis, is_hinglish=False
+        )
         assert len(bluf_en) > 5
         bluf_hi = synthesizer._generate_crisp_bluf("caching achha hai", "caching latency", axis, is_hinglish=True)
         assert len(bluf_hi) > 5
 
     # _generate_crisp_action_plan
-    for axis in [PowerAxis.SOLO, PowerAxis.CASUAL, PowerAxis.CONFLICT, PowerAxis.UPWARD, PowerAxis.LATERAL, PowerAxis.DOWNWARD]:
+    for axis in [
+        PowerAxis.SOLO,
+        PowerAxis.CASUAL,
+        PowerAxis.CONFLICT,
+        PowerAxis.UPWARD,
+        PowerAxis.LATERAL,
+        PowerAxis.DOWNWARD,
+    ]:
         act_en = synthesizer._generate_crisp_action_plan("caching benchmark", axis, is_hinglish=False)
         assert len(act_en) > 5
         act_hi = synthesizer._generate_crisp_action_plan("caching benchmark", axis, is_hinglish=True)
@@ -131,8 +165,17 @@ def test_local_synthesizer_helpers_coverage():
         assert len(strat) > 5
 
     # _clean_and_reframe
-    for axis in [PowerAxis.SOLO, PowerAxis.CASUAL, PowerAxis.CONFLICT, PowerAxis.UPWARD, PowerAxis.LATERAL, PowerAxis.DOWNWARD]:
-        reframed = synthesizer._clean_and_reframe("basically matlab you know i just think we could improve", "system throughput", axis)
+    for axis in [
+        PowerAxis.SOLO,
+        PowerAxis.CASUAL,
+        PowerAxis.CONFLICT,
+        PowerAxis.UPWARD,
+        PowerAxis.LATERAL,
+        PowerAxis.DOWNWARD,
+    ]:
+        reframed = synthesizer._clean_and_reframe(
+            "basically matlab you know i just think we could improve", "system throughput", axis
+        )
         assert "basically" not in reframed
         assert "matlab" not in reframed
 
@@ -162,11 +205,13 @@ def test_local_synthesizer_ollama_mock():
         "persona_context": "Brevity",
         "metrics": {"presence_score": 85},
         "top_strengths": [{"observation": "Clear focus", "verbatim_quote": "We will ship."}],
-        "areas_for_improvement": [{"critique": "Lead with BLUF", "verbatim_quote": "We will ship.", "coached_phrasing": "Ship Thursday."}],
+        "areas_for_improvement": [
+            {"critique": "Lead with BLUF", "verbatim_quote": "We will ship.", "coached_phrasing": "Ship Thursday."}
+        ],
         "action_items": [],
         "key_highlights": [],
         "longitudinal_summary": "Good concise delivery.",
-        "persona_alignment_notes": "Aligned with UPWARD"
+        "persona_alignment_notes": "Aligned with UPWARD",
     }
     mock_generate_resp.read.return_value = json.dumps({"response": json.dumps(sample_eval)}).encode("utf-8")
 
@@ -208,8 +253,13 @@ def test_local_synthesizer_learning_inquiry_all_axes():
             power_axis=axis,
             target_speaker="USER",
             dialogue=[
-                Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="How do I learn and explore the system architecture?")
-            ]
+                Utterance(
+                    speaker="USER",
+                    start_time=0.0,
+                    end_time=3.0,
+                    transcript="How do I learn and explore the system architecture?",
+                )
+            ],
         )
         res = synthesizer.synthesize(session, try_local_ollama=False)
         assert res is not None
@@ -220,7 +270,7 @@ def test_local_synthesizer_learning_inquiry_all_axes():
         session_id="test_invalid_axis",
         power_axis="UNKNOWN_AXIS_STRING",
         target_speaker="USER",
-        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Hello team.")]
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Hello team.")],
     )
     res_inv = synthesizer.synthesize(session_invalid, try_local_ollama=False)
     assert res_inv is not None
@@ -229,7 +279,7 @@ def test_local_synthesizer_learning_inquiry_all_axes():
 def test_schema_fallback_base_model_methods():
     """Test fallback BaseModel behavior and decorators for 100% schema.py branch coverage."""
     # Test fallback model_dump, model_validate
-    from engine.schema import TopStrength, AreaForImprovement, CommunicationMetrics
+    from engine.schema import AreaForImprovement, CommunicationMetrics, TopStrength
 
     ts = TopStrength(observation="Strong", verbatim_quote="Quote")
     d = ts.model_dump()

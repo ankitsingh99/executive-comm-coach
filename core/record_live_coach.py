@@ -5,29 +5,29 @@ and dynamically coaches your spoken communication across all registers
 (Formal/Executive, Collaborative/Peer, Casual/Social, Solo Practice, and Conflict).
 """
 
-import sys
-import os
-import time
 import argparse
+import os
+import sys
+import time
 from typing import Optional
 
 # Ensure path resolution
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from engine.schema import ConversationSession, Utterance
-from engine.persona_ontology import PowerAxis
-from engine.coaching_engine import ExecutiveCoachingEngine
-from engine.context_calibrator import CommunicationContextCalibrator
+from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
+from asr_diarization.acoustic_speaker_detector import AcousticSpeakerToneDetector
+from asr_diarization.diarizer import DiarizationEngine
+from asr_diarization.gemini_audio_engine import GeminiAudioEngine
 from asr_diarization.live_mic_recorder import LiveMicRecorder
 from asr_diarization.local_stt_engine import LocalSTTEngine
-from asr_diarization.acoustic_speaker_detector import AcousticSpeakerToneDetector
-from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
-from asr_diarization.gemini_audio_engine import GeminiAudioEngine
-from asr_diarization.diarizer import DiarizationEngine
 from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry
-from privacy.pii_redactor import PIIRedactor
+from config import DATA_DIR, GEMINI_MODEL, get_gemini_api_key
+from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.context_calibrator import CommunicationContextCalibrator
+from engine.persona_ontology import PowerAxis
+from engine.schema import ConversationSession, Utterance
 from privacy.dpdp_compliance import DPDPComplianceManager
-from config import DATA_DIR, get_gemini_api_key, GEMINI_MODEL
+from privacy.pii_redactor import PIIRedactor
 
 
 def parse_args():

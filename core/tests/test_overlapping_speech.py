@@ -4,10 +4,10 @@ and interruption metrics/coaching.
 """
 
 import pytest
-from engine.schema import Utterance, ConversationSession
 from asr_diarization.diarizer import DiarizationEngine
-from engine.metrics_calculator import MetricsCalculator
 from engine.local_coaching_synthesizer import LocalCoachingSynthesizer
+from engine.metrics_calculator import MetricsCalculator
+from engine.schema import ConversationSession, Utterance
 
 
 def test_no_overlapping_speech_sequential():
@@ -146,15 +146,34 @@ def test_n_speaker_conversation_analysis():
     are accurately analyzed for multi-party speech-to-text, overlaps, individual speaker turns,
     action items, emotional trajectories, and consensus agreements.
     """
-    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
     from engine.action_item_extractor import ActionItemExtractor
+    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
 
     dialogue = [
-        Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="Welcome team, let's review the Q3 launch plan."),
-        Utterance(speaker="RAHUL", start_time=3.5, end_time=7.0, transcript="Hey I am Rahul, I will deploy the database migrations on Thursday at 10 am."),
-        Utterance(speaker="PRIYA", start_time=6.8, end_time=10.0, transcript="Priya here. Wait, I have an open concern regarding frontend latency regression."),
-        Utterance(speaker="SANDEEP", start_time=9.5, end_time=13.0, transcript="Sandeep here. We agree to run load tests before Thursday's deployment."),
-        Utterance(speaker="USER", start_time=13.5, end_time=16.0, transcript="Perfect, agreed on running load tests first.")
+        Utterance(
+            speaker="USER", start_time=0.0, end_time=4.0, transcript="Welcome team, let's review the Q3 launch plan."
+        ),
+        Utterance(
+            speaker="RAHUL",
+            start_time=3.5,
+            end_time=7.0,
+            transcript="Hey I am Rahul, I will deploy the database migrations on Thursday at 10 am.",
+        ),
+        Utterance(
+            speaker="PRIYA",
+            start_time=6.8,
+            end_time=10.0,
+            transcript="Priya here. Wait, I have an open concern regarding frontend latency regression.",
+        ),
+        Utterance(
+            speaker="SANDEEP",
+            start_time=9.5,
+            end_time=13.0,
+            transcript="Sandeep here. We agree to run load tests before Thursday's deployment.",
+        ),
+        Utterance(
+            speaker="USER", start_time=13.5, end_time=16.0, transcript="Perfect, agreed on running load tests first."
+        ),
     ]
 
     # 1. Multi-party overlap and cross-talk computation
@@ -186,7 +205,7 @@ def test_n_speaker_conversation_analysis():
 
     # 5. Open loop raised by Priya
     assert len(loops) >= 1
-    priya_loop = next((l for l in loops if "PRIYA" in l.raised_by.upper()), None)
+    priya_loop = next((loop_item for loop_item in loops if "PRIYA" in loop_item.raised_by.upper()), None)
     assert priya_loop is not None
     assert "latency" in priya_loop.concern_topic.lower() or "latency" in priya_loop.context.lower()
 
@@ -196,7 +215,9 @@ def test_n_speaker_conversation_analysis():
     assert "**RAHUL**" in md
     assert "Interrupted" in md or "Overlapping" in md
 
-    cli_solo = DiarizationEngine.format_dialogue_cli([Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="Solo rehearsal.")], user_name="Ashish")
+    cli_solo = DiarizationEngine.format_dialogue_cli(
+        [Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="Solo rehearsal.")], user_name="Ashish"
+    )
     assert "[ASHISH (Solo)]" in cli_solo or "[ASHISH / YOU]" in cli_solo
 
     # 7. Test assign_roles with recognized user & counterpart names
@@ -227,4 +248,3 @@ def test_n_speaker_conversation_analysis():
     zero_dur_utt = [Utterance(speaker="USER", start_time=5.0, end_time=5.0, transcript="Quick check.")]
     cli_zero = DiarizationEngine.format_dialogue_cli(zero_dur_utt)
     assert "Quick check." in cli_zero
-

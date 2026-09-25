@@ -4,9 +4,10 @@ Defaults to 100% on-device local execution for development and edge deployment.
 """
 
 from typing import Optional
-from .schema import ConversationSession, ExecutiveCoachingEvaluation
-from .local_coaching_synthesizer import LocalCoachingSynthesizer
+
 from .gemini_coaching_engine import GeminiCoachingSynthesizer
+from .local_coaching_synthesizer import LocalCoachingSynthesizer
+from .schema import ConversationSession, ExecutiveCoachingEvaluation
 
 
 class ExecutiveCoachingEngine:

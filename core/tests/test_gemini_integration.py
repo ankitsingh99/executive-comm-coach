@@ -3,11 +3,12 @@ Unit tests for Gemini Multimodal Audio and Coaching Engine integration.
 """
 
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from asr_diarization.gemini_audio_engine import GeminiAudioEngine
-from engine.gemini_coaching_engine import GeminiCoachingSynthesizer
 from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.gemini_coaching_engine import GeminiCoachingSynthesizer
 from engine.schema import ConversationSession, Utterance
 
 
@@ -161,7 +162,7 @@ def test_gemini_coaching_synthesizer_empty_actions_and_highlights_fallback():
         power_axis="UPWARD",
         dialogue=[
             Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="We have decided to ship by Friday."),
-            Utterance(speaker="RAHUL", start_time=3.5, end_time=6.0, transcript="I will call Priya at 9.")
+            Utterance(speaker="RAHUL", start_time=3.5, end_time=6.0, transcript="I will call Priya at 9."),
         ],
     )
 
@@ -196,7 +197,10 @@ def test_gemini_client_initialization_failure_and_unavailable():
     with patch.object(synthesizer, "is_available", return_value=False):
         assert synthesizer.synthesize(MagicMock()) is None
 
-    with patch.object(synthesizer, "is_available", return_value=True), patch.object(synthesizer, "_get_client", return_value=None):
+    with (
+        patch.object(synthesizer, "is_available", return_value=True),
+        patch.object(synthesizer, "_get_client", return_value=None),
+    ):
         assert synthesizer.synthesize(MagicMock()) is None
 
 
@@ -206,15 +210,16 @@ def test_gemini_synthesizer_function_calling_config_exception():
     session = ConversationSession(
         session_id="test_fc_exc",
         target_speaker="USER",
-        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Good morning.")]
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Good morning.")],
     )
     mock_client = MagicMock()
     mock_response = MagicMock()
     mock_response.text = '{"persona_context": "Test", "top_strengths": [], "areas_for_improvement": []}'
     mock_client.models.generate_content.return_value = mock_response
 
-    with patch("google.genai.types.AutomaticFunctionCallingConfig", side_effect=TypeError("No such arg")), \
-         patch.object(synthesizer, "_get_client", return_value=mock_client):
+    with (
+        patch("google.genai.types.AutomaticFunctionCallingConfig", side_effect=TypeError("No such arg")),
+        patch.object(synthesizer, "_get_client", return_value=mock_client),
+    ):
         res = synthesizer.synthesize(session)
         assert res is not None
-

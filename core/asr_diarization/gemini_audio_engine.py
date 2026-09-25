@@ -4,26 +4,26 @@ Leverages Gemini 2.5 Flash native audio understanding for high-accuracy speech-t
 diarization, phonetic hesitation preservation, and vocal tone analysis.
 """
 
-import os
 import json
 import logging
+import os
 import warnings
-from typing import List, Tuple, Optional, Any
+from typing import Any, List, Optional, Tuple
 
 # Suppress GenAI automatic function calling warning
 logging.getLogger("google.genai").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore", message=".*automatic function calling.*")
 
 try:
-    from ..engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
-    from ..config import get_gemini_api_key, GEMINI_MODEL
-    from .diarizer import DiarizationEngine
+    from ..config import GEMINI_MODEL, get_gemini_api_key
+    from ..engine.schema import AcousticAnalysisResult, SpeakerAcousticProfile, Utterance
     from .acoustic_filler_detector import AcousticFillerDetector
+    from .diarizer import DiarizationEngine
 except (ImportError, ValueError):
-    from engine.schema import Utterance, SpeakerAcousticProfile, AcousticAnalysisResult
-    from config import get_gemini_api_key, GEMINI_MODEL
-    from asr_diarization.diarizer import DiarizationEngine
     from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
+    from asr_diarization.diarizer import DiarizationEngine
+    from config import GEMINI_MODEL, get_gemini_api_key
+    from engine.schema import AcousticAnalysisResult, SpeakerAcousticProfile, Utterance
 
 
 class GeminiAudioEngine:

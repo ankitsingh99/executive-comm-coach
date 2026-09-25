@@ -2,7 +2,7 @@
 Automated unit tests for Persona Ontology and Relational Rubric calibration.
 """
 
-from engine.persona_ontology import PowerAxis, PersonaOntologyEngine, UPWARD_RUBRIC, LATERAL_RUBRIC, DOWNWARD_RUBRIC
+from engine.persona_ontology import DOWNWARD_RUBRIC, LATERAL_RUBRIC, UPWARD_RUBRIC, PersonaOntologyEngine, PowerAxis
 
 
 def test_persona_profiles_creation():

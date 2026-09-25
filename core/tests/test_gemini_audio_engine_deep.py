@@ -9,7 +9,8 @@ import os
 import struct
 import tempfile
 import wave
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from asr_diarization.gemini_audio_engine import GeminiAudioEngine
 from engine.schema import AcousticAnalysisResult
 
@@ -49,7 +50,10 @@ def test_gemini_audio_engine_availability_and_invalid_inputs():
     short_tf.write(b"RIFFshort")
     short_tf.close()
     try:
-        with patch.object(engine, "is_available", return_value=True), patch.object(engine, "_get_client", return_value=MagicMock()):
+        with (
+            patch.object(engine, "is_available", return_value=True),
+            patch.object(engine, "_get_client", return_value=MagicMock()),
+        ):
             utts, ac = engine.process_audio(short_tf.name)
             assert utts == []
     finally:
@@ -68,28 +72,46 @@ def test_gemini_audio_engine_success_multispeaker():
                 "speaker": "SPEAKER 1",
                 "start_time": "00:00:00",
                 "end_time": "00:01",
-                "transcript": "Dekho basically matlab latency is high."
+                "transcript": "Dekho basically matlab latency is high.",
             },
             {
                 "speaker": "SPEAKER 2",
                 "start_time": "00:00:00.8",
                 "end_time": "00:02.5s",
-                "transcript": "Haan, hum cache add kar sakte hain."
+                "transcript": "Haan, hum cache add kar sakte hain.",
             },
             {
                 "speaker": "DIRECTOR_ANAND",
                 "start_time": "00:02",
                 "end_time": "00:03",
-                "transcript": "Approved. Proceed with rollout."
-            }
+                "transcript": "Approved. Proceed with rollout.",
+            },
         ],
         "speaker_count": 3,
         "overall_tone": "Strategic & Decisive",
         "speakers": [
-            {"speaker_id": "USER", "pitch_hz": 160.0, "tone_label": "Inquiring", "talk_time_percentage": 40.0, "confidence_score": 0.96},
-            {"speaker_id": "COUNTERPART", "pitch_hz": 190.0, "tone_label": "Collaborative", "talk_time_percentage": 40.0, "confidence_score": 0.94},
-            {"speaker_id": "DIRECTOR_ANAND", "pitch_hz": 130.0, "tone_label": "Authoritative", "talk_time_percentage": 20.0, "confidence_score": 0.98}
-        ]
+            {
+                "speaker_id": "USER",
+                "pitch_hz": 160.0,
+                "tone_label": "Inquiring",
+                "talk_time_percentage": 40.0,
+                "confidence_score": 0.96,
+            },
+            {
+                "speaker_id": "COUNTERPART",
+                "pitch_hz": 190.0,
+                "tone_label": "Collaborative",
+                "talk_time_percentage": 40.0,
+                "confidence_score": 0.94,
+            },
+            {
+                "speaker_id": "DIRECTOR_ANAND",
+                "pitch_hz": 130.0,
+                "tone_label": "Authoritative",
+                "talk_time_percentage": 20.0,
+                "confidence_score": 0.98,
+            },
+        ],
     }
 
     mock_client = MagicMock()
@@ -99,8 +121,10 @@ def test_gemini_audio_engine_success_multispeaker():
     mock_client.models.generate_content.return_value = mock_resp
 
     try:
-        with patch.object(engine, "_get_client", return_value=mock_client), \
-             patch.object(engine, "is_available", return_value=True):
+        with (
+            patch.object(engine, "_get_client", return_value=mock_client),
+            patch.object(engine, "is_available", return_value=True),
+        ):
             utts, ac = engine.process_audio(wav_path)
             assert len(utts) == 3
             assert utts[0].speaker == "USER"
@@ -122,22 +146,17 @@ def test_gemini_audio_engine_zero_timestamps_and_fallback_profiles():
 
     mock_gemini_response = {
         "transcription": [
-            {
-                "speaker": "SELF",
-                "start_time": 0.0,
-                "end_time": 0.0,
-                "transcript": "First sentence spoken clearly."
-            },
+            {"speaker": "SELF", "start_time": 0.0, "end_time": 0.0, "transcript": "First sentence spoken clearly."},
             {
                 "speaker": "OTHER",
                 "start_time": 0.0,
                 "end_time": 0.0,
-                "transcript": "Second sentence spoken clearly and with more detail."
-            }
+                "transcript": "Second sentence spoken clearly and with more detail.",
+            },
         ],
         "speaker_count": 2,
         "overall_tone": "Confident",
-        "speakers": []  # Empty speakers to test fallback profile generation
+        "speakers": [],  # Empty speakers to test fallback profile generation
     }
 
     mock_client = MagicMock()
@@ -146,8 +165,10 @@ def test_gemini_audio_engine_zero_timestamps_and_fallback_profiles():
     mock_client.models.generate_content.return_value = mock_resp
 
     try:
-        with patch.object(engine, "_get_client", return_value=mock_client), \
-             patch.object(engine, "is_available", return_value=True):
+        with (
+            patch.object(engine, "_get_client", return_value=mock_client),
+            patch.object(engine, "is_available", return_value=True),
+        ):
             utts, ac = engine.process_audio(wav_path)
             assert len(utts) == 2
             # Verify timestamps were synthesized sequentially
@@ -170,8 +191,10 @@ def test_gemini_audio_engine_exception_handling():
     mock_client.models.generate_content.side_effect = Exception("API Quota Exceeded")
 
     try:
-        with patch.object(engine, "_get_client", return_value=mock_client), \
-             patch.object(engine, "is_available", return_value=True):
+        with (
+            patch.object(engine, "_get_client", return_value=mock_client),
+            patch.object(engine, "is_available", return_value=True),
+        ):
             utts, ac = engine.process_audio(wav_path)
             assert utts == []
             assert isinstance(ac, AcousticAnalysisResult)
@@ -195,24 +218,19 @@ def test_gemini_audio_engine_client_init_error_and_3part_timestamps():
                 "speaker": "SPEAKER_02",
                 "start_time": "01:15:30",
                 "end_time": "01:15:35",
-                "transcript": "Checking 3-part timestamp."
+                "transcript": "Checking 3-part timestamp.",
             },
             {
                 "speaker": "SPEAKER_0",
                 "start_time": "invalid_time_format",
                 "end_time": "bad:colon:format:with:too:many:parts",
-                "transcript": "Fallback times"
+                "transcript": "Fallback times",
             },
-            {
-                "speaker": "SPEAKER_0",
-                "start_time": None,
-                "end_time": None,
-                "transcript": "None times"
-            }
+            {"speaker": "SPEAKER_0", "start_time": None, "end_time": None, "transcript": "None times"},
         ],
         "speaker_count": 2,
         "overall_tone": "Conversational",
-        "speakers": []
+        "speakers": [],
     }
     mock_client = MagicMock()
     mock_resp = MagicMock()
@@ -220,9 +238,11 @@ def test_gemini_audio_engine_client_init_error_and_3part_timestamps():
     mock_client.models.generate_content.return_value = mock_resp
 
     try:
-        with patch.object(engine, "_get_client", return_value=mock_client), \
-             patch.object(engine, "is_available", return_value=True), \
-             patch("google.genai.types.AutomaticFunctionCallingConfig", side_effect=TypeError("No AFC")):
+        with (
+            patch.object(engine, "_get_client", return_value=mock_client),
+            patch.object(engine, "is_available", return_value=True),
+            patch("google.genai.types.AutomaticFunctionCallingConfig", side_effect=TypeError("No AFC")),
+        ):
             utts, ac = engine.process_audio(wav_path)
             assert len(utts) >= 1
             three_part_utt = next(u for u in utts if "Checking 3-part timestamp" in u.transcript)
@@ -233,5 +253,3 @@ def test_gemini_audio_engine_client_init_error_and_3part_timestamps():
     finally:
         if os.path.exists(wav_path):
             os.remove(wav_path)
-
-

@@ -4,7 +4,7 @@ Automated unit tests for Acoustic Speaker Count & Vocal Tone Detection.
 
 import numpy as np
 from asr_diarization.acoustic_speaker_detector import AcousticSpeakerToneDetector
-from engine.schema import SpeakerAcousticProfile, AcousticAnalysisResult
+from engine.schema import AcousticAnalysisResult, SpeakerAcousticProfile
 
 
 def test_acoustic_detector_synthetic_single_speaker():
@@ -73,8 +73,8 @@ def test_acoustic_detector_empty_and_short_audio():
 
 def test_acoustic_detector_analyze_wav_file(tmp_path):
     """Test analyze_wav_file with mono, stereo, different sample rates, and missing files."""
-    import wave
     import os
+    import wave
 
     detector = AcousticSpeakerToneDetector(sample_rate=16000)
 
@@ -143,22 +143,43 @@ def test_acoustic_detector_all_tone_classifications():
     detector = AcousticSpeakerToneDetector()
 
     # 1. Assertive & Decisive (mean_energy > 0.08 and pitch_std > 25.0)
-    assert detector._classify_tone(mean_pitch=150.0, pitch_range=60.0, mean_energy=0.10, pitch_std=28.0) == "Assertive & Decisive"
+    assert (
+        detector._classify_tone(mean_pitch=150.0, pitch_range=60.0, mean_energy=0.10, pitch_std=28.0)
+        == "Assertive & Decisive"
+    )
 
     # 2. Dynamic & Expressive (pitch_std > 30.0 and pitch_range > 70.0)
-    assert detector._classify_tone(mean_pitch=160.0, pitch_range=80.0, mean_energy=0.05, pitch_std=32.0) == "Dynamic & Expressive"
+    assert (
+        detector._classify_tone(mean_pitch=160.0, pitch_range=80.0, mean_energy=0.05, pitch_std=32.0)
+        == "Dynamic & Expressive"
+    )
 
     # 3. Tense / Heightened (mean_pitch > 220.0 and pitch_std < 15.0)
-    assert detector._classify_tone(mean_pitch=240.0, pitch_range=30.0, mean_energy=0.05, pitch_std=10.0) == "Tense / Heightened"
+    assert (
+        detector._classify_tone(mean_pitch=240.0, pitch_range=30.0, mean_energy=0.05, pitch_std=10.0)
+        == "Tense / Heightened"
+    )
 
     # 4. Subdued & Reflective (mean_energy < 0.03 and pitch_std < 14.0)
-    assert detector._classify_tone(mean_pitch=140.0, pitch_range=20.0, mean_energy=0.02, pitch_std=11.0) == "Subdued & Reflective"
+    assert (
+        detector._classify_tone(mean_pitch=140.0, pitch_range=20.0, mean_energy=0.02, pitch_std=11.0)
+        == "Subdued & Reflective"
+    )
 
     # 5. Monotone / Neutral (pitch_std < 10.0)
-    assert detector._classify_tone(mean_pitch=150.0, pitch_range=15.0, mean_energy=0.05, pitch_std=8.0) == "Monotone / Neutral"
+    assert (
+        detector._classify_tone(mean_pitch=150.0, pitch_range=15.0, mean_energy=0.05, pitch_std=8.0)
+        == "Monotone / Neutral"
+    )
 
     # 6. Calm & Measured (mean_energy >= 0.03 and pitch_std >= 12.0)
-    assert detector._classify_tone(mean_pitch=150.0, pitch_range=30.0, mean_energy=0.05, pitch_std=15.0) == "Calm & Measured"
+    assert (
+        detector._classify_tone(mean_pitch=150.0, pitch_range=30.0, mean_energy=0.05, pitch_std=15.0)
+        == "Calm & Measured"
+    )
 
     # 7. Natural & Conversational (fallback)
-    assert detector._classify_tone(mean_pitch=150.0, pitch_range=20.0, mean_energy=0.04, pitch_std=11.0) == "Natural & Conversational"
+    assert (
+        detector._classify_tone(mean_pitch=150.0, pitch_range=20.0, mean_energy=0.04, pitch_std=11.0)
+        == "Natural & Conversational"
+    )

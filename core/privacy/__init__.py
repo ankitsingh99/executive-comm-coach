@@ -1,6 +1,6 @@
 """Privacy and DPDP Compliance module."""
 
+from .dpdp_compliance import ConsentRecord, DPDPComplianceManager
 from .pii_redactor import PIIRedactor
-from .dpdp_compliance import DPDPComplianceManager, ConsentRecord
 
 __all__ = ["PIIRedactor", "DPDPComplianceManager", "ConsentRecord"]

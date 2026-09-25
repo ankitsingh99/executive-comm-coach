@@ -1,5 +1,7 @@
 import os
+
 import pytest
+
 
 def test_schema_fallback_execution():
     """Test executing schema.py with pydantic missing to cover fallback class definitions."""
@@ -32,6 +34,7 @@ def test_schema_fallback_execution():
     @field_validator("some_field")
     def dummy(cls, v):
         return v
+
     assert dummy(None, 123) == 123
 
     # Test BaseModel

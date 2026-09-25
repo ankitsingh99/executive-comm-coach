@@ -7,50 +7,50 @@ and multi-dimensional communication scoring.
 import json
 import logging
 import warnings
-from typing import Optional, List
+from typing import List, Optional
 
 # Suppress GenAI automatic function calling warning
 logging.getLogger("google.genai").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore", message=".*automatic function calling.*")
 
 try:
-    from .schema import (
-        ConversationSession,
-        ExecutiveCoachingEvaluation,
-        TopStrength,
-        AreaForImprovement,
-        ActionItem,
-        KeyHighlight,
-        Utterance,
-        AgreementPoint,
-        UnresolvedOpenLoop,
-    )
-    from .persona_ontology import PersonaOntologyEngine, PowerAxis
-    from .metrics_calculator import MetricsCalculator
-    from .action_item_extractor import ActionItemExtractor
-    from .transcription_analyzer import TranscriptionAnalyzer
-    from .conversational_intelligence_engine import ConversationalIntelligenceEngine
+    from ..config import GEMINI_MODEL, get_gemini_api_key
     from ..privacy.pii_redactor import PIIRedactor
-    from ..config import get_gemini_api_key, GEMINI_MODEL
-except (ImportError, ValueError):
-    from engine.schema import (
+    from .action_item_extractor import ActionItemExtractor
+    from .conversational_intelligence_engine import ConversationalIntelligenceEngine
+    from .metrics_calculator import MetricsCalculator
+    from .persona_ontology import PersonaOntologyEngine, PowerAxis
+    from .schema import (
+        ActionItem,
+        AgreementPoint,
+        AreaForImprovement,
         ConversationSession,
         ExecutiveCoachingEvaluation,
-        TopStrength,
-        AreaForImprovement,
-        ActionItem,
         KeyHighlight,
-        Utterance,
-        AgreementPoint,
+        TopStrength,
         UnresolvedOpenLoop,
+        Utterance,
     )
-    from engine.persona_ontology import PersonaOntologyEngine, PowerAxis
-    from engine.metrics_calculator import MetricsCalculator
+    from .transcription_analyzer import TranscriptionAnalyzer
+except (ImportError, ValueError):
+    from config import GEMINI_MODEL, get_gemini_api_key
     from engine.action_item_extractor import ActionItemExtractor
-    from engine.transcription_analyzer import TranscriptionAnalyzer
     from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
+    from engine.metrics_calculator import MetricsCalculator
+    from engine.persona_ontology import PersonaOntologyEngine, PowerAxis
+    from engine.schema import (
+        ActionItem,
+        AgreementPoint,
+        AreaForImprovement,
+        ConversationSession,
+        ExecutiveCoachingEvaluation,
+        KeyHighlight,
+        TopStrength,
+        UnresolvedOpenLoop,
+        Utterance,
+    )
+    from engine.transcription_analyzer import TranscriptionAnalyzer
     from privacy.pii_redactor import PIIRedactor
-    from config import get_gemini_api_key, GEMINI_MODEL
 
 
 class GeminiCoachingSynthesizer:

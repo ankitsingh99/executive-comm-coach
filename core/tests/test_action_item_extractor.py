@@ -2,9 +2,9 @@
 Unit tests for Action Item, Commitment & Follow-up Extraction Engine.
 """
 
-from engine.schema import Utterance, ConversationSession, ExecutiveCoachingEvaluation
 from engine.action_item_extractor import ActionItemExtractor
 from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.schema import ConversationSession, ExecutiveCoachingEvaluation, Utterance
 
 
 def test_action_item_extraction_scheduling_and_calls():
@@ -134,7 +134,7 @@ def test_action_item_edge_cases_and_deduplication():
     # 3. Deduplication of identical action items
     duplicate_dialogue = [
         Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="I will send the report by 5 PM."),
-        Utterance(speaker="USER", start_time=3.0, end_time=5.0, transcript="I will send the report by 5 PM.")
+        Utterance(speaker="USER", start_time=3.0, end_time=5.0, transcript="I will send the report by 5 PM."),
     ]
     deduped = ActionItemExtractor.extract_from_dialogue(duplicate_dialogue)
     assert len(deduped) == 1
@@ -158,8 +158,9 @@ def test_action_item_extractor_fallback_regex_and_unsplit_sentence():
         assert no_anchor is None
 
     # 2. Utterance with no punctuation delimiters (exercises sentences = [text] fallback)
-    u_no_punc = Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="i will definitely send the logs tonight")
+    u_no_punc = Utterance(
+        speaker="USER", start_time=0.0, end_time=2.0, transcript="i will definitely send the logs tonight"
+    )
     items = ActionItemExtractor.extract_from_utterance(u_no_punc)
     assert len(items) == 1
     assert "send the logs" in items[0].task.lower()
-

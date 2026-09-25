@@ -4,7 +4,7 @@ Unit tests for CommunicationContextCalibrator (Multimodal context gauging).
 
 from engine.context_calibrator import CommunicationContextCalibrator
 from engine.persona_ontology import PowerAxis
-from engine.schema import Utterance, AcousticAnalysisResult, SpeakerAcousticProfile
+from engine.schema import AcousticAnalysisResult, SpeakerAcousticProfile, Utterance
 
 
 def test_infer_solo_context():

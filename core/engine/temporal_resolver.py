@@ -6,9 +6,9 @@ relative to a reference timestamp, and normalizes dates and deadlines into ISO f
 """
 
 import re
-from datetime import datetime, timedelta, date, time
-from typing import Optional
 from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
+from typing import Optional
 
 
 @dataclass

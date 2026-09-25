@@ -2,14 +2,14 @@
 Unit tests for AcousticFillerDetector, audio waveform hesitation parsing, and non-phonetic filler metrics.
 """
 
-import numpy as np
+import os
 import tempfile
 import wave
-import os
 
+import numpy as np
 from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
-from engine.schema import Utterance, AcousticFillerEvent
 from engine.metrics_calculator import MetricsCalculator
+from engine.schema import AcousticFillerEvent, Utterance
 
 
 def _generate_synthetic_filler_wav(
@@ -152,7 +152,9 @@ def test_evaluate_segment_all_acoustic_types_and_speaker_mapping():
     detector = AcousticFillerDetector()
 
     # 1. Too short duration
-    short_frames = [{"time": 0.0, "pitch_f0": 150.0, "centroid": 500.0, "low_ratio": 0.3, "mid_ratio": 0.3, "flux": 0.05}]
+    short_frames = [
+        {"time": 0.0, "pitch_f0": 150.0, "centroid": 500.0, "low_ratio": 0.3, "mid_ratio": 0.3, "flux": 0.05}
+    ]
     assert detector._evaluate_segment(short_frames) is None
 
     # Helper to generate N frames of duration ~0.3s
@@ -264,4 +266,3 @@ def test_evaluate_segment_aah_mid_ratio_and_centroid():
     assert ev is not None
     assert ev.token == "aah"
     assert ev.acoustic_type == "vocal_hesitation"
-

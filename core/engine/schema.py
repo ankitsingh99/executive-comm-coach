@@ -4,7 +4,7 @@ Enforces strict schema constraints, score bounds, and Top-N itemization.
 Supports both Pydantic and standard library dataclasses for universal portability.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 try:
     from pydantic import BaseModel, Field, field_validator

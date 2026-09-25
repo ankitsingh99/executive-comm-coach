@@ -3,17 +3,17 @@ Interactive Local On-Device Executive Communication Coach CLI.
 Enables instant evaluation of conversations completely offline.
 """
 
-import sys
 import os
+import sys
 from datetime import datetime, timezone
 
 # Ensure path resolution
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from engine.schema import ConversationSession
-from engine.persona_ontology import PowerAxis
-from engine.coaching_engine import ExecutiveCoachingEngine
 from asr_diarization.local_stt_engine import LocalSTTEngine
+from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.persona_ontology import PowerAxis
+from engine.schema import ConversationSession
 
 
 def run_local_cli():

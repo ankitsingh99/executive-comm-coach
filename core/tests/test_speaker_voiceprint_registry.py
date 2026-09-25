@@ -3,9 +3,10 @@ Unit tests for Persistent Speaker Voiceprint Memory & Acoustic Recognition Regis
 """
 
 import os
-import pytest
+
 import numpy as np
-from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry, SpeakerVoiceprint
+import pytest
+from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprint, SpeakerVoiceprintRegistry
 
 
 @pytest.fixture
@@ -162,8 +163,8 @@ def test_multi_user_profiling_and_distinction(temp_registry):
 
 def test_voiceprint_wav_file_enrollment_and_update(temp_registry, tmp_path):
     """Test enrolling directly from WAV files, updating existing profiles, and multi-channel handling."""
-    import wave
     import struct
+    import wave
 
     # 1. Create 16-bit mono wav file
     wav_path = str(tmp_path / "speaker_test.wav")
@@ -183,7 +184,9 @@ def test_voiceprint_wav_file_enrollment_and_update(temp_registry, tmp_path):
     assert vp.sample_count == 1
 
     # Update existing speaker with second wav sample (running average update)
-    vp_updated = temp_registry.enroll_speaker("Anand Sharma", "Senior Director", "UPWARD", audio_signal_or_wav_path=wav_path)
+    vp_updated = temp_registry.enroll_speaker(
+        "Anand Sharma", "Senior Director", "UPWARD", audio_signal_or_wav_path=wav_path
+    )
     assert vp_updated.sample_count == 2
     assert vp_updated.role == "Senior Director"
 
@@ -213,8 +216,8 @@ def test_corrupted_database_recovery(tmp_path):
 
 def test_voiceprint_bitdepth_and_short_audio_branches(temp_registry, tmp_path):
     """Test 32-bit int, 8-bit uint WAV reading, short signals (<300ms), and deleting non-existent speaker."""
-    import wave
     import struct
+    import wave
 
     sr = 16000
     voice = generate_synthetic_voice(pitch_f0=140.0, duration_s=1.0, sample_rate=sr)
@@ -275,10 +278,11 @@ def test_voiceprint_bitdepth_and_short_audio_branches(temp_registry, tmp_path):
 
     # 8. Corrupted embedding vector self-healing during enroll update and identification
     from unittest.mock import patch
+
     temp_registry.enroll_speaker("Corrupt Speaker", "Engineer", "LATERAL", voice, sr)
     # Corrupt embedding vector to zeros
     temp_registry.voiceprints["Corrupt Speaker"].embedding_vector = [0.0] * 32
-    
+
     # Updating speaker should self-heal via synthesize_fallback_embedding
     temp_registry.enroll_speaker("Corrupt Speaker", "Lead", "LATERAL", voice, sr)
     assert np.linalg.norm(temp_registry.voiceprints["Corrupt Speaker"].embedding_vector) > 0.5
@@ -290,8 +294,6 @@ def test_voiceprint_bitdepth_and_short_audio_branches(temp_registry, tmp_path):
     assert len(temp_registry.voiceprints["Corrupt Speaker"].embedding_vector) == 32
     assert np.linalg.norm(temp_registry.voiceprints["Corrupt Speaker"].embedding_vector) > 0.5
 
-
     # 9. save_to_disk exception handling
     with patch("builtins.open", side_effect=IOError("Disk permission denied")):
         temp_registry.save_to_disk()
-

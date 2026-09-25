@@ -10,18 +10,18 @@ from typing import List
 
 try:
     from ..engine.schema import Utterance
-    from .nvidia_parakeet_engine import NvidiaParakeetEngine
-    from .gemini_audio_engine import GeminiAudioEngine
-    from .sarvam_client import SarvamSpeechClient
-    from .indic_normalizer import IndicNormalizer
     from .acoustic_filler_detector import AcousticFillerDetector
+    from .gemini_audio_engine import GeminiAudioEngine
+    from .indic_normalizer import IndicNormalizer
+    from .nvidia_parakeet_engine import NvidiaParakeetEngine
+    from .sarvam_client import SarvamSpeechClient
 except (ImportError, ValueError):
-    from engine.schema import Utterance
-    from asr_diarization.nvidia_parakeet_engine import NvidiaParakeetEngine
-    from asr_diarization.gemini_audio_engine import GeminiAudioEngine
-    from asr_diarization.sarvam_client import SarvamSpeechClient
-    from asr_diarization.indic_normalizer import IndicNormalizer
     from asr_diarization.acoustic_filler_detector import AcousticFillerDetector
+    from asr_diarization.gemini_audio_engine import GeminiAudioEngine
+    from asr_diarization.indic_normalizer import IndicNormalizer
+    from asr_diarization.nvidia_parakeet_engine import NvidiaParakeetEngine
+    from asr_diarization.sarvam_client import SarvamSpeechClient
+    from engine.schema import Utterance
 
 
 class LocalSTTEngine:

@@ -3,10 +3,11 @@ Unit tests for SarvamSpeechClient covering multipart payload building,
 API mocking, diarization parsing, fallback transcripts, and error handling.
 """
 
-import os
 import json
+import os
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from asr_diarization.sarvam_client import SarvamSpeechClient
 
 
@@ -26,10 +27,10 @@ def test_sarvam_multipart_builder():
         fields={"model": "saaras:v2", "language_code": "hi-IN"},
         file_field="file",
         filename="test.wav",
-        file_bytes=b"RIFFdummywavbytes"
+        file_bytes=b"RIFFdummywavbytes",
     )
     assert "multipart/form-data; boundary=" in content_type
-    assert b"Content-Disposition: form-data; name=\"model\"" in body
+    assert b'Content-Disposition: form-data; name="model"' in body
     assert b"saaras:v2" in body
     assert b"RIFFdummywavbytes" in body
 
@@ -40,9 +41,24 @@ def test_sarvam_parse_diarized_entries_multi_speaker():
     sample_response = {
         "diarized_transcript": {
             "entries": [
-                {"speaker_id": "spk_0", "transcript": "Namaste, kaise hain aap?", "start_time_seconds": 0.0, "end_time_seconds": 2.5},
-                {"speaker_id": "spk_1", "transcript": "Main theek hoon, review shuru karein?", "start_time_seconds": 3.0, "end_time_seconds": 5.8},
-                {"speaker_id": "spk_2", "transcript": "Haan main bhi aligned hoon.", "start_time_seconds": 6.0, "end_time_seconds": 8.0},
+                {
+                    "speaker_id": "spk_0",
+                    "transcript": "Namaste, kaise hain aap?",
+                    "start_time_seconds": 0.0,
+                    "end_time_seconds": 2.5,
+                },
+                {
+                    "speaker_id": "spk_1",
+                    "transcript": "Main theek hoon, review shuru karein?",
+                    "start_time_seconds": 3.0,
+                    "end_time_seconds": 5.8,
+                },
+                {
+                    "speaker_id": "spk_2",
+                    "transcript": "Haan main bhi aligned hoon.",
+                    "start_time_seconds": 6.0,
+                    "end_time_seconds": 8.0,
+                },
             ]
         }
     }
@@ -57,9 +73,7 @@ def test_sarvam_parse_diarized_entries_multi_speaker():
 def test_sarvam_parse_fallback_transcript():
     """Verify fallback when diarized entries are absent."""
     client = SarvamSpeechClient(api_key="mock_key")
-    fallback_response = {
-        "transcript": "Aaj hum deployment schedule discuss karenge."
-    }
+    fallback_response = {"transcript": "Aaj hum deployment schedule discuss karenge."}
     utterances = client._parse_sarvam_response(fallback_response)
     assert len(utterances) == 1
     assert utterances[0].speaker == "USER"
@@ -78,13 +92,20 @@ def test_sarvam_transcribe_audio_chunk_mock():
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.__enter__.return_value = mock_resp
-        mock_resp.read.return_value = json.dumps({
-            "diarized_transcript": {
-                "entries": [
-                    {"speaker_id": "spk_0", "transcript": "Hello team", "start_time_seconds": 0.0, "end_time_seconds": 2.0}
-                ]
+        mock_resp.read.return_value = json.dumps(
+            {
+                "diarized_transcript": {
+                    "entries": [
+                        {
+                            "speaker_id": "spk_0",
+                            "transcript": "Hello team",
+                            "start_time_seconds": 0.0,
+                            "end_time_seconds": 2.0,
+                        }
+                    ]
+                }
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
 
         with patch("urllib.request.urlopen", return_value=mock_resp):
             utts = client.transcribe_audio_chunk(temp_wav)

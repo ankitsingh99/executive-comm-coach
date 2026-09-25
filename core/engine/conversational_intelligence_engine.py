@@ -9,21 +9,21 @@ from typing import List, Optional, Tuple
 
 try:
     from .schema import (
-        Utterance,
+        AcousticAnalysisResult,
+        AgreementPoint,
         ConversationalDynamicsMetric,
         EmotionalTrajectoryPoint,
-        AgreementPoint,
         UnresolvedOpenLoop,
-        AcousticAnalysisResult,
+        Utterance,
     )
 except (ImportError, ValueError):
     from engine.schema import (
-        Utterance,
+        AcousticAnalysisResult,
+        AgreementPoint,
         ConversationalDynamicsMetric,
         EmotionalTrajectoryPoint,
-        AgreementPoint,
         UnresolvedOpenLoop,
-        AcousticAnalysisResult,
+        Utterance,
     )
 
 

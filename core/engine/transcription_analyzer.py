@@ -7,33 +7,33 @@ Analyzes transcribed dialogue turns or raw speech text to extract:
 Supports on-device deterministic NLP and optional Gemini AI synthesis.
 """
 
-import re
 import json
+import re
 from datetime import datetime
-from typing import List, Optional, Union, Dict
+from typing import Dict, List, Optional, Union
 
 try:
-    from .schema import (
-        Utterance,
-        ConversationSession,
-        KeyHighlight,
-        ActionItem,
-        TranscriptionAnalysisResult,
-    )
-    from .action_item_extractor import ActionItemExtractor
-    from ..config import get_gemini_api_key, GEMINI_MODEL
     from ..asr_diarization.indic_normalizer import IndicNormalizer
-except (ImportError, ValueError):
-    from engine.schema import (
-        Utterance,
+    from ..config import GEMINI_MODEL, get_gemini_api_key
+    from .action_item_extractor import ActionItemExtractor
+    from .schema import (
+        ActionItem,
         ConversationSession,
         KeyHighlight,
-        ActionItem,
         TranscriptionAnalysisResult,
+        Utterance,
     )
-    from engine.action_item_extractor import ActionItemExtractor
-    from config import get_gemini_api_key, GEMINI_MODEL
+except (ImportError, ValueError):
     from asr_diarization.indic_normalizer import IndicNormalizer
+    from config import GEMINI_MODEL, get_gemini_api_key
+    from engine.action_item_extractor import ActionItemExtractor
+    from engine.schema import (
+        ActionItem,
+        ConversationSession,
+        KeyHighlight,
+        TranscriptionAnalysisResult,
+        Utterance,
+    )
 
 
 # Strategic Highlight & Decision Heuristics (English + Hinglish)

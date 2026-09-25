@@ -3,11 +3,11 @@ Interactive Web & Mobile App Emulator Server for Executive Communication Coach.
 Serves the emulator UI and provides live API endpoints for evaluation and voiceprints.
 """
 
-import os
-import sys
 import json
 import mimetypes
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Setup Python paths
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -15,13 +15,13 @@ PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 
-from engine.schema import ConversationSession, Utterance
-from engine.coaching_engine import ExecutiveCoachingEngine
-from engine.action_item_extractor import ActionItemExtractor
-from engine.transcription_analyzer import TranscriptionAnalyzer
 from asr_diarization.diarizer import DiarizationEngine
-from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprintRegistry, SpeakerVoiceprint
 from asr_diarization.local_stt_engine import LocalSTTEngine
+from asr_diarization.speaker_voiceprint_registry import SpeakerVoiceprint, SpeakerVoiceprintRegistry
+from engine.action_item_extractor import ActionItemExtractor
+from engine.coaching_engine import ExecutiveCoachingEngine
+from engine.schema import ConversationSession, Utterance
+from engine.transcription_analyzer import TranscriptionAnalyzer
 
 
 class EmulatorHandler(BaseHTTPRequestHandler):
@@ -232,7 +232,6 @@ class EmulatorHandler(BaseHTTPRequestHandler):
 
                 # Check if there is an enrolled app user or counterpart in registry
                 enrolled_user = None
-                enrolled_counterpart = None
                 for vp in registry.voiceprints.values():
                     if vp.is_user or vp.role in ["App User", "Self"] or vp.power_axis == "SOLO":
                         enrolled_user = vp.speaker_name
@@ -338,7 +337,15 @@ class EmulatorHandler(BaseHTTPRequestHandler):
 
         elif url_path == "/api/enroll_voiceprint":
             name = payload.get("speaker_name", "").strip()
-            junk_names = {"speaker (solo)", "speaker (analyzed)", "solo speaker", "live speaker", "speaker", "new speaker", ""}
+            junk_names = {
+                "speaker (solo)",
+                "speaker (analyzed)",
+                "solo speaker",
+                "live speaker",
+                "speaker",
+                "new speaker",
+                "",
+            }
             if not name or name.lower() in junk_names or len(name) < 2:
                 self._send_json({"status": "error", "message": "Please provide a valid speaker name."})
                 return
