@@ -16,24 +16,12 @@ try:
     from ..asr_diarization.indic_normalizer import IndicNormalizer
     from ..config import GEMINI_MODEL, get_gemini_api_key
     from .action_item_extractor import ActionItemExtractor
-    from .schema import (
-        ActionItem,
-        ConversationSession,
-        KeyHighlight,
-        TranscriptionAnalysisResult,
-        Utterance,
-    )
+    from .schema import ActionItem, ConversationSession, KeyHighlight, TranscriptionAnalysisResult, Utterance
 except (ImportError, ValueError):
     from asr_diarization.indic_normalizer import IndicNormalizer
     from config import GEMINI_MODEL, get_gemini_api_key
     from engine.action_item_extractor import ActionItemExtractor
-    from engine.schema import (
-        ActionItem,
-        ConversationSession,
-        KeyHighlight,
-        TranscriptionAnalysisResult,
-        Utterance,
-    )
+    from engine.schema import ActionItem, ConversationSession, KeyHighlight, TranscriptionAnalysisResult, Utterance
 
 
 # Strategic Highlight & Decision Heuristics (English + Hinglish)

@@ -28,12 +28,14 @@ def print_step_header(step_num: int, title: str):
 
 
 def main():
-    print("""
+    print(
+        """
  +------------------------------------------------------------------------------+
  |          ON-DEVICE EXECUTIVE CONVERSATIONAL INTELLIGENCE COACH               |
  |                   Live Demonstration & Coaching Pipeline                     |
  +------------------------------------------------------------------------------+
-""")
+"""
+    )
 
     # -------------------------------------------------------------------------
     # STEP 1: Ambient Sensing & Voice Activity Detection (Silero VAD)

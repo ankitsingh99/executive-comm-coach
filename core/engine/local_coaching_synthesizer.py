@@ -15,11 +15,7 @@ try:
     from ..asr_diarization.indic_normalizer import IndicNormalizer
     from ..privacy.pii_redactor import PIIRedactor
     from .conversational_intelligence_engine import ConversationalIntelligenceEngine
-    from .metrics_calculator import (
-        ASSERTIVE_PATTERNS,
-        HEDGING_PATTERNS,
-        MetricsCalculator,
-    )
+    from .metrics_calculator import ASSERTIVE_PATTERNS, HEDGING_PATTERNS, MetricsCalculator
     from .persona_ontology import PersonaOntologyEngine, PersonaProfile, PowerAxis
     from .schema import (
         AreaForImprovement,
@@ -33,11 +29,7 @@ try:
 except (ImportError, ValueError):
     from asr_diarization.indic_normalizer import IndicNormalizer
     from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
-    from engine.metrics_calculator import (
-        ASSERTIVE_PATTERNS,
-        HEDGING_PATTERNS,
-        MetricsCalculator,
-    )
+    from engine.metrics_calculator import ASSERTIVE_PATTERNS, HEDGING_PATTERNS, MetricsCalculator
     from engine.persona_ontology import PersonaOntologyEngine, PersonaProfile, PowerAxis
     from engine.schema import (
         AreaForImprovement,

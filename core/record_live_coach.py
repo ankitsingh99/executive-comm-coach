@@ -234,12 +234,14 @@ def main():
     use_gemini = not args.local_only and gemini_engine.is_available()
 
     engine_tag = f"Powered by Google Gemini ({GEMINI_MODEL})" if use_gemini else "Running On-Device (Local Models)"
-    print(f"""
+    print(
+        f"""
  +------------------------------------------------------------------------------+
  |           LIVE UNIVERSAL COMMUNICATION COACH                                 |
  |       {engine_tag:<71}|
  +------------------------------------------------------------------------------+
-""")
+"""
+    )
 
     silence_threshold = getattr(args, "silence_sec", 2.0)
     max_duration = args.duration if (args.duration and args.duration > 0) else 300

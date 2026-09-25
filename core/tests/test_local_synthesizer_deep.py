@@ -8,12 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from engine.local_coaching_synthesizer import LocalCoachingSynthesizer
 from engine.persona_ontology import PersonaProfile, PowerAxis
-from engine.schema import (
-    CommunicationMetrics,
-    ConversationSession,
-    FillerWordMetric,
-    Utterance,
-)
+from engine.schema import CommunicationMetrics, ConversationSession, FillerWordMetric, Utterance
 
 
 def test_local_synthesizer_all_power_axes_english():
