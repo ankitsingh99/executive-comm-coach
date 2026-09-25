@@ -61,7 +61,7 @@ AGREEMENT_CUES = [
 # Open Loop and Unresolved Tension Cues
 OPEN_LOOP_CUES = [
     r"\b(?:still need to figure out|let's revisit|revisit (?:this|later)|not sure about)\b",
-    r"\b(?:open question|pending (?:approval|review|decision)|concern with|risk of|blocker)\b",
+    r"\b(?:open question|open concern|pending (?:approval|review|decision)|concern (?:with|regarding)|risk of|blocker)\b",
     r"\b(?:we haven't decided on|table this for now|circle back on|unresolved)\b",
     r"\b(?:baad mein dekhte hain|abhi decide nahi hua|is par clarity chahiye|doubt hai|risk lag raha hai)\b",
 ]

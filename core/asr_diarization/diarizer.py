@@ -175,37 +175,40 @@ class DiarizationEngine:
         cls, utterances: List[Utterance], user_speaker_id: str = "USER"
     ) -> Tuple[List[Utterance], Optional[str], Optional[str]]:
         """
-        Scans utterances for verbal introductions (e.g. 'Hey I am Rahul and today...').
-        Detects counterpart introductions as well as solo user introductions.
-        Returns (updated_utterances, detected_counterpart_name, detected_user_name).
+        Scans utterances for verbal introductions (e.g. 'Hey I am Rahul', 'Priya here', 'Vikram speaking').
+        Supports arbitrary N >= 1 participants in a multi-party conversation.
+        Returns (updated_utterances, primary_counterpart_name, user_name).
         """
         detected_counterpart: Optional[str] = None
         detected_user: Optional[str] = None
-        target_counterpart_tag: Optional[str] = None
+        speaker_name_map = {}
 
         user_synonyms = {user_speaker_id.upper(), "USER", "SPEAKER_01", "SPEAKER_0", "SPEAKER 1", "SPEAKER_1", "SELF"}
 
         for u in utterances:
-            spk_up = u.speaker.strip().upper()
+            spk_key = u.speaker.strip()
+            spk_up = spk_key.upper()
             name = cls.extract_speaker_name_from_text(u.transcript)
             if name:
+                speaker_name_map[spk_key] = name
                 if spk_up in user_synonyms or len(utterances) == 1:
                     if not detected_user:
                         detected_user = name
                 else:
                     if not detected_counterpart:
                         detected_counterpart = name
-                        target_counterpart_tag = u.speaker
 
-        # Re-tag the dialogue turns if any names were found
+        # Re-tag all dialogue turns according to their detected speaker identities
         updated: List[Utterance] = []
         for u in utterances:
-            spk_up = u.speaker.strip().upper()
-            if spk_up in user_synonyms and detected_user:
+            spk_key = u.speaker.strip()
+            spk_up = spk_key.upper()
+
+            if spk_key in speaker_name_map:
+                new_spk = speaker_name_map[spk_key]
+            elif spk_up in user_synonyms and detected_user:
                 new_spk = detected_user
-            elif detected_counterpart and (
-                u.speaker == target_counterpart_tag or spk_up in {"COUNTERPART", "SPEAKER_02", "SPEAKER_2", "OTHER"}
-            ):
+            elif detected_counterpart and spk_up in {"COUNTERPART", "SPEAKER_02", "SPEAKER_2", "OTHER"}:
                 new_spk = detected_counterpart
             else:
                 new_spk = u.speaker

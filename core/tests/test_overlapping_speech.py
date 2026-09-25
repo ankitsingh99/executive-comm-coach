@@ -138,3 +138,55 @@ def test_format_dialogue_cli_with_overlap():
     cli_str = DiarizationEngine.format_dialogue_cli(utts, counterpart_name="RAHUL")
     assert "⚡" in cli_str
     assert "INTERRUPTED USER" in cli_str
+
+
+def test_n_speaker_conversation_analysis():
+    """
+    Validate that conversations with N >= 4 participants (e.g. USER, RAHUL, PRIYA, SANDEEP)
+    are accurately analyzed for multi-party speech-to-text, overlaps, individual speaker turns,
+    action items, emotional trajectories, and consensus agreements.
+    """
+    from engine.conversational_intelligence_engine import ConversationalIntelligenceEngine
+    from engine.action_item_extractor import ActionItemExtractor
+
+    dialogue = [
+        Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="Welcome team, let's review the Q3 launch plan."),
+        Utterance(speaker="RAHUL", start_time=3.5, end_time=7.0, transcript="Hey I am Rahul, I will deploy the database migrations on Thursday at 10 am."),
+        Utterance(speaker="PRIYA", start_time=6.8, end_time=10.0, transcript="Priya here. Wait, I have an open concern regarding frontend latency regression."),
+        Utterance(speaker="SANDEEP", start_time=9.5, end_time=13.0, transcript="Sandeep here. We agree to run load tests before Thursday's deployment."),
+        Utterance(speaker="USER", start_time=13.5, end_time=16.0, transcript="Perfect, agreed on running load tests first.")
+    ]
+
+    # 1. Multi-party overlap and cross-talk computation
+    processed, overlap_events, total_dur, interruptions = DiarizationEngine.compute_overlapping_speech(dialogue)
+    assert overlap_events == 3  # (USER, RAHUL), (RAHUL, PRIYA), (PRIYA, SANDEEP)
+    assert total_dur > 0.5
+    assert interruptions == 3
+
+    # Check distinct speakers
+    distinct_speakers = {u.speaker for u in processed}
+    assert distinct_speakers == {"USER", "RAHUL", "PRIYA", "SANDEEP"}
+
+    # 2. Action item extraction across multiple owners
+    actions = ActionItemExtractor.extract_from_dialogue(processed)
+    assert len(actions) >= 1
+    # Check that Rahul's commitment was extracted with correct owner
+    rahul_action = next((a for a in actions if a.owner.upper() == "RAHUL"), None)
+    assert rahul_action is not None
+    assert "Thursday" in (rahul_action.due_time_or_date or "")
+
+    # 3. Conversational dynamics & emotional trajectory across all N participants
+    dyn, emo, agr, loops = ConversationalIntelligenceEngine.analyze_session(processed, target_speaker="USER")
+    assert len(emo) == 5
+    assert {e.speaker for e in emo} == {"USER", "RAHUL", "PRIYA", "SANDEEP"}
+
+    # 4. Consensus agreements & open loops
+    assert len(agr) >= 1
+    assert any("load test" in a.agreed_solution.lower() or "agree" in a.headline.lower() for a in agr)
+
+    # 5. Open loop raised by Priya
+    assert len(loops) >= 1
+    priya_loop = next((l for l in loops if "PRIYA" in l.raised_by.upper()), None)
+    assert priya_loop is not None
+    assert "latency" in priya_loop.concern_topic.lower() or "latency" in priya_loop.context.lower()
+
