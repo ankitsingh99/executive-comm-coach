@@ -162,3 +162,17 @@ def test_adaptive_mic_sensitivity_feeble_and_loud_speech():
     loud_vocal = ((np.sin(2 * np.pi * 180 * t) + 0.4 * np.sin(2 * np.pi * 360 * t)) * 20000.0).astype(np.int16)
     prob_loud = AmbientVadGate.calculate_speech_probability(loud_vocal, noise_floor_rms=0.0020)
     assert prob_loud >= 0.75
+
+    # 4. Empty chunk
+    assert AmbientVadGate.calculate_speech_probability(np.array([], dtype=np.float32)) == 0.0
+
+    # 5. Float32 array input without noise floor
+    float_audio = (np.sin(2 * np.pi * 150 * t) * 0.5).astype(np.float32)
+    prob_f32 = AmbientVadGate.calculate_speech_probability(float_audio, noise_floor_rms=0.0)
+    assert prob_f32 > 0.50
+
+    # 6. Low energy idle gate message
+    vad = AmbientVadGate(purge_prob_threshold=0.30, speech_prob_threshold=0.75)
+    trig, msg = vad.evaluate_frame(timestamp_ms=100.0, speech_prob=0.45)
+    assert trig is False
+    assert "downstream models remain idle" in msg

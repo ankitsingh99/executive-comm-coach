@@ -150,3 +150,71 @@ def test_gemini_coaching_synthesizer_top_n_and_error_handling():
         # Test exception fallback
         mock_client.models.generate_content.side_effect = Exception("API rate limited")
         assert synthesizer.synthesize(session) is None
+
+
+def test_gemini_coaching_synthesizer_empty_actions_and_highlights_fallback():
+    synthesizer = GeminiCoachingSynthesizer(api_key="test_fake_api_key")
+
+    session = ConversationSession(
+        session_id="test_fallback_actions",
+        target_speaker="USER",
+        power_axis="UPWARD",
+        dialogue=[
+            Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="We have decided to ship by Friday."),
+            Utterance(speaker="RAHUL", start_time=3.5, end_time=6.0, transcript="I will call Priya at 9.")
+        ],
+    )
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = """{
+      "persona_context": "Upward Executive",
+      "top_strengths": [{"observation": "Clear", "verbatim_quote": "We have decided."}],
+      "areas_for_improvement": [{"critique": "Lead with BLUF", "verbatim_quote": "We have decided.", "coached_phrasing": "Ship Friday."}],
+      "action_items": [],
+      "key_highlights": []
+    }"""
+    mock_client.models.generate_content.return_value = mock_response
+
+    with patch.object(synthesizer, "_get_client", return_value=mock_client):
+        eval_res = synthesizer.synthesize(session)
+        assert eval_res is not None
+        # Verify fallback NLP populated actions and highlights
+        assert len(eval_res.action_items) >= 1
+        assert len(eval_res.key_highlights) >= 1
+
+
+def test_gemini_client_initialization_failure_and_unavailable():
+    """Test _get_client failure when genai.Client raises an error and is_available behavior."""
+    synthesizer = GeminiCoachingSynthesizer(api_key="valid_key")
+    with patch("google.genai.Client", side_effect=Exception("Failed to load genai")):
+        client = synthesizer._get_client()
+        assert client is None
+        assert synthesizer.is_available() is False
+
+    # Test synthesize returns None if not available or no client
+    with patch.object(synthesizer, "is_available", return_value=False):
+        assert synthesizer.synthesize(MagicMock()) is None
+
+    with patch.object(synthesizer, "is_available", return_value=True), patch.object(synthesizer, "_get_client", return_value=None):
+        assert synthesizer.synthesize(MagicMock()) is None
+
+
+def test_gemini_synthesizer_function_calling_config_exception():
+    """Test when AutomaticFunctionCallingConfig raises an exception."""
+    synthesizer = GeminiCoachingSynthesizer(api_key="valid_key")
+    session = ConversationSession(
+        session_id="test_fc_exc",
+        target_speaker="USER",
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Good morning.")]
+    )
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = '{"persona_context": "Test", "top_strengths": [], "areas_for_improvement": []}'
+    mock_client.models.generate_content.return_value = mock_response
+
+    with patch("google.genai.types.AutomaticFunctionCallingConfig", side_effect=TypeError("No such arg")), \
+         patch.object(synthesizer, "_get_client", return_value=mock_client):
+        res = synthesizer.synthesize(session)
+        assert res is not None
+

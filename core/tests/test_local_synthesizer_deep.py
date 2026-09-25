@@ -189,3 +189,51 @@ def test_local_synthesizer_ollama_mock():
     # 3. Mock Ollama network error
     with patch("urllib.request.urlopen", side_effect=Exception("Connection refused")):
         assert synthesizer._try_ollama_local_inference(dialogue, profile, metrics, top_n=2) is None
+
+    # 4. Mock Ollama tags non-200 HTTP status
+    mock_500 = MagicMock()
+    mock_500.status = 500
+    mock_500.__enter__.return_value = mock_500
+    with patch("urllib.request.urlopen", return_value=mock_500):
+        assert synthesizer._try_ollama_local_inference(dialogue, profile, metrics, top_n=2) is None
+
+
+def test_local_synthesizer_learning_inquiry_all_axes():
+    """Test is_seeking_learning and is_question across SOLO, LATERAL, and DOWNWARD axes."""
+    synthesizer = LocalCoachingSynthesizer()
+
+    for axis in ["SOLO", "LATERAL", "DOWNWARD", "CONFLICT"]:
+        session = ConversationSession(
+            session_id=f"test_learn_{axis}",
+            power_axis=axis,
+            target_speaker="USER",
+            dialogue=[
+                Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="How do I learn and explore the system architecture?")
+            ]
+        )
+        res = synthesizer.synthesize(session, try_local_ollama=False)
+        assert res is not None
+        assert len(res.areas_for_improvement) >= 1
+
+    # Invalid power axis fallback to UPWARD
+    session_invalid = ConversationSession(
+        session_id="test_invalid_axis",
+        power_axis="UNKNOWN_AXIS_STRING",
+        target_speaker="USER",
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Hello team.")]
+    )
+    res_inv = synthesizer.synthesize(session_invalid, try_local_ollama=False)
+    assert res_inv is not None
+
+
+def test_schema_fallback_base_model_methods():
+    """Test fallback BaseModel behavior and decorators for 100% schema.py branch coverage."""
+    # Test fallback model_dump, model_validate
+    from engine.schema import TopStrength, AreaForImprovement, CommunicationMetrics
+
+    ts = TopStrength(observation="Strong", verbatim_quote="Quote")
+    d = ts.model_dump()
+    assert d["observation"] == "Strong"
+
+    ts_val = TopStrength.model_validate({"observation": "Validated", "verbatim_quote": "Quote"})
+    assert ts_val.observation == "Validated"

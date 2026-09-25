@@ -178,3 +178,60 @@ def test_gemini_audio_engine_exception_handling():
     finally:
         if os.path.exists(wav_path):
             os.remove(wav_path)
+
+
+def test_gemini_audio_engine_client_init_error_and_3part_timestamps():
+    """Test client initialization error and 3-part timestamp parsing in audio engine."""
+    engine = GeminiAudioEngine(api_key="valid_key")
+    with patch("google.genai.Client", side_effect=Exception("Client init failed")):
+        assert engine._get_client() is None
+        assert engine.is_available() is False
+
+    # Test 3-part time strings and invalid formats
+    wav_path = create_mock_wav(duration_sec=0.2)
+    mock_gemini_response = {
+        "transcription": [
+            {
+                "speaker": "SPEAKER_02",
+                "start_time": "01:15:30",
+                "end_time": "01:15:35",
+                "transcript": "Checking 3-part timestamp."
+            },
+            {
+                "speaker": "SPEAKER_0",
+                "start_time": "invalid_time_format",
+                "end_time": "bad:colon:format:with:too:many:parts",
+                "transcript": "Fallback times"
+            },
+            {
+                "speaker": "SPEAKER_0",
+                "start_time": None,
+                "end_time": None,
+                "transcript": "None times"
+            }
+        ],
+        "speaker_count": 2,
+        "overall_tone": "Conversational",
+        "speakers": []
+    }
+    mock_client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = json.dumps(mock_gemini_response)
+    mock_client.models.generate_content.return_value = mock_resp
+
+    try:
+        with patch.object(engine, "_get_client", return_value=mock_client), \
+             patch.object(engine, "is_available", return_value=True), \
+             patch("google.genai.types.AutomaticFunctionCallingConfig", side_effect=TypeError("No AFC")):
+            utts, ac = engine.process_audio(wav_path)
+            assert len(utts) >= 1
+            three_part_utt = next(u for u in utts if "Checking 3-part timestamp" in u.transcript)
+            # 01:15:30 is 1*3600 + 15*60 + 30 = 3600 + 900 + 30 = 4530.0
+            assert three_part_utt.start_time == 4530.0
+            assert three_part_utt.end_time == 4535.0
+            assert three_part_utt.speaker == "COUNTERPART"
+    finally:
+        if os.path.exists(wav_path):
+            os.remove(wav_path)
+
+

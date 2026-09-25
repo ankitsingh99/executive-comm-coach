@@ -116,3 +116,50 @@ def test_action_item_ambiguous_time_resolution():
     assert len(items) == 1
     assert items[0].target_time_inferred_ampm == "PM"
     assert "2026-09-12T21:00:00" in items[0].resolved_datetime
+
+
+def test_action_item_edge_cases_and_deduplication():
+    """Test short utterances, long descriptions, fallback anchors, and deduplication."""
+    # 1. Short utterance (< 8 chars)
+    short_u = Utterance(speaker="USER", start_time=0.0, end_time=1.0, transcript="ok")
+    assert ActionItemExtractor.extract_from_utterance(short_u) == []
+
+    # 2. Long task description (> 120 chars)
+    desc = ActionItemExtractor.extract_task_description(
+        "I will definitely deliver our entire distributed database architecture across all global regions and environments by next quarter with zero downtime.",
+        matched_intent="Deliverable",
+    )
+    assert desc.endswith("...")
+
+    # 3. Deduplication of identical action items
+    duplicate_dialogue = [
+        Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="I will send the report by 5 PM."),
+        Utterance(speaker="USER", start_time=3.0, end_time=5.0, transcript="I will send the report by 5 PM.")
+    ]
+    deduped = ActionItemExtractor.extract_from_dialogue(duplicate_dialogue)
+    assert len(deduped) == 1
+
+    # 4. Fallback temporal anchor regex
+    anchor = ActionItemExtractor.extract_temporal_anchor("The deadline is on 15 Oct 2026.")
+    assert anchor is not None
+
+
+def test_action_item_extractor_fallback_regex_and_unsplit_sentence():
+    """Test extract_temporal_anchor fallback regex loop when TemporalResolver returns None, and unsplit sentences."""
+    from unittest.mock import patch
+
+    # 1. Temporal anchor regex fallback when TemporalResolver is mocked to return None
+    with patch("engine.action_item_extractor.TemporalResolver.resolve_time_expression", return_value=None):
+        anchor = ActionItemExtractor.extract_temporal_anchor("Please complete this by tomorrow at 5 pm.")
+        assert anchor is not None
+        assert "tomorrow" in anchor or "5 pm" in anchor
+
+        no_anchor = ActionItemExtractor.extract_temporal_anchor("Hello there, nice to meet you.")
+        assert no_anchor is None
+
+    # 2. Utterance with no punctuation delimiters (exercises sentences = [text] fallback)
+    u_no_punc = Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="i will definitely send the logs tonight")
+    items = ActionItemExtractor.extract_from_utterance(u_no_punc)
+    assert len(items) == 1
+    assert "send the logs" in items[0].task.lower()
+

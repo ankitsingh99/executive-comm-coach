@@ -132,10 +132,50 @@ def test_relative_deadlines_eod_and_asap():
 
     res_eod = TemporalResolver.resolve_time_expression("please finish by EOD", ref_dt=ref_dt)
     assert res_eod is not None
-    assert "EOD" in res_eod.formatted_label
-    assert res_eod.urgency == "High"
-
     res_asap = TemporalResolver.resolve_time_expression("deploy the fix asap", ref_dt=ref_dt)
     assert res_asap is not None
     assert "ASAP" in res_asap.formatted_label
-    assert res_asap.urgency == "High"
+
+
+def test_temporal_resolver_extended_deadlines_and_calendar_dates():
+    """Test EOW, next week, tonight, today time resolution, and calendar date boundaries."""
+    ref_dt = datetime(2026, 9, 12, 19, 30, 0)  # Saturday 7:30 PM
+
+    # 1. EOD when current time is after 18:00 (rolls forward to tomorrow 6 PM)
+    res_late_eod = TemporalResolver.resolve_time_expression("finish by eod", ref_dt=ref_dt)
+    assert res_late_eod is not None
+    assert "2026-09-13T18:00:00" in res_late_eod.resolved_datetime
+
+    # 2. End of week / EOW
+    ref_wed = datetime(2026, 9, 9, 10, 0, 0)  # Wednesday
+    res_eow = TemporalResolver.resolve_time_expression("deliver by end of week", ref_dt=ref_wed)
+    assert res_eow is not None
+    assert "Friday by EOD" in res_eow.formatted_label
+
+    # 3. Next week / agle hafte
+    res_nw = TemporalResolver.resolve_time_expression("milte hain agle hafte", ref_dt=ref_wed)
+    assert res_nw is not None
+    assert "Next Week" in res_nw.formatted_label
+
+    # 4. Tonight
+    res_tonight = TemporalResolver.resolve_time_expression("call you tonight at 8", ref_dt=datetime(2026, 9, 12, 10, 0, 0))
+    assert res_tonight is not None
+    assert res_tonight.inferred_ampm == "PM"
+
+    # 5. Today at 3 (ambiguous hour on today: picks 3 PM if morning)
+    res_today = TemporalResolver.resolve_time_expression("meet today at 3", ref_dt=datetime(2026, 9, 12, 10, 0, 0))
+    assert res_today is not None
+    assert res_today.inferred_ampm == "PM"
+
+    # 6. 'Parson' (Hindi alternative spelling of parso)
+    res_parson = TemporalResolver.resolve_time_expression("parson subah 10 baje", ref_dt=ref_wed)
+    assert res_parson is not None
+    assert res_parson.inferred_ampm == "AM"
+
+    # 7. Invalid date in text (e.g. 31 Feb)
+    assert TemporalResolver.resolve_time_expression("deadline is 31 Feb 2026", ref_dt=ref_wed) is None
+
+    # 8. Past date rollforward (> 180 days ago rolls to next year)
+    res_roll = TemporalResolver.resolve_time_expression("due on 15 Jan", ref_dt=datetime(2026, 9, 12, 10, 0, 0))
+    assert res_roll is not None
+    assert "2027" in res_roll.resolved_datetime

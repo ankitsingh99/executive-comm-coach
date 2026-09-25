@@ -134,3 +134,32 @@ def test_coaching_engine_gemini_synthesis_flow(sample_session):
         res = engine.evaluate_session(sample_session, use_llm=True)
         assert res.metrics.presence_score == 92
         assert res.longitudinal_summary == "High-impact delivery."
+
+
+def test_metrics_calculator_phrase_fillers_and_fallbacks():
+    """Test multi-word phrase fillers and fallback speaker mapping in MetricsCalculator."""
+    from engine.metrics_calculator import MetricsCalculator
+
+    # 1. Multi-word phrases
+    phrase_text = "You know, it is kind of sort of tricky."
+    fillers = MetricsCalculator.detect_fillers(phrase_text)
+    tokens = {f.token for f in fillers}
+    assert "you know" in tokens or "kind of" in tokens
+
+    # 2. Empty dialogue
+    m_empty = MetricsCalculator.analyze_dialogue([])
+    assert m_empty.presence_score == 75
+
+    # 3. Speaker fallback mapping (when target speaker not found in dialogue)
+    # Multi-speaker fallback (maps unique_spks[0])
+    utts_multi = [
+        Utterance(speaker="UNKNOWN_A", start_time=0.0, end_time=2.0, transcript="We should deploy now."),
+        Utterance(speaker="UNKNOWN_B", start_time=2.5, end_time=4.0, transcript="Agreed.")
+    ]
+    m_multi = MetricsCalculator.analyze_dialogue(utts_multi, target_speaker="CUSTOM_USER")
+    assert m_multi.presence_score > 0
+
+    # Solo fallback
+    utts_solo = [Utterance(speaker="UNKNOWN_SOLO", start_time=0.0, end_time=2.0, transcript="Solo rehearsal test.")]
+    m_solo = MetricsCalculator.analyze_dialogue(utts_solo, target_speaker="CUSTOM_USER")
+    assert m_solo.presence_score > 0

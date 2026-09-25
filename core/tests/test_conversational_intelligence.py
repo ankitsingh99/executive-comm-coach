@@ -157,3 +157,41 @@ def test_local_coaching_synthesizer_attaches_all_insights():
     assert len(evaluation.emotional_trajectory) == 2
     assert len(evaluation.agreements) >= 1
     assert len(evaluation.unresolved_loops) >= 1
+
+
+def test_conversational_intelligence_acoustic_tones_and_edge_cases():
+    """Test vocal tension branches, zero word inputs, and empty sessions."""
+    # 1. Empty dialogue
+    dyn_empty, traj_empty, agr_empty, loops_empty = ConversationalIntelligenceEngine.analyze_session([])
+    assert traj_empty == []
+    assert agr_empty == []
+    assert loops_empty == []
+    assert dyn_empty.user_talk_time_pct == 50.0
+
+    # 2. Vocal tension acoustic branches
+    from engine.schema import AcousticAnalysisResult
+    utts = [
+        Utterance(speaker="USER", start_time=0.0, end_time=0.0, transcript="ok"),
+        Utterance(speaker="COUNTERPART", start_time=0.0, end_time=0.0, transcript="sure")
+    ]
+
+    # Tense
+    ac_tense = AcousticAnalysisResult(overall_tone="Tense & Strained")
+    dyn_tense = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts, target_speaker="USER", acoustic_result=ac_tense)
+    assert dyn_tense.vocal_tension_index == "Elevated Tension / High Strain"
+
+    # Monotone
+    ac_mono = AcousticAnalysisResult(overall_tone="Monotone / Flat")
+    dyn_mono = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts, target_speaker="USER", acoustic_result=ac_mono)
+    assert dyn_mono.vocal_tension_index == "Subdued / Guarded"
+
+    # Vibrant
+    ac_vib = AcousticAnalysisResult(overall_tone="Vibrant & Expressive")
+    dyn_vib = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts, target_speaker="USER", acoustic_result=ac_vib)
+    assert dyn_vib.vocal_tension_index == "High Energy & Expressive"
+
+    # Zero user words (counterpart speaks only)
+    utts_cp_only = [Utterance(speaker="COUNTERPART", start_time=0.0, end_time=3.0, transcript="Hello there team.")]
+    dyn_cp = ConversationalIntelligenceEngine.compute_conversational_dynamics(utts_cp_only, target_speaker="USER")
+    assert dyn_cp.brevity_potential_pct == 0.0
+    assert dyn_cp.user_talk_time_pct == 0.0

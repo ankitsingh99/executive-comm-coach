@@ -158,3 +158,88 @@ def test_transcription_analyzer_gemini_mock():
     res_session = analyzer.analyze(session, use_gemini=False)
     assert res_session.session_id == "transcription_analysis" or res_session.session_id == "session_test"
     assert len(res_session.potential_tasks) >= 1
+
+
+def test_transcription_analyzer_helper_branches():
+    """Test sentiment tones, summary variants, headline truncations, and normalization."""
+    analyzer = TranscriptionAnalyzer()
+
+    # 1. Sentiment tones
+    assert analyzer._detect_sentiment_tone("We have a major blocker and risk in deployment.") == "Urgent & Issue-Focused"
+    assert analyzer._detect_sentiment_tone("This is great and we are perfectly aligned.") == "Positive & Collaborative"
+    assert analyzer._detect_sentiment_tone("We will ship and deliver on Thursday.") == "Decisive & Action-Oriented"
+    assert analyzer._detect_sentiment_tone("Hello, how is the weather today?") == "Calm & Constructive"
+
+    # 2. Summary variations
+    from engine.schema import ActionItem, KeyHighlight
+    utts = [Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Test")]
+    # Highlights only
+    hl = [KeyHighlight(headline="H", takeaway="Core architecture.", speaker="USER", verbatim_quote="q")]
+    s_hl = analyzer._generate_summary(utts, hl, [])
+    assert "focused on core architecture" in s_hl.lower()
+
+    # Tasks only (no highlights)
+    task = [ActionItem(owner="USER", task="Review PR")]
+    s_task = analyzer._generate_summary(utts, [], task)
+    assert "established 1 concrete action item" in s_task.lower()
+
+    # Neither
+    s_none = analyzer._generate_summary(utts, [], [])
+    assert "covered key topical points" in s_none.lower()
+
+    # 3. Normalization from string with empty lines, raw lines, and invalid input
+    raw_str = "\n  \nSPEAKER_01: First turn\nPlain turn without speaker tag\n"
+    normalized = analyzer._normalize_to_utterances(raw_str)
+    assert len(normalized) == 2
+    assert normalized[0].speaker == "SPEAKER_01"
+    assert normalized[1].speaker == "USER"
+
+    # Invalid input type
+    assert analyzer._normalize_to_utterances(12345) == []
+
+    # 4. Long headline truncation
+    long_text = "we have decided to completely rebuild the whole caching system from scratch with redis"
+    hd = analyzer._generate_highlight_headline(long_text, "Decision")
+    assert hd.endswith("...")
+
+    # 5. Empty text string normalization
+    assert analyzer._normalize_to_utterances("") == []
+    assert analyzer._normalize_to_utterances("   ") == []
+
+
+def test_transcription_analyzer_client_and_gemini_fallbacks():
+    """Test client error handling, is_gemini_available, and fallback when Gemini throws exception."""
+    from unittest.mock import patch, MagicMock
+
+    analyzer = TranscriptionAnalyzer(api_key="test_key")
+
+    # 1. _get_client throws exception
+    with patch("google.genai.Client", side_effect=Exception("Genai import failure")):
+        assert analyzer._get_client() is None
+        assert analyzer.is_gemini_available() is False
+
+    # 2. _analyze_with_gemini returns None on API failure, fallback to NLP
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = Exception("API 500 error")
+
+    utts = [Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="I will send the report by 5 PM tomorrow.")]
+    with patch.object(analyzer, "_get_client", return_value=mock_client), \
+         patch.object(analyzer, "is_gemini_available", return_value=True):
+        res = analyzer.analyze(utts, use_gemini=True)
+        # Should gracefully fallback to deterministic NLP analysis
+        assert res is not None
+        assert len(res.potential_tasks) >= 1
+
+    # 3. _analyze_with_gemini when LLM returns no tasks
+    mock_response = MagicMock()
+    mock_response.text = '{"summary": "Test", "key_highlights": [], "potential_tasks": [], "topics_discussed": []}'
+    mock_client.models.generate_content.side_effect = None
+    mock_client.models.generate_content.return_value = mock_response
+
+    with patch.object(analyzer, "_get_client", return_value=mock_client), \
+         patch.object(analyzer, "is_gemini_available", return_value=True):
+        res_no_tasks = analyzer.analyze(utts, use_gemini=True)
+        assert res_no_tasks is not None
+        # Tasks should have been extracted via deterministic fallback
+        assert len(res_no_tasks.potential_tasks) >= 1
+

@@ -77,3 +77,21 @@ def test_non_verbal_sounds_and_clicks_detection():
     assert "tch" in tokens
     assert "aaaa" in tokens or "aa" in tokens
     assert "uff" in tokens
+
+
+def test_indic_normalizer_halant_and_edge_cases():
+    """Test halant consonant clusters, English bypass, and is_hinglish boundaries."""
+    # 1. Halant character clusters (e.g. क्त, ल्य)
+    halant_text = "कल्याण और मुख्य"
+    translit = IndicNormalizer.transliterate_devanagari_to_roman(halant_text)
+    assert "kalyan" in translit or "mukhy" in translit or len(translit) > 3
+
+    # 2. Transliterate pure English bypass
+    eng_text = "This is purely English text."
+    assert IndicNormalizer.transliterate_devanagari_to_roman(eng_text) == eng_text
+
+    # 3. is_hinglish empty / devanagari
+    assert IndicNormalizer.is_hinglish("") is False
+    assert IndicNormalizer.is_hinglish(None) is False
+    assert IndicNormalizer.is_hinglish("हम") is True
+    assert IndicNormalizer.is_hinglish("Hello team, good morning.") is False

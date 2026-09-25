@@ -190,3 +190,78 @@ def test_evaluate_segment_all_acoustic_types_and_speaker_mapping():
     ev_spk = detector._evaluate_segment(frames_uhh, speaker_segments=utts)
     assert ev_spk is not None
     assert ev_spk.speaker == "COUNTERPART"
+
+
+def test_acoustic_filler_wav_bitdepths_and_empty_signals(tmp_path):
+    """Test 32-bit, 8-bit WAV files, stereo resampling, and empty signals in AcousticFillerDetector."""
+    import wave
+
+    detector = AcousticFillerDetector()
+    sr = 16000
+
+    # 1. Empty signal and short signal
+    assert detector.detect_fillers_from_signal(np.array([], dtype=np.float32), sr) == []
+    assert detector.detect_fillers_from_signal(np.ones(10, dtype=np.float32), sr) == []
+
+    # 2. 32-bit float WAV
+    wav_32 = str(tmp_path / "filler_32.wav")
+    samples_32 = (np.sin(2 * np.pi * 180 * np.linspace(0, 0.5, 8000)) * 2147483647).astype(np.int32)
+    with wave.open(wav_32, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(4)
+        wf.setframerate(sr)
+        wf.writeframes(samples_32.tobytes())
+
+    res_32 = detector.detect_fillers_from_wav(wav_32)
+    assert isinstance(res_32, list)
+
+    # 3. 8-bit uint WAV
+    wav_8 = str(tmp_path / "filler_8.wav")
+    samples_8 = np.clip((np.sin(2 * np.pi * 180 * np.linspace(0, 0.5, 8000)) + 1.0) * 127.5, 0, 255).astype(np.uint8)
+    with wave.open(wav_8, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(1)
+        wf.setframerate(sr)
+        wf.writeframes(samples_8.tobytes())
+
+    res_8 = detector.detect_fillers_from_wav(wav_8)
+    assert isinstance(res_8, list)
+
+    # 4. Stereo 24kHz WAV (num_channels > 1 and sr != self.sample_rate)
+    wav_stereo_24k = str(tmp_path / "filler_stereo_24k.wav")
+    t_24k = np.linspace(0, 0.5, 12000)
+    samples_left = (np.sin(2 * np.pi * 180 * t_24k) * 32767).astype(np.int16)
+    samples_right = (np.sin(2 * np.pi * 180 * t_24k) * 32767).astype(np.int16)
+    stereo_interleaved = np.empty((12000, 2), dtype=np.int16)
+    stereo_interleaved[:, 0] = samples_left
+    stereo_interleaved[:, 1] = samples_right
+
+    with wave.open(wav_stereo_24k, "wb") as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(24000)
+        wf.writeframes(stereo_interleaved.tobytes())
+
+    res_stereo = detector.detect_fillers_from_wav(wav_stereo_24k)
+    assert isinstance(res_stereo, list)
+
+
+def test_evaluate_segment_aah_mid_ratio_and_centroid():
+    """Test _evaluate_segment for the aah token via mid_ratio >= 0.35 or centroid <= 1200.0."""
+    detector = AcousticFillerDetector()
+    frames_aah = [
+        {
+            "time": i * 0.025,
+            "pitch_f0": 160.0,
+            "centroid": 1100.0,
+            "low_ratio": 0.4,
+            "mid_ratio": 0.38,
+            "flux": 0.05,
+        }
+        for i in range(12)
+    ]
+    ev = detector._evaluate_segment(frames_aah)
+    assert ev is not None
+    assert ev.token == "aah"
+    assert ev.acoustic_type == "vocal_hesitation"
+

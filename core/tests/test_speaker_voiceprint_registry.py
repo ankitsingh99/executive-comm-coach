@@ -209,3 +209,89 @@ def test_corrupted_database_recovery(tmp_path):
     # Should recover gracefully without crashing
     reg = SpeakerVoiceprintRegistry(storage_dir=str(storage_dir))
     assert len(reg.list_enrolled_speakers()) == 0
+
+
+def test_voiceprint_bitdepth_and_short_audio_branches(temp_registry, tmp_path):
+    """Test 32-bit int, 8-bit uint WAV reading, short signals (<300ms), and deleting non-existent speaker."""
+    import wave
+    import struct
+
+    sr = 16000
+    voice = generate_synthetic_voice(pitch_f0=140.0, duration_s=1.0, sample_rate=sr)
+
+    # 1. 32-bit int WAV
+    wav_32 = str(tmp_path / "test_32bit.wav")
+    samples_32 = (voice * 2147483647).astype(np.int32)
+    with wave.open(wav_32, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(4)
+        wf.setframerate(sr)
+        wf.writeframes(samples_32.tobytes())
+
+    vp32 = temp_registry.enroll_speaker("Rohan 32", "Eng", "LATERAL", audio_signal_or_wav_path=wav_32)
+    assert vp32 is not None
+
+    # 2. 8-bit uint WAV
+    wav_8 = str(tmp_path / "test_8bit.wav")
+    samples_8 = np.clip((voice + 1.0) * 127.5, 0, 255).astype(np.uint8)
+    with wave.open(wav_8, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(1)
+        wf.setframerate(sr)
+        wf.writeframes(samples_8.tobytes())
+
+    vp8 = temp_registry.enroll_speaker("Rohan 8", "Eng", "LATERAL", audio_signal_or_wav_path=wav_8)
+    assert vp8 is not None
+
+    # 3. Short signal extraction (< 300ms -> None)
+    short_signal = np.ones(int(sr * 0.1), dtype=np.float32)
+    assert temp_registry.extract_voiceprint_features(short_signal, sample_rate=sr) is None
+
+    # 4. Silent signal (> 300ms but < 5 voiced frames -> None)
+    silent_signal = np.zeros(int(sr * 0.5), dtype=np.float32)
+    assert temp_registry.extract_voiceprint_features(silent_signal, sample_rate=sr) is None
+
+    # 5. Deleting non-existent speaker
+    assert temp_registry.delete_voiceprint("Non Existent Speaker") is False
+
+    # 6. Synthesize fallback embedding directly
+    fallback_emb = temp_registry.synthesize_fallback_embedding(150.0, 1200.0)
+    assert fallback_emb.shape == (32,)
+
+    # 7. Stereo WAV loading in _load_audio_file
+    wav_stereo = str(tmp_path / "stereo_test.wav")
+    samples_stereo = np.empty((8000, 2), dtype=np.int16)
+    samples_stereo[:, 0] = (voice[:8000] * 32767).astype(np.int16)
+    samples_stereo[:, 1] = (voice[:8000] * 32767).astype(np.int16)
+    with wave.open(wav_stereo, "wb") as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(samples_stereo.tobytes())
+
+    sig, s_rate = temp_registry._load_audio_file(wav_stereo)
+    assert s_rate == sr
+    assert sig.ndim == 1
+
+    # 8. Corrupted embedding vector self-healing during enroll update and identification
+    from unittest.mock import patch
+    temp_registry.enroll_speaker("Corrupt Speaker", "Engineer", "LATERAL", voice, sr)
+    # Corrupt embedding vector to zeros
+    temp_registry.voiceprints["Corrupt Speaker"].embedding_vector = [0.0] * 32
+    
+    # Updating speaker should self-heal via synthesize_fallback_embedding
+    temp_registry.enroll_speaker("Corrupt Speaker", "Lead", "LATERAL", voice, sr)
+    assert np.linalg.norm(temp_registry.voiceprints["Corrupt Speaker"].embedding_vector) > 0.5
+
+    # Corrupt again and test identify_speaker self-healing
+    temp_registry.voiceprints["Corrupt Speaker"].embedding_vector = [0.0] * 10
+    identified = temp_registry.identify_speaker(voice, sample_rate=sr, threshold=0.1)
+    assert identified is not None
+    assert len(temp_registry.voiceprints["Corrupt Speaker"].embedding_vector) == 32
+    assert np.linalg.norm(temp_registry.voiceprints["Corrupt Speaker"].embedding_vector) > 0.5
+
+
+    # 9. save_to_disk exception handling
+    with patch("builtins.open", side_effect=IOError("Disk permission denied")):
+        temp_registry.save_to_disk()
+

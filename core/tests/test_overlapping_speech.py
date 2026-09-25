@@ -199,3 +199,32 @@ def test_n_speaker_conversation_analysis():
     cli_solo = DiarizationEngine.format_dialogue_cli([Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="Solo rehearsal.")], user_name="Ashish")
     assert "[ASHISH (Solo)]" in cli_solo or "[ASHISH / YOU]" in cli_solo
 
+    # 7. Test assign_roles with recognized user & counterpart names
+    raw_utts = [
+        Utterance(speaker="SPEAKER_01", start_time=0.0, end_time=2.0, transcript="Hello"),
+        Utterance(speaker="SPEAKER_02", start_time=2.0, end_time=4.0, transcript="Hi there"),
+        Utterance(speaker="CUSTOM_SPK", start_time=4.0, end_time=6.0, transcript="Testing"),
+    ]
+    assigned = DiarizationEngine.assign_roles(
+        raw_utts, user_speaker_id="SPEAKER_01", recognized_user_name="Ashish", recognized_counterpart_name="Vikram"
+    )
+    assert assigned[0].speaker == "Ashish"
+    assert assigned[1].speaker == "Vikram"
+    assert assigned[2].speaker == "CUSTOM_SPK"
+
+    # 8. Test detect_and_apply_verbal_introductions re-tagging
+    intro_utts = [
+        Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="Hi, I am Ashish from engineering."),
+        Utterance(speaker="COUNTERPART", start_time=3.5, end_time=7.0, transcript="Hey, this is Vikram from product."),
+    ]
+    retagged, cp, usr = DiarizationEngine.detect_and_apply_verbal_introductions(intro_utts)
+    assert usr == "Ashish"
+    assert cp == "Vikram"
+    assert retagged[0].speaker == "Ashish"
+    assert retagged[1].speaker == "Vikram"
+
+    # 9. Format CLI with invalid / zero end time
+    zero_dur_utt = [Utterance(speaker="USER", start_time=5.0, end_time=5.0, transcript="Quick check.")]
+    cli_zero = DiarizationEngine.format_dialogue_cli(zero_dur_utt)
+    assert "Quick check." in cli_zero
+
