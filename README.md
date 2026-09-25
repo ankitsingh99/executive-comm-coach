@@ -1,8 +1,17 @@
 # Executive Communication Coach
 
+[![CI](https://github.com/ankitsingh99/executive-comm-coach/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitsingh99/executive-comm-coach/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ankitsingh99/executive-comm-coach?color=blue&label=Release)](https://github.com/ankitsingh99/executive-comm-coach/releases)
+[![Discussions](https://img.shields.io/badge/Discussions-Join%20Community-purple?logo=github)](https://github.com/ankitsingh99/executive-comm-coach/discussions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/ankitsingh99/executive-comm-coach)
+[![CUPS](https://img.shields.io/badge/CUPS-v2.4%2B-informational.svg)](https://github.com/ankitsingh99/executive-comm-coach)
+[![Version](https://img.shields.io/badge/Version-v0.1.0-blue.svg)](https://github.com/ankitsingh99/executive-comm-coach/releases)
+[![Coverage](https://img.shields.io/badge/Coverage-95.83%25-brightgreen.svg)](https://github.com/ankitsingh99/executive-comm-coach)
+
 An on-device, privacy-first AI communication intelligence system and companion service that analyzes spoken workplace and personal conversations across all registers (Executive, Collaborative, Casual, Solo Practice, Mentorship, and Conflict), providing persona-calibrated communication coaching, cross-talk detection, and commitment tracking.
 
-For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE.md](file:///Users/ashish/git/executive-comm-coach/ARCHITECTURE.md).
+For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
