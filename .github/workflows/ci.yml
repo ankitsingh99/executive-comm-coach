@@ -30,13 +30,13 @@ jobs:
           pip install flake8 black isort
 
       - name: Run Black formatting check
-        run: black --check --diff core/
+        run: black --config pyproject.toml --check --diff core/
 
       - name: Run isort imports check
-        run: isort --check-only --diff core/
+        run: isort --settings-path pyproject.toml --check-only --diff core/
 
       - name: Run Flake8 linter
-        run: flake8 core/
+        run: flake8 --config .flake8 core/
 
   test-suite:
     name: Test Suite (Python ${{ matrix.python-version }} on ${{ matrix.os }})
