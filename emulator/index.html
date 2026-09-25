@@ -371,6 +371,48 @@
       color: #fff;
     }
 
+    /* Floating Minimized Nudge Animated Pill */
+    .minimized-nudge-pill {
+      position: absolute;
+      top: 24px;
+      right: 14px;
+      z-index: 45;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(16, 185, 129, 0.6);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 16px rgba(16, 185, 129, 0.4);
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: floatBadge 2.5s ease-in-out infinite, slideInRight 0.3s ease-out;
+    }
+    .minimized-nudge-pill:hover {
+      transform: scale(1.06);
+      border-color: #34d399;
+      box-shadow: 0 6px 25px rgba(16, 185, 129, 0.6);
+      background: rgba(15, 23, 42, 1);
+    }
+    .minimized-pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes floatBadge {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-3px); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
 
     .spinner-ring {
       width: 54px;
@@ -624,6 +666,13 @@
         <div class="phone-notch"></div>
         
         <div class="phone-screen">
+          <!-- Floating Minimized Animated Nudge Pill (shown when banner is dismissed/closed) -->
+          <div class="minimized-nudge-pill" id="minimized-nudge-pill" style="display: none;" onclick="expandNudge()" title="Speech Detected • Tap to open coaching recorder">
+            <div class="minimized-pulse-dot"></div>
+            <span class="material-symbols-outlined" style="font-size: 0.95rem; color: #34d399;">record_voice_over</span>
+            <span style="font-size: 0.65rem; font-weight: 700; color: #a7f3d0;">Speech Detected</span>
+          </div>
+
           <!-- Floating Ambient Consent & Speech Detection Nudge Banner -->
           <div class="ambient-nudge-banner" id="ambient-nudge-banner" style="display: none;">
             <div class="nudge-header">
@@ -2011,6 +2060,14 @@
           btn.innerHTML = '<span>[STOP] Stop Recording</span>';
           document.getElementById('txt-tone').innerText = "Live Mic Active (Analyzing Pitch...)";
 
+          // Hide any open nudge banner or floating pill when recording starts
+          const nBanner = document.getElementById('ambient-nudge-banner');
+          const nPill = document.getElementById('minimized-nudge-pill');
+          if (nBanner) nBanner.style.display = 'none';
+          if (nPill) nPill.style.display = 'none';
+          nudgeActive = false;
+          isNudgeDismissed = false;
+
         } catch (err) {
           console.error("Microphone access failed:", err);
           alert("Microphone Access Request:\nPlease allow microphone permissions in your browser to record live speech.");
@@ -2047,6 +2104,8 @@
     let ambientStream = null;
     let ambientInterval = null;
     let nudgeActive = false;
+    let isNudgeDismissed = false;
+    let pendingNudgeText = "";
 
     function playExecutiveChime() {
       try {
@@ -2066,27 +2125,58 @@
     }
 
     function showAmbientSpeechNudge(customText) {
-      if (isRecording || nudgeActive) return;
-      nudgeActive = true;
+      if (isRecording) return;
+      if (customText) pendingNudgeText = customText;
+
       const banner = document.getElementById('ambient-nudge-banner');
+      const pill = document.getElementById('minimized-nudge-pill');
       const desc = document.getElementById('nudge-desc-text');
-      if (customText && desc) {
-        desc.innerHTML = `Spoken dialogue detected: <em>"${customText}"</em><br>Would you like to start recording for communication coaching &amp; action item capture?`;
+
+      if (pendingNudgeText && desc) {
+        desc.innerHTML = `Spoken dialogue detected: <em>"${pendingNudgeText}"</em><br>Would you like to start recording for communication coaching &amp; action item capture?`;
       } else if (desc) {
         desc.innerHTML = "We detected that you started speaking! Would you like to start recording for communication coaching &amp; action item analysis?";
       }
+
+      // If user dismissed/closed the banner dialog, preserve their peace: keep it minimized as an animated floating icon instead of popping up incessantly
+      if (isNudgeDismissed) {
+        if (pill) pill.style.display = 'flex';
+        if (banner) banner.style.display = 'none';
+        return;
+      }
+
+      if (nudgeActive) return;
+      nudgeActive = true;
+      if (pill) pill.style.display = 'none';
       if (banner) banner.style.display = 'flex';
       playExecutiveChime();
     }
 
     function dismissNudge() {
       nudgeActive = false;
+      isNudgeDismissed = true; // Turn into minimized animated floating pill
       const banner = document.getElementById('ambient-nudge-banner');
+      const pill = document.getElementById('minimized-nudge-pill');
       if (banner) banner.style.display = 'none';
+      if (pill) pill.style.display = 'flex'; // Animated floating pill icon
+    }
+
+    function expandNudge() {
+      isNudgeDismissed = false;
+      nudgeActive = true;
+      const banner = document.getElementById('ambient-nudge-banner');
+      const pill = document.getElementById('minimized-nudge-pill');
+      if (pill) pill.style.display = 'none';
+      if (banner) banner.style.display = 'flex';
     }
 
     function acceptNudgeAndRecord() {
-      dismissNudge();
+      nudgeActive = false;
+      isNudgeDismissed = false;
+      const banner = document.getElementById('ambient-nudge-banner');
+      const pill = document.getElementById('minimized-nudge-pill');
+      if (banner) banner.style.display = 'none';
+      if (pill) pill.style.display = 'none';
       if (!isRecording) {
         toggleMic();
       }
@@ -2100,6 +2190,8 @@
       ];
       const picked = samplePhrases[Math.floor(Math.random() * samplePhrases.length)];
       document.getElementById('custom-speech-input').value = picked;
+      pendingNudgeText = picked;
+      isNudgeDismissed = false; // Fresh manual simulation explicitly shows dialog
       showAmbientSpeechNudge(picked);
     }
 
