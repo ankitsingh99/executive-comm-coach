@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Linting Tools
         run: |
@@ -30,7 +30,7 @@ jobs:
           pip install flake8 black isort
 
       - name: Run Black formatting check
-        run: black --config pyproject.toml --check --diff core/
+        run: black --target-version py311 --config pyproject.toml --check --diff core/
 
       - name: Run isort imports check
         run: isort --settings-path pyproject.toml --check-only --diff core/
