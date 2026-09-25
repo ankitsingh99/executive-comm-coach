@@ -134,4 +134,12 @@ Open `http://localhost:8080/emulator/index.html` in your browser.
 ```bash
 ./venv/bin/pytest -v
 ```
-Runs the 55+ automated unit and integration tests covering ASR, diarization, VAD gating, Hinglish normalization, temporal resolution, and coaching synthesis.
+Runs the 117+ automated unit and integration tests covering ASR, diarization, VAD gating, Hinglish normalization, temporal resolution, and coaching synthesis.
+
+---
+
+## AI Attribution & Disclaimer Notice
+
+> [!NOTE]
+> **AI-Assisted Development**: This software tool and its architectural components were created and authored with the assistance of Artificial Intelligence (AI) models and agentic coding workflows. All algorithms and suggestions are intended for developmental, educational, and coaching purposes.
+

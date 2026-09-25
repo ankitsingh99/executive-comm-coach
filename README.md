@@ -164,7 +164,14 @@ executive-comm-coach/
 
 ---
 
-## 5. License
+## 5. Disclaimer & AI Attribution
+
+> [!NOTE]
+> **AI Assistance Notice**: This software tool, including its core speech processing algorithms, NLP coaching logic, test suites, architecture, and user interface, was created and developed with the assistance of Artificial Intelligence (AI) systems and models. All coaching insights, transcription analysis, and behavioral scores are generated algorithmically for developmental and self-improvement purposes.
+
+---
+
+## 6. License
 
 Licensed under the Apache License, Version 2.0.
 
