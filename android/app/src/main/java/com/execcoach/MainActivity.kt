@@ -1,112 +1,151 @@
 package com.execcoach
 
 import android.Manifest
-import android.content.Intent
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.ViewGroup
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.execcoach.data.local.CoachingDatabase
-import com.execcoach.data.local.entity.ImprovementEntity
-import com.execcoach.data.local.entity.SessionEntity
-import com.execcoach.data.local.entity.StrengthEntity
-import com.execcoach.service.AmbientAudioService
-import com.execcoach.ui.dashboard.DashboardScreen
-import com.execcoach.ui.session.FeedbackBottomSheet
-import com.execcoach.ui.theme.ExecCoachTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private val database by lazy { CoachingDatabase.getInstance(applicationContext) }
-    private var isAmbientServiceRunning by mutableStateOf(false)
+    private var pendingPermissionRequest: PermissionRequest? = null
+    private var webViewInstance: WebView? = null
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val recordGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
-        if (recordGranted) {
-            toggleAmbientService()
+        val recordAudioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
+        if (recordAudioGranted) {
+            pendingPermissionRequest?.let { req ->
+                req.grant(req.resources)
+                pendingPermissionRequest = null
+            }
+        } else {
+            pendingPermissionRequest?.deny()
+            pendingPermissionRequest = null
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Pre-request microphone permission on Android 10+
+        requestAudioPermissions()
+
         setContent {
-            ExecCoachTheme {
-                val coroutineScope = rememberCoroutineScope()
-                val sessions by database.coachingDao().getAllSessionsFlow().collectAsState(initial = emptyList())
-                var selectedSession by remember { mutableStateOf<SessionEntity?>(null) }
-                var selectedStrengths by remember { mutableStateOf<List<StrengthEntity>>(emptyList()) }
-                var selectedImprovements by remember { mutableStateOf<List<ImprovementEntity>>(emptyList()) }
-
-                DashboardScreen(
-                    sessions = sessions,
-                    isAmbientActive = isAmbientServiceRunning,
-                    onToggleAmbient = { requestPermissionsAndToggle() },
-                    onSessionSelected = { session ->
-                        coroutineScope.launch {
-                            selectedStrengths = database.coachingDao().getStrengthsForSession(session.sessionId)
-                            selectedImprovements = database.coachingDao().getImprovementsForSession(session.sessionId)
-                            selectedSession = session
-                        }
-                    },
-                    onEraseSession = { sessionId ->
-                        coroutineScope.launch {
-                            database.coachingDao().eraseSessionCompletely(sessionId)
-                        }
-                    }
-                )
-
-                selectedSession?.let { session ->
-                    FeedbackBottomSheet(
-                        session = session,
-                        strengths = selectedStrengths,
-                        improvements = selectedImprovements,
-                        onDismiss = { selectedSession = null },
-                        onErase = {
-                            coroutineScope.launch {
-                                database.coachingDao().eraseSessionCompletely(session.sessionId)
-                            }
-                        }
-                    )
-                }
-            }
+            AppWebViewContainer()
         }
     }
 
-    private fun requestPermissionsAndToggle() {
+    private fun requestAudioPermissions() {
         val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-        val allGranted = permissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        val needsRequest = permissions.any {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
-        if (allGranted) {
-            toggleAmbientService()
-        } else {
+        if (needsRequest) {
             permissionLauncher.launch(permissions.toTypedArray())
         }
     }
 
-    private fun toggleAmbientService() {
-        val intent = Intent(this, AmbientAudioService::class.java)
-        if (isAmbientServiceRunning) {
-            intent.action = AmbientAudioService.ACTION_STOP
-            startService(intent)
-            isAmbientServiceRunning = false
-        } else {
-            intent.action = AmbientAudioService.ACTION_START_AMBIENT
-            ContextCompat.startForegroundService(this, intent)
-            isAmbientServiceRunning = true
+    @SuppressLint("SetJavaScriptEnabled")
+    @Composable
+    private fun AppWebViewContainer() {
+        val context = this
+        val webView = remember {
+            WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundColor(0xFF070A13.toInt()) // Match dark theme background
+
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    databaseEnabled = true
+                    mediaPlaybackRequiresUserGesture = false
+                    allowFileAccess = true
+                    allowContentAccess = true
+                    useWideViewPort = true
+                    loadWithOverviewMode = true
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                }
+
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                        return false
+                    }
+                }
+
+                webChromeClient = object : WebChromeClient() {
+                    override fun onPermissionRequest(request: PermissionRequest) {
+                        runOnUiThread {
+                            val isAudio = request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+                            if (isAudio) {
+                                if (ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.RECORD_AUDIO
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    request.grant(request.resources)
+                                } else {
+                                    pendingPermissionRequest = request
+                                    permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+                                }
+                            } else {
+                                request.grant(request.resources)
+                            }
+                        }
+                    }
+                }
+
+                loadUrl("file:///android_asset/index.html")
+            }
         }
+
+        DisposableEffect(webView) {
+            webViewInstance = webView
+            onDispose {
+                webView.destroy()
+                webViewInstance = null
+            }
+        }
+
+        AndroidView(
+            factory = { webView },
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF070A13))
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        webViewInstance?.destroy()
+        webViewInstance = null
     }
 }
