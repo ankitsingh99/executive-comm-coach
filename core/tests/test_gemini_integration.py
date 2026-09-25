@@ -114,3 +114,39 @@ def test_gemini_coaching_synthesizer_mock():
         assert len(evaluation.top_strengths) == 1
         assert len(evaluation.areas_for_improvement) == 1
         assert "delaying the release" in evaluation.areas_for_improvement[0].coached_phrasing
+
+
+def test_gemini_coaching_synthesizer_top_n_and_error_handling():
+    synthesizer = GeminiCoachingSynthesizer(api_key="test_fake_api_key")
+
+    session = ConversationSession(
+        session_id="test_top_n",
+        target_speaker="USER",
+        power_axis="INVALID_AXIS",
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Let's proceed.")],
+    )
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    # Markdown code fences wrapping json
+    mock_response.text = """```json
+    {
+      "persona_context": "Direct",
+      "metrics": {"presence_score": 80},
+      "top_strengths": [{"observation": "Clear", "verbatim_quote": "Let's proceed."}],
+      "areas_for_improvement": [{"critique": "Crisp", "verbatim_quote": "Let's proceed.", "coached_phrasing": "Proceed."}],
+      "longitudinal_summary": "Good",
+      "persona_alignment_notes": "Solo"
+    }
+    ```"""
+    mock_client.models.generate_content.return_value = mock_response
+
+    with patch.object(synthesizer, "_get_client", return_value=mock_client):
+        synthesizer.api_key = "test_fake_api_key"
+        eval_res = synthesizer.synthesize(session, top_n=1)
+        assert eval_res is not None
+        assert len(eval_res.top_strengths) == 1
+
+        # Test exception fallback
+        mock_client.models.generate_content.side_effect = Exception("API rate limited")
+        assert synthesizer.synthesize(session) is None

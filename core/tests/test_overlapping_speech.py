@@ -190,3 +190,12 @@ def test_n_speaker_conversation_analysis():
     assert priya_loop is not None
     assert "latency" in priya_loop.concern_topic.lower() or "latency" in priya_loop.context.lower()
 
+    # 6. Test format_dialogue_markdown and CLI formatting with user_name
+    md = DiarizationEngine.format_dialogue_markdown(processed)
+    assert "**USER**" in md
+    assert "**RAHUL**" in md
+    assert "Interrupted" in md or "Overlapping" in md
+
+    cli_solo = DiarizationEngine.format_dialogue_cli([Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript="Solo rehearsal.")], user_name="Ashish")
+    assert "[ASHISH (Solo)]" in cli_solo or "[ASHISH / YOU]" in cli_solo
+

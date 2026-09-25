@@ -88,3 +88,73 @@ def test_transcription_analyzer_full_analysis():
     priya_task = next(t for t in result.potential_tasks if "priya" in t.task.lower() or "call" in t.task.lower())
     assert priya_task.target_time_inferred_ampm == "AM"
     assert "2026-09-12T09:00:00" in priya_task.resolved_datetime
+
+
+def test_transcription_analyzer_gemini_mock():
+    """Test LLM-based analysis with Gemini response mocking and fallback."""
+    import json
+    from unittest.mock import patch, MagicMock
+
+    dialogue = [
+        Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="We will deploy the caching subsystem on Friday.")
+    ]
+
+    mock_llm_json = {
+        "summary": "The team aligned on the upcoming deployment schedule.",
+        "key_highlights": [
+            {
+                "headline": "Caching Deployment Scheduled",
+                "takeaway": "Subsystem is ready for Friday release.",
+                "speaker": "USER",
+                "verbatim_quote": "We will deploy the caching subsystem on Friday.",
+                "category": "Milestone",
+                "importance": "High"
+            }
+        ],
+        "potential_tasks": [
+            {
+                "owner": "USER",
+                "task": "Deploy the caching subsystem",
+                "due_time_or_date": "Friday",
+                "resolved_datetime": "2026-09-18T17:00:00Z",
+                "target_time_inferred_ampm": "PM",
+                "verbatim_quote": "We will deploy the caching subsystem on Friday.",
+                "category": "Deliverable / Commitment",
+                "urgency": "High"
+            }
+        ],
+        "topics_discussed": ["Caching Subsystem", "Deployment Schedule"],
+        "sentiment_tone": "Decisive & Collaborative"
+    }
+
+    analyzer = TranscriptionAnalyzer(api_key="mock_key")
+    mock_client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = f"```json\n{json.dumps(mock_llm_json)}\n```"
+    mock_client.models.generate_content.return_value = mock_resp
+
+    with patch.object(analyzer, "_get_client", return_value=mock_client), \
+         patch.object(analyzer, "is_gemini_available", return_value=True):
+        res = analyzer.analyze(dialogue, use_gemini=True)
+        assert len(res.key_highlights) == 1
+        assert res.key_highlights[0].category == "Milestone"
+        assert len(res.potential_tasks) == 1
+        assert res.potential_tasks[0].urgency == "High"
+        assert "Caching Subsystem" in res.topics_discussed
+
+    # Test empty / no speech input
+    res_empty = analyzer.analyze([], use_gemini=False)
+    assert res_empty.summary == "No audible speech detected to analyze."
+    assert res_empty.key_highlights == []
+    assert res_empty.potential_tasks == []
+
+    # Test ConversationSession input
+    session = ConversationSession(
+        session_id="session_test",
+        power_axis="LATERAL",
+        target_speaker="USER",
+        dialogue=[Utterance(speaker="USER", start_time=0.0, end_time=2.0, transcript="Let's sync up later today.")]
+    )
+    res_session = analyzer.analyze(session, use_gemini=False)
+    assert res_session.session_id == "transcription_analysis" or res_session.session_id == "session_test"
+    assert len(res_session.potential_tasks) >= 1

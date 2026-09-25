@@ -158,3 +158,54 @@ def test_multi_user_profiling_and_distinction(temp_registry):
     assert match_r is not None
     assert match_r[0].speaker_name == "Rohan"
     assert match_r[0].is_user is False
+
+
+def test_voiceprint_wav_file_enrollment_and_update(temp_registry, tmp_path):
+    """Test enrolling directly from WAV files, updating existing profiles, and multi-channel handling."""
+    import wave
+    import struct
+
+    # 1. Create 16-bit mono wav file
+    wav_path = str(tmp_path / "speaker_test.wav")
+    sr = 16000
+    voice = generate_synthetic_voice(pitch_f0=150.0, duration_s=1.0, sample_rate=sr)
+    int_samples = (voice * 32767).astype(np.int16)
+    with wave.open(wav_path, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(int_samples.tobytes())
+
+    # Enroll via wav path
+    vp = temp_registry.enroll_speaker("Anand Sharma", "Director", "UPWARD", audio_signal_or_wav_path=wav_path)
+    assert vp is not None
+    assert vp.speaker_name == "Anand Sharma"
+    assert vp.sample_count == 1
+
+    # Update existing speaker with second wav sample (running average update)
+    vp_updated = temp_registry.enroll_speaker("Anand Sharma", "Senior Director", "UPWARD", audio_signal_or_wav_path=wav_path)
+    assert vp_updated.sample_count == 2
+    assert vp_updated.role == "Senior Director"
+
+    # Identify via wav file path
+    match = temp_registry.identify_speaker(wav_path, threshold=0.75)
+    assert match is not None
+    assert match[0].speaker_name == "Anand Sharma"
+
+    # Test invalid audio path
+    assert temp_registry.enroll_speaker("Ghost", audio_signal_or_wav_path="/invalid/path.wav") is None
+    assert temp_registry.identify_speaker("/invalid/path.wav") is None
+    assert temp_registry.enroll_speaker("Ghost", audio_signal_or_wav_path=12345) is None
+    assert temp_registry.identify_speaker(12345) is None
+
+
+def test_corrupted_database_recovery(tmp_path):
+    """Test corrupted or invalid JSON database self-healing."""
+    storage_dir = tmp_path / "corrupt_vault"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    db_file = storage_dir / "speaker_voiceprints.json"
+    db_file.write_text("{ corrupt json ...")
+
+    # Should recover gracefully without crashing
+    reg = SpeakerVoiceprintRegistry(storage_dir=str(storage_dir))
+    assert len(reg.list_enrolled_speakers()) == 0

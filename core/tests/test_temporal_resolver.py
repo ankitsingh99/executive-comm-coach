@@ -58,6 +58,52 @@ def test_explicit_ampm_preservation():
     assert res_am.inferred_ampm == "AM"
     assert "9:00 AM" in res_am.formatted_label
 
+
+def test_24h_format_and_qualifiers():
+    ref_dt = datetime(2026, 9, 12, 10, 0, 0)
+    # 1. 24-hour format
+    res_24 = TemporalResolver.resolve_time_expression("deploy at 15:30", ref_dt=ref_dt)
+    assert res_24 is not None
+    assert "3:30 PM" in res_24.formatted_label
+
+    # 2. Hinglish Subah / Shaam / Dopahar
+    res_subah = TemporalResolver.resolve_time_expression("kal subah 8 baje sync karenge", ref_dt=ref_dt)
+    assert res_subah is not None
+    assert res_subah.inferred_ampm == "AM"
+
+    res_shaam = TemporalResolver.resolve_time_expression("shaam ko 7 baje milte hain", ref_dt=ref_dt)
+    assert res_shaam is not None
+    assert res_shaam.inferred_ampm == "PM"
+
+    res_dopahar = TemporalResolver.resolve_time_expression("dopahar 2 baje call hai", ref_dt=ref_dt)
+    assert res_dopahar is not None
+    assert res_dopahar.inferred_ampm == "PM"
+
+
+def test_relative_and_day_of_week_deadlines():
+    ref_dt = datetime(2026, 9, 12, 10, 0, 0)  # Saturday
+
+    # 1. Tomorrow at ambiguous 10 (should be AM) and 4 (should be PM)
+    res_tom_10 = TemporalResolver.resolve_time_expression("sync tomorrow at 10", ref_dt=ref_dt)
+    assert res_tom_10 is not None
+    assert res_tom_10.inferred_ampm == "AM"
+    assert "Tomorrow at 10:00 AM" in res_tom_10.formatted_label
+
+    res_tom_4 = TemporalResolver.resolve_time_expression("sync tomorrow at 4", ref_dt=ref_dt)
+    assert res_tom_4 is not None
+    assert res_tom_4.inferred_ampm == "PM"
+    assert "Tomorrow at 4:00 PM" in res_tom_4.formatted_label
+
+    # 2. Next Friday / EOD
+    res_fri = TemporalResolver.resolve_time_expression("deliver by Friday", ref_dt=ref_dt)
+    assert res_fri is not None
+    assert "Friday" in res_fri.formatted_label
+
+    # 3. Parso 4 baje
+    res_parso = TemporalResolver.resolve_time_expression("parso 4 baje demo denge", ref_dt=ref_dt)
+    assert res_parso is not None
+    assert res_parso.inferred_ampm == "PM"
+
     res_pm = TemporalResolver.resolve_time_expression("sync at 9 PM", ref_dt=ref_dt)
     assert res_pm is not None
     assert res_pm.inferred_ampm == "PM"

@@ -111,3 +111,26 @@ def test_phonetic_and_vocal_fillers_detection():
     # Verify English discourse fillers are detected
     assert "basically" in tokens
     assert "like" in tokens
+
+
+def test_coaching_engine_gemini_synthesis_flow(sample_session):
+    """Test ExecutiveCoachingEngine routing to Gemini synthesizer when available."""
+    from unittest.mock import patch, MagicMock
+
+    engine = ExecutiveCoachingEngine(use_local_only=False)
+    mock_gemini_eval = ExecutiveCoachingEvaluation(
+        persona_context="UPWARD Executive Leadership",
+        metrics=CommunicationMetrics(presence_score=92),
+        top_strengths=[TopStrength(observation="Decisive presence", verbatim_quote="We have decided.")],
+        areas_for_improvement=[AreaForImprovement(critique="Direct opening", verbatim_quote="I just think", coached_phrasing="We will ship.")],
+        action_items=[],
+        key_highlights=[],
+        longitudinal_summary="High-impact delivery.",
+        persona_alignment_notes="Optimal BLUF alignment."
+    )
+
+    with patch.object(engine.gemini_synthesizer, "is_available", return_value=True), \
+         patch.object(engine.gemini_synthesizer, "synthesize", return_value=mock_gemini_eval):
+        res = engine.evaluate_session(sample_session, use_llm=True)
+        assert res.metrics.presence_score == 92
+        assert res.longitudinal_summary == "High-impact delivery."

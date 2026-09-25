@@ -114,3 +114,79 @@ def test_metrics_calculator_with_acoustic_fillers():
     tokens = [f.token for f in metrics.filler_words_detected]
     assert "umm" in tokens
     assert "aah" in tokens
+
+
+def test_filler_injection_relative_positions():
+    """Test filler injection at start, middle, and end of utterance."""
+    # 1. Beginning injection (rel_pos <= 0.25)
+    u_start = Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="we should ship today.")
+    f_start = [AcousticFillerEvent(token="umm", start_time=0.1, end_time=0.6, duration_sec=0.5, speaker="USER")]
+    inj_start = AcousticFillerDetector.inject_fillers_into_utterances([u_start], f_start)
+    assert inj_start[0].transcript.startswith("umm")
+
+    # 2. End injection (rel_pos >= 0.75)
+    u_end = Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="we should ship today.")
+    f_end = [AcousticFillerEvent(token="aah", start_time=3.5, end_time=3.9, duration_sec=0.4, speaker="USER")]
+    inj_end = AcousticFillerDetector.inject_fillers_into_utterances([u_end], f_end)
+    assert inj_end[0].transcript.endswith("aah")
+
+    # 3. Middle injection (0.25 < rel_pos < 0.75)
+    u_mid = Utterance(speaker="USER", start_time=0.0, end_time=4.0, transcript="we should really ship today.")
+    f_mid = [AcousticFillerEvent(token="uhh", start_time=2.0, end_time=2.5, duration_sec=0.5, speaker="USER")]
+    inj_mid = AcousticFillerDetector.inject_fillers_into_utterances([u_mid], f_mid)
+    assert "uhh" in inj_mid[0].transcript
+    assert not inj_mid[0].transcript.startswith("uhh")
+    assert not inj_mid[0].transcript.endswith("uhh")
+
+    # 4. Invalid or missing inputs
+    assert AcousticFillerDetector.inject_fillers_into_utterances([], f_start) == []
+    assert AcousticFillerDetector.inject_fillers_into_utterances([u_start], []) == [u_start]
+
+    # 5. Invalid WAV file path handling
+    detector = AcousticFillerDetector()
+    assert detector.detect_fillers_from_wav("/path/does/not/exist.wav") == []
+
+
+def test_evaluate_segment_all_acoustic_types_and_speaker_mapping():
+    """Test _evaluate_segment directly for 100% branch coverage."""
+    detector = AcousticFillerDetector()
+
+    # 1. Too short duration
+    short_frames = [{"time": 0.0, "pitch_f0": 150.0, "centroid": 500.0, "low_ratio": 0.3, "mid_ratio": 0.3, "flux": 0.05}]
+    assert detector._evaluate_segment(short_frames) is None
+
+    # Helper to generate N frames of duration ~0.3s
+    def make_frames(low=0.1, mid=0.1, centroid=1500.0, flux=0.05, n=12):
+        return [
+            {
+                "time": i * 0.025,
+                "pitch_f0": 150.0,
+                "centroid": centroid,
+                "low_ratio": low,
+                "mid_ratio": mid,
+                "flux": flux,
+            }
+            for i in range(n)
+        ]
+
+    # 2. 'uhh' token (1200 < centroid <= 1900, duration < 0.45)
+    frames_uhh = make_frames(low=0.2, mid=0.2, centroid=1500.0, n=12)
+    ev_uhh = detector._evaluate_segment(frames_uhh)
+    assert ev_uhh is not None
+    assert ev_uhh.token == "uhh"
+
+    # 3. 'err' token (centroid > 1900, duration < 0.45)
+    frames_err = make_frames(low=0.2, mid=0.2, centroid=2200.0, n=12)
+    ev_err = detector._evaluate_segment(frames_err)
+    assert ev_err is not None
+    assert ev_err.token == "err"
+
+    # 4. High spectral flux rejection
+    frames_flux = make_frames(low=0.2, mid=0.2, centroid=1500.0, flux=0.8, n=12)
+    assert detector._evaluate_segment(frames_flux) is None
+
+    # 5. Speaker segment attribution
+    utts = [Utterance(speaker="COUNTERPART", start_time=0.0, end_time=2.0, transcript="...")]
+    ev_spk = detector._evaluate_segment(frames_uhh, speaker_segments=utts)
+    assert ev_spk is not None
+    assert ev_spk.speaker == "COUNTERPART"
