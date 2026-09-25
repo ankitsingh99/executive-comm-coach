@@ -230,15 +230,30 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     for ul in getattr(evaluation, "unresolved_loops", [])
                 ]
 
+                # Check if there is an enrolled app user or counterpart in registry
+                enrolled_user = None
+                enrolled_counterpart = None
+                for vp in registry.voiceprints.values():
+                    if vp.is_user or vp.role in ["App User", "Self"] or vp.power_axis == "SOLO":
+                        enrolled_user = vp.speaker_name
+                        break
+
+                if power_axis == "SOLO":
+                    recognized_speaker = intro_user or enrolled_user or "New Voice (Solo)"
+                    recognized_sub = (
+                        f"User Voice Profile '{recognized_speaker}' • SOLO Mode"
+                        if (intro_user or enrolled_user)
+                        else "Unenrolled Voice • SOLO Mode"
+                    )
+                else:
+                    recognized_speaker = intro_counterpart or counterpart_name or "New Collaborator"
+                    recognized_sub = f"Voiceprint Profile Synced • {power_axis} Mode"
+
                 resp_data = {
                     "title": "Evaluated Dialogue",
                     "dialogue": dialogue_text,
-                    "recognized_speaker": (
-                        intro_user
-                        if power_axis == "SOLO" and intro_user
-                        else (counterpart_name if power_axis != "SOLO" else "Speaker (Solo)")
-                    ),
-                    "recognized_sub": f"Voiceprint Profile Synced • {power_axis} Mode",
+                    "recognized_speaker": recognized_speaker,
+                    "recognized_sub": recognized_sub,
                     "power_axis": power_axis,
                     "tone": "Calm & Measured (132 Hz)",
                     "presence": getattr(evaluation.metrics, "presence_score", 75),
@@ -322,7 +337,12 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                 )
 
         elif url_path == "/api/enroll_voiceprint":
-            name = payload.get("speaker_name", "New Speaker").strip()
+            name = payload.get("speaker_name", "").strip()
+            junk_names = {"speaker (solo)", "speaker (analyzed)", "solo speaker", "live speaker", "speaker", "new speaker", ""}
+            if not name or name.lower() in junk_names or len(name) < 2:
+                self._send_json({"status": "error", "message": "Please provide a valid speaker name."})
+                return
+
             role = payload.get("role", "Collaborator")
             power_axis = payload.get("power_axis", "LATERAL")
             pitch = float(payload.get("mean_pitch_hz", 135.0))

@@ -719,24 +719,35 @@
               </button>
             </div>
 
-            <!-- Voiceprint Enrollment Prompt / Nudge Card -->
-            <div id="enrollment-nudge-card" style="display: none; background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.12)); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 12px; padding: 0.75rem 0.85rem; flex-direction: column; gap: 0.4rem; animation: fadeIn 0.3s ease-out;">
+            <!-- Voiceprint Enrollment Prompt / Nudge Card with Inline Name Input -->
+            <div id="enrollment-nudge-card" style="display: none; background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.12)); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 12px; padding: 0.75rem 0.85rem; flex-direction: column; gap: 0.45rem; animation: fadeIn 0.3s ease-out;">
               <div style="display: flex; align-items: flex-start; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <span class="material-symbols-outlined" style="font-size: 1.35rem; color: var(--cyan);">fingerprint</span>
                   <div>
-                    <div style="font-size: 0.75rem; font-weight: 700; color: #ffffff;" id="nudge-title">New Voice Recognized: Rahul</div>
-                    <div style="font-size: 0.65rem; color: var(--cyan);">Would you like to enroll and remember this speaker's voiceprint?</div>
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #ffffff;" id="nudge-title">New Voice Recognized</div>
+                    <div style="font-size: 0.65rem; color: var(--cyan);">Enter name to save and remember this voiceprint:</div>
                   </div>
                 </div>
                 <button onclick="dismissEnrollNudge()" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.75rem;">✕</button>
               </div>
-              <div style="display: flex; gap: 0.4rem; margin-top: 0.2rem;">
-                <button class="primary-btn" onclick="acceptEnrollNudge()" style="flex: 1; padding: 0.35rem 0.6rem; font-size: 0.68rem; background: linear-gradient(135deg, #06b6d4, #3b82f6); display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+
+              <div style="display: flex; gap: 0.35rem; align-items: center; margin-top: 0.1rem;">
+                <input type="text" id="nudge-speaker-input" placeholder="Speaker name (e.g. Ashish, Priya)..." style="flex: 1; background: rgba(0,0,0,0.45); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.55rem; font-size: 0.72rem; color: #fff; outline: none;">
+                <select id="nudge-speaker-role" style="background: rgba(15,23,42,0.9); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.35rem 0.4rem; font-size: 0.65rem; color: #fff; outline: none;">
+                  <option value="LATERAL">Collaborator / Peer</option>
+                  <option value="USER">App User (My Voice)</option>
+                  <option value="UPWARD">Executive / Manager</option>
+                  <option value="SOLO">Solo Speaker</option>
+                </select>
+              </div>
+
+              <div style="display: flex; gap: 0.4rem; margin-top: 0.15rem;">
+                <button class="primary-btn" onclick="acceptEnrollNudge()" style="flex: 1; padding: 0.38rem 0.6rem; font-size: 0.7rem; background: linear-gradient(135deg, #06b6d4, #3b82f6); display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
                   <span class="material-symbols-outlined" style="font-size: 0.85rem;">save</span>
-                  <span>Yes, Save Voiceprint</span>
+                  <span>Save Voiceprint</span>
                 </button>
-                <button class="erase-btn" onclick="dismissEnrollNudge()" style="padding: 0.35rem 0.6rem; font-size: 0.68rem; color: var(--text-muted); border-color: var(--bg-card-border);">
+                <button class="erase-btn" onclick="dismissEnrollNudge()" style="padding: 0.38rem 0.6rem; font-size: 0.7rem; color: var(--text-muted); border-color: var(--bg-card-border);">
                   <span>Not Now</span>
                 </button>
               </div>
@@ -1572,14 +1583,25 @@
 
       // 9. Dynamic Voiceprint Enrollment Prompt / Nudge
       const currentSpeaker = (data.speakerName || '').trim();
+      const isGeneric = !currentSpeaker || 
+        currentSpeaker.toLowerCase().includes('speaker') || 
+        currentSpeaker.toLowerCase().includes('live') || 
+        currentSpeaker.toLowerCase().includes('analyzed') ||
+        currentSpeaker.toLowerCase().includes('new voice');
+
       const nudgeCard = document.getElementById('enrollment-nudge-card');
       if (nudgeCard) {
-        if (currentSpeaker && currentSpeaker !== 'Live Speaker' && !currentSpeaker.toLowerCase().includes('speaker (analyzed)')) {
-          document.getElementById('nudge-title').innerText = `New Voice Recognized: ${currentSpeaker}`;
-          nudgeCard.style.display = 'flex';
-        } else {
-          nudgeCard.style.display = 'none';
+        const inputField = document.getElementById('nudge-speaker-input');
+        const roleField = document.getElementById('nudge-speaker-role');
+        if (inputField) {
+          inputField.value = isGeneric ? '' : currentSpeaker;
         }
+        if (roleField) {
+          const isSoloMode = (data.power_axis === 'SOLO' || (data.speakerSub && data.speakerSub.includes('SOLO')));
+          roleField.value = isSoloMode ? 'USER' : 'LATERAL';
+        }
+        document.getElementById('nudge-title').innerText = isGeneric ? 'Unenrolled Voice Detected' : `Voice Detected: ${currentSpeaker}`;
+        nudgeCard.style.display = 'flex';
       }
     }
 
@@ -1589,24 +1611,45 @@
     }
 
     async function acceptEnrollNudge() {
-      const rawName = document.getElementById('txt-speaker-name').innerText.replace('Recognized:', '').trim();
-      const name = rawName || "New Collaborator";
+      const inputField = document.getElementById('nudge-speaker-input');
+      const roleField = document.getElementById('nudge-speaker-role');
+      let name = (inputField ? inputField.value : '').trim();
+
+      if (!name) {
+        name = prompt("Enter speaker's name to remember their voice profile in local memory:", "");
+        if (!name || !name.trim()) {
+          alert("Please enter a name for the voiceprint profile.");
+          return;
+        }
+        name = name.trim();
+      }
+
+      const roleVal = roleField ? roleField.value : 'LATERAL';
+      const isUser = roleVal === 'USER' || roleVal === 'SOLO';
+      const powerAxis = isUser ? 'SOLO' : (roleVal === 'UPWARD' ? 'UPWARD' : 'LATERAL');
+      const roleName = isUser ? 'App User' : (roleVal === 'UPWARD' ? 'Executive' : 'Collaborator');
+
       try {
         const resp = await fetch('/api/enroll_voiceprint', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             speaker_name: name,
-            role: "Collaborator",
-            power_axis: "LATERAL",
-            mean_pitch_hz: 138.0,
-            is_user: false
+            role: roleName,
+            power_axis: powerAxis,
+            mean_pitch_hz: 135.0,
+            is_user: isUser
           })
         });
-        if (resp.ok) {
+        const res = await resp.json();
+        if (resp.ok && res.status !== 'error') {
           dismissEnrollNudge();
-          alert(`Voiceprint profile for '${name}' enrolled successfully! Future conversations will remember this speaker automatically.`);
+          alert(`Voiceprint profile for '${name}' (${isUser ? 'App User' : 'Counterpart'}) enrolled successfully! Future conversations will remember this speaker automatically.`);
+          document.getElementById('txt-speaker-name').innerText = `Recognized: ${name}`;
+          document.getElementById('txt-speaker-sub').innerText = `Voiceprint Enrolled • ${powerAxis} Mode`;
           loadVoiceVault();
+        } else {
+          alert(res.message || "Failed to save voiceprint.");
         }
       } catch (e) {
         alert("Failed to save voiceprint.");
@@ -1675,28 +1718,38 @@
 
     async function enrollCurrentSpeaker() {
       const spkText = document.getElementById('txt-speaker-name').innerText.replace('Recognized:', '').trim();
-      const name = prompt("Enter speaker name to enroll into Voiceprint Memory Vault:", spkText || "New Speaker");
-      if (!name) return;
+      const isGeneric = !spkText || 
+        spkText.toLowerCase().includes('speaker') || 
+        spkText.toLowerCase().includes('live') || 
+        spkText.toLowerCase().includes('analyzed') ||
+        spkText.toLowerCase().includes('new voice');
+      const defaultName = isGeneric ? "" : spkText;
+      const name = prompt("Enter speaker name to enroll into Voiceprint Memory Vault:", defaultName);
+      if (!name || !name.trim()) return;
 
-      const isUser = confirm(`Is '${name}' the primary App User (Your Voice)?\nClick 'OK' for App User (Self) or 'Cancel' for Counterpart/Collaborator.`);
+      const trimmedName = name.trim();
+      const isUser = confirm(`Is '${trimmedName}' the primary App User (Your Voice)?\nClick 'OK' for App User (Self) or 'Cancel' for Counterpart/Collaborator.`);
 
       try {
         const resp = await fetch('/api/enroll_voiceprint', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            speaker_name: name,
+            speaker_name: trimmedName,
             role: isUser ? "App User" : "Collaborator",
             power_axis: isUser ? "SOLO" : "LATERAL",
             mean_pitch_hz: 135.0,
             is_user: isUser
           })
         });
-        if (resp.ok) {
-          alert(`[OK] Voiceprint profile for '${name}' (${isUser ? 'App User' : 'Counterpart'}) successfully enrolled!`);
-          document.getElementById('txt-speaker-name').innerText = `Recognized: ${name}`;
+        const res = await resp.json();
+        if (resp.ok && res.status !== 'error') {
+          alert(`Voiceprint profile for '${trimmedName}' (${isUser ? 'App User' : 'Counterpart'}) successfully enrolled!`);
+          document.getElementById('txt-speaker-name').innerText = `Recognized: ${trimmedName}`;
           document.getElementById('txt-speaker-sub').innerText = `Voiceprint Recalled & Enrolled • ${isUser ? 'SOLO' : 'LATERAL'} Mode`;
-          setAppTab('vault');
+          loadVoiceVault();
+        } else {
+          alert(res.message || "Failed to enroll voiceprint.");
         }
       } catch (e) {
         alert("Failed to enroll voiceprint.");

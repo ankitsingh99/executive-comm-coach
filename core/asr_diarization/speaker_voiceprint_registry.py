@@ -117,6 +117,11 @@ class SpeakerVoiceprintRegistry:
                         "the",
                         "this",
                         "that",
+                        "speaker (solo)",
+                        "speaker (analyzed)",
+                        "solo speaker",
+                        "live speaker",
+                        "speaker",
                     }
                     cleaned = {}
                     for k, v in data.items():
