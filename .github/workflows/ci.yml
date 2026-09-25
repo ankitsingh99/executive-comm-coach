@@ -30,13 +30,13 @@ jobs:
           pip install "black==24.10.0" "isort==5.13.2" "flake8==7.1.1"
 
       - name: Run Black formatting check
-        run: black --check --diff core/
+        run: black --check --diff core/ setup.py
 
       - name: Run isort imports check
-        run: isort --check-only --diff core/
+        run: isort --check-only --diff core/ setup.py
 
       - name: Run Flake8 linter
-        run: flake8 core/
+        run: flake8 core/ setup.py
 
   test-suite:
     name: Test Suite (Python ${{ matrix.python-version }} on ${{ matrix.os }})
