@@ -2,12 +2,12 @@
 
 [![CI](https://github.com/ankitsingh99/executive-comm-coach/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitsingh99/executive-comm-coach/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ankitsingh99/executive-comm-coach?color=blue&label=Release)](https://github.com/ankitsingh99/executive-comm-coach/releases)
-[![Discussions](https://img.shields.io/badge/Discussions-Join%20Community-purple?logo=github)](https://github.com/ankitsingh99/executive-comm-coach/discussions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://github.com/ankitsingh99/executive-comm-coach)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/ankitsingh99/executive-comm-coach)
-[![CUPS](https://img.shields.io/badge/CUPS-v2.4%2B-informational.svg)](https://github.com/ankitsingh99/executive-comm-coach)
-[![Version](https://img.shields.io/badge/Version-v0.1.0-blue.svg)](https://github.com/ankitsingh99/executive-comm-coach/releases)
 [![Coverage](https://img.shields.io/badge/Coverage-95.83%25-brightgreen.svg)](https://github.com/ankitsingh99/executive-comm-coach)
+[![Discussions](https://img.shields.io/badge/Discussions-Join%20Community-purple?logo=github)](https://github.com/ankitsingh99/executive-comm-coach/discussions)
+[![Privacy](https://img.shields.io/badge/Privacy-DPDP%20Act%20Compliant-10B981.svg)](https://github.com/ankitsingh99/executive-comm-coach)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 An on-device, privacy-first AI communication intelligence system and companion service that analyzes spoken workplace and personal conversations across all registers (Executive, Collaborative, Casual, Solo Practice, Mentorship, and Conflict), providing persona-calibrated communication coaching, cross-talk detection, and commitment tracking.
 
