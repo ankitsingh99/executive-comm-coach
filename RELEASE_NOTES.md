@@ -1,6 +1,27 @@
-# Release v0.4.0 — Executive Communication Coach
+# Release v0.4.1 — Executive Communication Coach
 
-We are pleased to announce the **v0.4.0** release of **Executive Communication Coach**, introducing a secure `WebViewAssetLoader` audio bridge, zero-latency microphone streaming, seamless Android runtime permission bridging, and custom in-app permission dialogs.
+We are pleased to announce the **v0.4.1** release of **Executive Communication Coach**, featuring automatic ambient dialogue sensing on launch, instant proactive nudges with haptic feedback, hardware DSP AudioFX offloading, and 95%+ test coverage.
+
+---
+
+## 🌟 Key Features & Updates in v0.4.1
+
+### 1. Zero-Configuration Ambient Dialogue Detection
+- **Auto-Activated on Launch**: Ambient conversation sensing starts automatically without needing manual toggles or settings navigation.
+- **Proactive Executive Nudge**: Detects vocal frequencies and drops down the Executive Nudge banner (`#ambient-nudge-banner`) with a 1-tap start button.
+- **Tactile Haptic Pulse**: Discrete vibration sequence alerts the user without disrupting the conversation.
+
+### 2. Low-Power Hardware DSP & NNAPI Acceleration
+- **AudioFX Offloading**: Hardware-accelerated `AcousticEchoCanceler` and `NoiseSuppressor` attached directly to the audio session ID.
+- **NNAPI/DSP VAD**: ONNX Runtime configured with Android NNAPI for hardware acceleration on Tensor, Snapdragon, and MediaTek silicon.
+
+### 3. Comprehensive Test Coverage (95.78%)
+- **Python Engine**: 118 / 118 unit tests passed with 95.78% total code coverage.
+- **Android Test Suite**: Full JUnit coverage for `AudioRecordManager`, `SileroVadDetector`, `AmbientAudioService`, and `CoachBridgeInterface`.
+
+---
+
+## Release v0.4.0 — Executive Communication Coach
 
 ---
 

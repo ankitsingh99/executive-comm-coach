@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2026-09-26
+
+### Added
+- **Auto-Activated Ambient Speech Sensing**: Ambient conversation listener is enabled automatically on app launch with zero manual setup.
+- **Instant Proactive Nudge & Haptics**: High-contrast Executive Nudge banner and subtle vibration feedback trigger instantly upon spoken dialogue detection.
+- **Hardware DSP Offloading & NNAPI Acceleration**: Native integration with `AcousticEchoCanceler`, `NoiseSuppressor`, and Android NNAPI for sub-milliwatt sensing.
+- **Comprehensive Android Unit Test Suite**: Added 100% passing test suites for `AudioRecordManager`, `SileroVadDetector`, `AmbientAudioService`, and `CoachBridgeInterface`.
+
+---
+
 ## [0.4.0] - 2026-09-26
 
 ### Added
