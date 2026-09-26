@@ -4,7 +4,6 @@ Serves the emulator UI and provides live API endpoints for evaluation and voicep
 """
 
 import json
-import mimetypes
 import os
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -23,15 +22,35 @@ from engine.coaching_engine import ExecutiveCoachingEngine
 from engine.schema import ConversationSession, Utterance
 from engine.transcription_analyzer import TranscriptionAnalyzer
 
+SAFE_MIME_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".htm": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".mjs": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".webp": "image/webp",
+    ".wav": "audio/wav",
+    ".mp3": "audio/mpeg",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".ttf": "font/ttf",
+}
+
 
 class EmulatorHandler(BaseHTTPRequestHandler):
     """Handles static files and API requests for the app emulator."""
 
     def do_GET(self):
         url_path = self.path.split("?")[0]
-        if url_path == "/" or url_path == "/index.html":
-            file_path = os.path.join(PROJECT_ROOT, "emulator", "index.html")
-            self._serve_file(file_path, "text/html")
+        if url_path in ("/", "/index.html"):
+            self._serve_file("index.html")
         elif url_path == "/api/voiceprints":
             registry = SpeakerVoiceprintRegistry()
             speakers = registry.list_enrolled_speakers()
@@ -54,20 +73,8 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             ]
             self._send_json(data)
         else:
-            emulator_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
-            safe_rel_path = os.path.normpath(url_path.lstrip("/\\"))
-            local_path = os.path.realpath(os.path.join(emulator_dir, safe_rel_path))
-
-            # Strictly enforce directory boundary check to prevent path traversal
-            if not local_path.startswith(emulator_dir + os.sep) and local_path != emulator_dir:
-                self.send_error(403, "Forbidden")
-                return
-
-            if os.path.exists(local_path) and not os.path.isdir(local_path):
-                mime, _ = mimetypes.guess_type(local_path)
-                self._serve_file(local_path, mime or "application/octet-stream")
-            else:
-                self.send_error(404, "Not Found")
+            clean_rel = url_path.lstrip("/\\")
+            self._serve_file(clean_rel)
 
     def do_POST(self):
         url_path = self.path.split("?")[0]
@@ -450,20 +457,28 @@ class EmulatorHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    def _serve_file(self, path: str, content_type: str):
+    def _serve_file(self, rel_path: str):
         emulator_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
-        canonical_path = os.path.realpath(path)
+        safe_rel = os.path.normpath(rel_path.lstrip("/\\"))
+        canonical_path = os.path.realpath(os.path.join(emulator_dir, safe_rel))
+
+        # Enforce strict directory boundary containment check using os.path.commonpath (CWE-22)
         if not canonical_path.startswith(emulator_dir + os.sep) and canonical_path != emulator_dir:
             self.send_error(403, "Forbidden")
             return
-        if not os.path.exists(canonical_path) or os.path.isdir(canonical_path):
+        if os.path.commonpath([emulator_dir, canonical_path]) != emulator_dir:
+            self.send_error(403, "Forbidden")
+            return
+
+        if not os.path.isfile(canonical_path):
             self.send_error(404, "File Not Found")
             return
+
+        _, ext = os.path.splitext(canonical_path)
+        safe_content_type = SAFE_MIME_TYPES.get(ext.lower(), "application/octet-stream")
+
         with open(canonical_path, "rb") as f:
             content = f.read()
-
-        # Sanitize content_type to ensure no CRLF injection can occur
-        safe_content_type = "".join(c for c in str(content_type) if c not in "\r\n") or "application/octet-stream"
 
         self.send_response(200)
         self.send_header("Content-Type", safe_content_type)
