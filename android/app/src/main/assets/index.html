@@ -369,6 +369,199 @@
       background: rgba(255, 255, 255, 0.98) !important;
     }
 
+    /* Custom Executive Themed Dialog Box */
+    .custom-dialog-backdrop {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(4, 7, 15, 0.78);
+      backdrop-filter: blur(12px);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      animation: dialogFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-theme="light"] .custom-dialog-backdrop {
+      background: rgba(15, 23, 42, 0.45);
+    }
+
+    .custom-dialog-backdrop.active {
+      display: flex;
+    }
+
+    .custom-dialog-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--bg-surface);
+      border: 1.5px solid var(--bg-card-border-active);
+      border-radius: 20px;
+      padding: 1.35rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0.75rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 30px var(--primary-glow);
+      animation: dialogPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    [data-theme="light"] .custom-dialog-card {
+      background: #ffffff;
+      border-color: rgba(99, 102, 241, 0.35);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18), 0 0 30px rgba(99, 102, 241, 0.15);
+    }
+
+    .custom-dialog-icon-badge {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1.5px solid var(--primary);
+      color: var(--primary-light);
+      margin-bottom: 0.15rem;
+    }
+
+    .custom-dialog-icon-badge .material-symbols-outlined {
+      font-size: 1.65rem;
+    }
+
+    .custom-dialog-icon-badge.success {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+
+    .custom-dialog-icon-badge.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .custom-dialog-icon-badge.danger {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: var(--rose);
+      color: var(--rose);
+    }
+
+    .custom-dialog-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+    }
+
+    .custom-dialog-message {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+
+    .custom-dialog-actions {
+      display: flex;
+      gap: 0.6rem;
+      width: 100%;
+      margin-top: 0.35rem;
+    }
+
+    .custom-dialog-btn-confirm {
+      flex: 1;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #ffffff;
+      border: none;
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    .custom-dialog-btn-confirm.danger {
+      background: linear-gradient(135deg, #f43f5e, #e11d48);
+      box-shadow: 0 4px 14px rgba(244, 63, 94, 0.35);
+    }
+
+    .custom-dialog-btn-confirm:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .custom-dialog-btn-cancel {
+      padding: 0.65rem 1.1rem;
+      background: var(--subtle-box-bg);
+      border: 1px solid var(--bg-card-border);
+      color: var(--text-muted);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .custom-dialog-btn-cancel:hover {
+      color: var(--text-main);
+      background: var(--bg-card-hover);
+    }
+
+    @keyframes dialogFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes dialogPopIn {
+      from { opacity: 0; transform: scale(0.92) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* In-App Floating Toast Notification */
+    .app-toast-pill {
+      position: absolute;
+      bottom: 74px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--primary);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px var(--primary-glow);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius-full);
+      padding: 0.5rem 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text-main);
+      z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .app-toast-pill.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    [data-theme="light"] .app-toast-pill {
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18), 0 0 20px rgba(99, 102, 241, 0.2);
+    }
+
+
     .material-symbols-outlined {
       font-family: 'Material Symbols Outlined';
       font-weight: normal;
@@ -2615,8 +2808,30 @@
             </div>
           </div>
 
+          <!-- CUSTOM THEMED EXECUTIVE DIALOG MODAL -->
+          <div class="custom-dialog-backdrop" id="custom-dialog-modal">
+            <div class="custom-dialog-card" id="custom-dialog-container">
+              <div class="custom-dialog-icon-badge" id="custom-dialog-icon-wrap">
+                <span class="material-symbols-outlined" id="custom-dialog-icon">info</span>
+              </div>
+              <div class="custom-dialog-title" id="custom-dialog-title">Executive Coach</div>
+              <div class="custom-dialog-message" id="custom-dialog-message"></div>
+              <div class="custom-dialog-actions" id="custom-dialog-actions">
+                <button class="custom-dialog-btn-cancel" id="custom-dialog-btn-cancel" onclick="handleDialogCancel()">Cancel</button>
+                <button class="custom-dialog-btn-confirm" id="custom-dialog-btn-confirm" onclick="handleDialogConfirm()">Confirm</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- IN-APP FLOATING TOAST -->
+          <div class="app-toast-pill" id="app-toast">
+            <span class="material-symbols-outlined" id="app-toast-icon" style="font-size: 1rem; color: var(--emerald);">check_circle</span>
+            <span id="app-toast-text">Success message</span>
+          </div>
+
           <!-- Mobile Unified Bottom Navigation Bar -->
           <div class="app-bottombar">
+
             <button class="bar-btn active" id="btn-bar-scorecard" onclick="setAppTab('scorecard')">
               <span class="material-symbols-outlined bar-icon">speed</span>
               <span>Coach</span>
@@ -3265,7 +3480,7 @@
 
     function copyAllActions() {
       if (currentActions.length === 0) {
-        alert("No action items to copy.");
+        showToast("No action items to copy", "info", "var(--amber)");
         return;
       }
       const text = currentActions.map(a => {
@@ -3275,12 +3490,12 @@
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-          alert("✓ Action items copied to clipboard as checklist!");
+          showToast("Action items checklist copied to clipboard!", "check_circle", "var(--emerald)");
         }).catch(() => {
-          prompt("Copy action items:", text);
+          showAppAlert(text, "Action Items Checklist");
         });
       } else {
-        prompt("Copy action items:", text);
+        showAppAlert(text, "Action Items Checklist");
       }
     }
 
@@ -3399,18 +3614,18 @@
 
     function copyFullTranscript() {
       if (currentDialogueTurns.length === 0) {
-        alert("No dialogue transcript to copy.");
+        showToast("No dialogue transcript to copy", "info", "var(--amber)");
         return;
       }
       const text = currentDialogueTurns.map(t => `${t.speaker} (${t.timeStr}): ${t.text}`).join('\n\n');
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-          alert("✓ Full conversation transcript copied to clipboard!");
+          showToast("Conversation transcript copied to clipboard!", "check_circle", "var(--emerald)");
         }).catch(() => {
-          prompt("Copy transcript:", text);
+          showAppAlert(text, "Conversation Transcript");
         });
       } else {
-        prompt("Copy transcript:", text);
+        showAppAlert(text, "Conversation Transcript");
       }
     }
 
@@ -3579,44 +3794,205 @@
       }
     }
 
+    // Custom Executive Themed Dialog & Alert Engine
+    let activeDialogResolver = null;
+    let toastTimeoutHandle = null;
+
+    function showToast(message, icon = 'check_circle', color = 'var(--emerald)', durationMs = 2800) {
+      const toast = document.getElementById('app-toast');
+      const toastText = document.getElementById('app-toast-text');
+      const toastIcon = document.getElementById('app-toast-icon');
+      if (!toast || !toastText) return;
+
+      if (toastTimeoutHandle) {
+        clearTimeout(toastTimeoutHandle);
+        toastTimeoutHandle = null;
+      }
+
+      toastText.innerText = message;
+      if (toastIcon) {
+        toastIcon.innerText = icon;
+        toastIcon.style.color = color;
+      }
+
+      toast.classList.add('visible');
+      toastTimeoutHandle = setTimeout(() => {
+        toast.classList.remove('visible');
+        toastTimeoutHandle = null;
+      }, durationMs);
+    }
+
+    function showAppDialog(options) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('custom-dialog-modal');
+        const titleEl = document.getElementById('custom-dialog-title');
+        const msgEl = document.getElementById('custom-dialog-message');
+        const iconWrap = document.getElementById('custom-dialog-icon-wrap');
+        const iconEl = document.getElementById('custom-dialog-icon');
+        const btnCancel = document.getElementById('custom-dialog-btn-cancel');
+        const btnConfirm = document.getElementById('custom-dialog-btn-confirm');
+
+        if (!modal) {
+          resolve(true);
+          return;
+        }
+
+        activeDialogResolver = resolve;
+
+        const title = options.title || 'Executive Coach';
+        const message = options.message || '';
+        const type = options.type || 'info'; // 'info', 'success', 'warning', 'danger'
+        const confirmText = options.confirmText || (options.showCancel ? 'Confirm' : 'OK');
+        const cancelText = options.cancelText || 'Cancel';
+        const showCancel = Boolean(options.showCancel);
+        const isDanger = Boolean(options.isDanger || type === 'danger');
+
+        if (titleEl) titleEl.innerText = title;
+        if (msgEl) msgEl.innerText = message;
+
+        // Icon Badge styling & icon
+        if (iconWrap) {
+          iconWrap.className = `custom-dialog-icon-badge ${type}`;
+        }
+        if (iconEl) {
+          if (type === 'success') iconEl.innerText = 'check_circle';
+          else if (type === 'warning') iconEl.innerText = 'warning';
+          else if (type === 'danger') iconEl.innerText = 'error';
+          else iconEl.innerText = 'info';
+        }
+
+        // Cancel Button
+        if (btnCancel) {
+          btnCancel.style.display = showCancel ? 'block' : 'none';
+          btnCancel.innerText = cancelText;
+        }
+
+        // Confirm Button
+        if (btnConfirm) {
+          btnConfirm.innerText = confirmText;
+          if (isDanger) {
+            btnConfirm.classList.add('danger');
+          } else {
+            btnConfirm.classList.remove('danger');
+          }
+        }
+
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+      });
+    }
+
+    function handleDialogConfirm() {
+      const modal = document.getElementById('custom-dialog-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+      }
+      if (typeof activeDialogResolver === 'function') {
+        const res = activeDialogResolver;
+        activeDialogResolver = null;
+        res(true);
+      }
+    }
+
+    function handleDialogCancel() {
+      const modal = document.getElementById('custom-dialog-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+      }
+      if (typeof activeDialogResolver === 'function') {
+        const res = activeDialogResolver;
+        activeDialogResolver = null;
+        res(false);
+      }
+    }
+
+    function showAppAlert(message, title = 'Executive Coach', type = 'info') {
+      return showAppDialog({
+        title: title,
+        message: message,
+        type: type,
+        showCancel: false,
+        confirmText: 'OK'
+      });
+    }
+
+    function showAppConfirm(message, title = 'Confirm Action', options = {}) {
+      return showAppDialog({
+        title: title,
+        message: message,
+        type: options.type || (options.isDanger ? 'danger' : 'warning'),
+        showCancel: true,
+        confirmText: options.confirmText || 'Confirm',
+        cancelText: options.cancelText || 'Cancel',
+        isDanger: options.isDanger || false
+      });
+    }
+
+    // Route standard alert() to custom themed dialog modal
+    window.alert = function(msg) {
+      if (typeof msg !== 'string') msg = String(msg);
+      let type = 'info';
+      let title = 'Executive Coach';
+      if (msg.startsWith('[OK]') || msg.startsWith('✓')) {
+        type = 'success';
+        title = 'Success';
+      } else if (msg.toLowerCase().includes('failed') || msg.toLowerCase().includes('error') || msg.toLowerCase().includes('denied')) {
+        type = 'danger';
+        title = 'Notice';
+      } else if (msg.toLowerCase().includes('warning') || msg.toLowerCase().includes('please enter') || msg.toLowerCase().includes('permission')) {
+        type = 'warning';
+        title = 'Attention';
+      }
+      showAppAlert(msg, title, type);
+    };
+
     // Android Hardware / Gesture Back Navigation Handler
     window.handleAndroidBack = function() {
-      // 0. Close Settings Modal if open
+      // 0. Close Custom Dialog if active
+      const customDialog = document.getElementById('custom-dialog-modal');
+      if (customDialog && (customDialog.style.display === 'flex' || customDialog.classList.contains('active'))) {
+        handleDialogCancel();
+        return true;
+      }
+
+      // 1. Close Settings Modal if open
       const setModal = document.getElementById('settings-modal');
       if (setModal && setModal.style.display === 'flex') {
         closeSettingsModal();
         return true;
       }
 
-      // 1. Close Insights Modal if open
+      // 2. Close Insights Modal if open
       const insModal = document.getElementById('insights-modal');
       if (insModal && (insModal.style.display === 'flex' || window.getComputedStyle(insModal).display === 'flex')) {
         closeInsightsModal();
         return true;
       }
 
-      // 2. Close New Action form if open
+      // 3. Close New Action form if open
       const actionForm = document.getElementById('form-new-action');
       if (actionForm && actionForm.style.display === 'flex') {
         actionForm.style.display = 'none';
         return true;
       }
 
-      // 3. Clear Dialogue inspection card if open
+      // 4. Clear Dialogue inspection card if open
       const diaInspect = document.getElementById('dialogue-inspect-card');
       if (diaInspect && diaInspect.style.display === 'flex') {
         clearSelectedDialogueTurn();
         return true;
       }
 
-      // 4. Close mobile sidebar if open
+      // 5. Close mobile sidebar if open
       const sidebar = document.getElementById('main-sidebar');
       if (sidebar && sidebar.classList.contains('mobile-open')) {
         sidebar.classList.remove('mobile-open');
         return true;
       }
 
-      // 5. Navigate back in Tab History
+      // 6. Navigate back in Tab History
       if (appTabHistory.length > 1) {
         appTabHistory.pop(); // Pop current tab
         const prevTab = appTabHistory[appTabHistory.length - 1];
@@ -3624,7 +4000,7 @@
         return true;
       }
 
-      // 6. At root page (scorecard) with nothing open -> allow back gesture to exit or show toast
+      // 7. At root page (scorecard) with nothing open -> allow back gesture to exit or show toast
       return false;
     };
 
@@ -3880,16 +4256,21 @@
       alert(`[OK] Settings saved! Active Engine: ${appSettings.engineMode === 'gemini' ? 'Gemini 2.5 Cloud' : (appSettings.engineMode === 'custom' ? 'Custom Server' : '100% On-Device Neural AI')}`);
     }
 
-    function wipeAllAppDataAndSettings() {
-      if (confirm("DPDP Act Section 12 Right to Erasure:\nPermanently clear all cached credentials, enrolled voiceprints, action items, and session history on this device?")) {
+    async function wipeAllAppDataAndSettings() {
+      const confirmed = await showAppConfirm(
+        "DPDP Act Section 12 Right to Erasure:\n\nPermanently clear all cached credentials, enrolled voiceprints, action items, and session history on this device?",
+        "Right to Erasure",
+        { isDanger: true, confirmText: "Erase All Data", cancelText: "Cancel", type: "danger" }
+      );
+      if (confirmed) {
         try {
           localStorage.clear();
         } catch (e) { }
         appSettings = { engineMode: 'device', geminiApiKey: '', customServerUrl: '' };
         loadSavedSettings();
         closeSettingsModal();
-        alert("✓ All app data and cached credentials permanently erased.");
-        location.reload();
+        showToast("All app data & cached credentials erased", "delete_forever", "var(--rose)");
+        setTimeout(() => location.reload(), 900);
       }
     }
 
@@ -4066,7 +4447,12 @@ Respond ONLY with a valid JSON object formatted like:
     }
 
     async function eraseVoiceProfile(name) {
-      if (confirm(`Right to Erasure (DPDP Act Sec 12):\nPermanently delete biometric voiceprint profile for '${name}'?`)) {
+      const confirmed = await showAppConfirm(
+        `Right to Erasure (DPDP Act Sec 12):\n\nPermanently delete biometric voiceprint profile for '${name}'?`,
+        "Erase Voiceprint Profile",
+        { isDanger: true, confirmText: "Erase Profile", cancelText: "Cancel", type: "danger" }
+      );
+      if (confirmed) {
         if (window.AndroidCoachAI && typeof window.AndroidCoachAI.eraseVoiceprint === 'function') {
           try {
             window.AndroidCoachAI.eraseVoiceprint(name);
@@ -4085,7 +4471,7 @@ Respond ONLY with a valid JSON object formatted like:
         const updated = local.filter(p => p.speaker_name !== name);
         setLocalVault(updated);
 
-        alert(`[OK] Voiceprint profile for '${name}' permanently deleted.`);
+        showToast(`Voiceprint for '${name}' erased`, "delete", "var(--rose)");
         loadVoiceVault();
       }
     }
