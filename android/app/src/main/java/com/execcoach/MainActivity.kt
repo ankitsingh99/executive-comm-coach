@@ -54,10 +54,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Ensure system status & nav bars match dark background theme
+        // Initialize system status & nav bars matching active system/app theme
         WindowCompat.setDecorFitsSystemWindows(window, true)
-        window.statusBarColor = 0xFF070A13.toInt()
-        window.navigationBarColor = 0xFF0E1424.toInt()
+        val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val isSystemDark = nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        updateSystemBarTheme(isSystemDark)
 
         // Handle Android Back gesture / button smoothly without abrupt app exit
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -96,6 +97,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun updateSystemBarTheme(isDark: Boolean) {
+        runOnUiThread {
+            val statusBarColor = if (isDark) 0xFF070A13.toInt() else 0xFFF0F4F9.toInt()
+            val navBarColor = if (isDark) 0xFF0E1424.toInt() else 0xFFFFFFFF.toInt()
+            window.statusBarColor = statusBarColor
+            window.navigationBarColor = navBarColor
+
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.isAppearanceLightStatusBars = !isDark
+            insetsController.isAppearanceLightNavigationBars = !isDark
+            webViewInstance?.setBackgroundColor(if (isDark) 0xFF070A13.toInt() else 0xFFF0F4F9.toInt())
+        }
+    }
+
     private fun requestAudioPermissions() {
         val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -108,6 +123,7 @@ class MainActivity : ComponentActivity() {
             permissionLauncher.launch(permissions.toTypedArray())
         }
     }
+
 
     @SuppressLint("SetJavaScriptEnabled")
     @Composable

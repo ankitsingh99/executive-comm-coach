@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-09-26
+
+### Added
+- **Dark & Light Mode Support**: Dual executive themes tailored for high-contrast presentation:
+  - **🌙 Executive Dark**: Deep obsidian canvas (`#070A13`), neon indigo/cyan glow accents, and frosted glass cards.
+  - **☀️ Executive Light (Daylight)**: Crisp daylight pearl canvas (`#F0F4F9`), pure white surfaces, and rich slate typography (`#0F172A`).
+- **System Theme Auto-Synchronization**:
+  - Live OS color scheme detection (`prefers-color-scheme`) with automatic background switching.
+  - Desktop header segmented switch (`Dark | Light | System`).
+  - Mobile HUD topbar one-tap theme cycle toggle.
+  - Settings & Privacy modal visual preview cards for Dark, Light, and System sync.
+- **Android System Bar Synchronization**: Dynamic Android Status Bar & Navigation Bar light/dark contrast controller via `WindowCompat.getInsetsController`.
+- **Jetpack Compose ThemeMode**: Expanded `ExecCoachTheme` with `ThemeMode` enum (`DARK`, `LIGHT`, `SYSTEM`).
+
+---
+
 ## [0.2.0] - 2026-09-26
+
 
 ### Added
 - **Native Android Companion App**: Assembled debug APK (`app-debug.apk`) for Android 10+ through Android 17+ (API 35+), tested and optimized on Google Pixel 11.

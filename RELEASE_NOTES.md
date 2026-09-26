@@ -1,10 +1,33 @@
-# Release v0.2.0 — Executive Communication Coach
+# Release v0.3.0 — Executive Communication Coach
+
+We are pleased to announce the **v0.3.0** release of **Executive Communication Coach**, introducing full Dark Mode, Light Mode, and dynamic System Theme auto-synchronization across Android and web cockpits.
+
+---
+
+## 🌟 Key Features & Updates in v0.3.0
+
+### 1. Dual Executive Themes (Dark & Light)
+- **Executive Dark Mode**: Obsidian/Navy theme (`#070A13` / `#0E1424`), vibrant Indigo/Cyan glow accents, and frosted glass cards.
+- **Executive Light Mode**: Clean daylight pearl canvas (`#F0F4F9` / `#FFFFFF`), high-contrast slate typography (`#0F172A`), and refined daylight glass borders.
+
+### 2. Live System Appearance Synchronization
+- **OS Theme Listener**: Follows system `prefers-color-scheme` preferences and switches seamlessly in real time.
+- **Header & HUD Controls**: Instant segmented toggles in the desktop top bar, mobile topbar pill toggle, and modal visual preview selector.
+
+### 3. Native Android Status & Nav Bar Contrast
+- **Adaptive System Insets**: Status and navigation bar icons adapt light/dark contrast automatically on Android 10+ through Android 17+.
+- **Jetpack Compose Theming**: Full support for `ThemeMode.DARK`, `ThemeMode.LIGHT`, and `ThemeMode.SYSTEM`.
+
+---
+
+## Release v0.2.0 — Executive Communication Coach
 
 We are pleased to announce the **v0.2.0** release of **Executive Communication Coach**, introducing the native Android companion app, real-time microphone Web Audio waveform visualization, edge-to-edge mobile UI optimizations, and an overhauled executive cockpit.
 
 ---
 
 ## 🌟 Key Features & Updates in v0.2.0
+
 
 ### 1. Native Android Companion App
 - **High-Performance Android APK**: Compiled and optimized for Android 10+ through Android 17+ (`minSdk = 29`, `targetSdk = 35`), running natively on modern flagships like Google Pixel 11.

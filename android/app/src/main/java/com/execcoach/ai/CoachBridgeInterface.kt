@@ -48,4 +48,35 @@ class CoachBridgeInterface(private val context: Context, private val engine: OnD
             false
         }
     }
+
+    @JavascriptInterface
+    fun setAppTheme(themeMode: String): Boolean {
+        return try {
+            if (context is com.execcoach.MainActivity) {
+                val isDark = when (themeMode) {
+                    "dark" -> true
+                    "light" -> false
+                    else -> {
+                        val nightModeFlags = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                        nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    }
+                }
+                context.updateSystemBarTheme(isDark)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun getSystemTheme(): String {
+        return try {
+            val nightModeFlags = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            if (nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
+        } catch (e: Exception) {
+            "dark"
+        }
+    }
 }
+
