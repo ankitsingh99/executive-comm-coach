@@ -77,7 +77,11 @@ class GeminiAudioEngine:
             # Infer mime type if not provided
             if not mime_type:
                 ext = os.path.splitext(audio_wav_path)[1].lower()
-                mime_type = "audio/webm" if ext == ".webm" else ("audio/ogg" if ext == ".ogg" else ("audio/mp3" if ext == ".mp3" else "audio/wav"))
+                mime_type = (
+                    "audio/webm"
+                    if ext == ".webm"
+                    else ("audio/ogg" if ext == ".ogg" else ("audio/mp3" if ext == ".mp3" else "audio/wav"))
+                )
 
             # Read actual audio duration from WAV header if WAV
             audio_duration_sec = 0.0

@@ -93,24 +93,25 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                 mime_type = payload.get("mime_type", "audio/webm")
                 counterpart_name = payload.get("counterpart_name", "Rahul")
                 power_axis = payload.get("power_axis", "LATERAL")
-                
+
                 utterances = []
-                
+
                 # If audio blob provided, transcribe directly via SOTA Gemini Multimodal Audio Engine
                 if audio_base64:
                     import base64
                     import tempfile
-                    
+
                     try:
                         audio_bytes = base64.b64decode(audio_base64)
                         ext = ".webm" if "webm" in mime_type else (".ogg" if "ogg" in mime_type else ".wav")
-                        
+
                         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp_f:
                             tmp_f.write(audio_bytes)
                             tmp_path = tmp_f.name
-                        
+
                         try:
                             from asr_diarization.gemini_audio_engine import GeminiAudioEngine
+
                             gemini_engine = GeminiAudioEngine()
                             if gemini_engine.is_available():
                                 utterances, _ = gemini_engine.process_audio(tmp_path, mime_type=mime_type)
@@ -124,7 +125,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                                     pass
                     except Exception as audio_err:
                         print(f"Audio transcription error: {audio_err}")
-                
+
                 if not dialogue_text:
                     dialogue_text = "Speech turn."
 
