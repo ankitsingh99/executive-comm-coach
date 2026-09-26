@@ -458,26 +458,21 @@ class EmulatorHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _serve_file(self, rel_path: str):
-        emulator_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
-        safe_rel = os.path.normpath(rel_path.lstrip("/\\"))
-        canonical_path = os.path.realpath(os.path.join(emulator_dir, safe_rel))
+        safe_name = os.path.basename(rel_path.lstrip("/\\")) or "index.html"
+        base_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
+        fullpath = os.path.normpath(os.path.join(base_dir, safe_name))
 
-        # Enforce strict directory boundary containment check using os.path.commonpath (CWE-22)
-        if not canonical_path.startswith(emulator_dir + os.sep) and canonical_path != emulator_dir:
+        if not fullpath.startswith(base_dir):
             self.send_error(403, "Forbidden")
             return
-        if os.path.commonpath([emulator_dir, canonical_path]) != emulator_dir:
-            self.send_error(403, "Forbidden")
-            return
-
-        if not os.path.isfile(canonical_path):
+        if not os.path.isfile(fullpath):
             self.send_error(404, "File Not Found")
             return
 
-        _, ext = os.path.splitext(canonical_path)
+        _, ext = os.path.splitext(fullpath)
         safe_content_type = SAFE_MIME_TYPES.get(ext.lower(), "application/octet-stream")
 
-        with open(canonical_path, "rb") as f:
+        with open(fullpath, "rb") as f:
             content = f.read()
 
         self.send_response(200)
