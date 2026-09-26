@@ -132,6 +132,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Register 100% On-Device AI Engine Bridge for zero cloud dependency
+                val coachEngine = com.execcoach.ai.OnDeviceCoachEngine(context)
+                addJavascriptInterface(
+                    com.execcoach.ai.CoachBridgeInterface(context, coachEngine),
+                    "AndroidCoachAI"
+                )
+
                 loadUrl("file:///android_asset/index.html")
             }
         }

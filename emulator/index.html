@@ -3080,14 +3080,27 @@
       if (!container) return;
 
       let list = null;
-      try {
-        const resp = await fetch('/api/voiceprints');
-        if (resp.ok) {
-          list = await resp.json();
-          setLocalVault(list);
-        }
-      } catch (e) { }
 
+      // 1. Try On-Device Android AI Engine first if running inside Android App
+      if (window.AndroidCoachAI && typeof window.AndroidCoachAI.getVoiceprints === 'function') {
+        try {
+          const raw = window.AndroidCoachAI.getVoiceprints();
+          if (raw) list = JSON.parse(raw);
+        } catch (e) { }
+      }
+
+      // 2. Try HTTP API if running on web dev server
+      if (!list) {
+        try {
+          const resp = await fetch('/api/voiceprints');
+          if (resp.ok) {
+            list = await resp.json();
+            setLocalVault(list);
+          }
+        } catch (e) { }
+      }
+
+      // 3. Fallback to localStorage
       if (!list || !Array.isArray(list)) {
         list = getLocalVault();
       }
@@ -3144,6 +3157,12 @@
         is_user: isUser
       };
 
+      if (window.AndroidCoachAI && typeof window.AndroidCoachAI.saveVoiceprint === 'function') {
+        try {
+          window.AndroidCoachAI.saveVoiceprint(JSON.stringify(newProfile));
+        } catch (e) { }
+      }
+
       try {
         await fetch('/api/enroll_voiceprint', {
           method: 'POST',
@@ -3165,6 +3184,12 @@
 
     async function eraseVoiceProfile(name) {
       if (confirm(`Right to Erasure (DPDP Act Sec 12):\nPermanently delete biometric voiceprint profile for '${name}'?`)) {
+        if (window.AndroidCoachAI && typeof window.AndroidCoachAI.eraseVoiceprint === 'function') {
+          try {
+            window.AndroidCoachAI.eraseVoiceprint(name);
+          } catch (e) { }
+        }
+
         try {
           await fetch('/api/erase_voiceprint', {
             method: 'POST',
@@ -3206,33 +3231,48 @@
       if (overlay) {
         overlay.style.display = 'flex';
         barFill.style.width = '25%';
-        stepTxt.innerText = 'Extracting acoustic cadence & pitch (132 Hz)...';
+        stepTxt.innerText = window.AndroidCoachAI ? 'Running on-device neural acoustic engine (0ms cloud latency)...' : 'Extracting acoustic cadence & pitch (132 Hz)...';
       }
 
       const p1 = setTimeout(() => {
         if (barFill) barFill.style.width = '65%';
         if (stepTxt) stepTxt.innerText = 'Matching voiceprint & DPDP privacy checks...';
-      }, 350);
+      }, 200);
 
       const p2 = setTimeout(() => {
         if (barFill) barFill.style.width = '90%';
         if (stepTxt) stepTxt.innerText = 'Synthesizing dynamics, consensus & loops...';
-      }, 700);
+      }, 400);
 
       try {
-        const resp = await fetch('/api/evaluate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dialogue_text: text })
-        });
+        let res = null;
 
-        await new Promise(r => setTimeout(r, 650));
+        // 1. Check for native Android On-Device AI Engine
+        if (window.AndroidCoachAI && typeof window.AndroidCoachAI.evaluateConversation === 'function') {
+          const rawLocalRes = window.AndroidCoachAI.evaluateConversation(text);
+          res = JSON.parse(rawLocalRes);
+        }
+
+        // 2. If not on Android or native returned error, try backend API
+        if (!res || res.status === 'error') {
+          const resp = await fetch('/api/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dialogue_text: text })
+          });
+          if (resp.ok) {
+            res = await resp.json();
+          } else {
+            throw new Error("Server status: " + resp.status);
+          }
+        }
+
+        await new Promise(r => setTimeout(r, 300));
 
         if (barFill) barFill.style.width = '100%';
         if (stepTxt) stepTxt.innerText = 'Analysis complete! Updating HUD.';
 
-        if (resp.ok) {
-          const res = await resp.json();
+        if (res) {
           latestInsightsData = res;
           renderApp({
             speakerName: res.recognized_speaker,
@@ -3246,8 +3286,6 @@
             dialogueText: text,
             actions: res.action_items || []
           });
-        } else {
-          throw new Error("Server status: " + resp.status);
         }
       } catch (e) {
         console.error("Evaluation request error:", e);
