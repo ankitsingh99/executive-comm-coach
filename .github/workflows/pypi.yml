@@ -8,6 +8,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   pypi-publish:
     name: Upload package to PyPI

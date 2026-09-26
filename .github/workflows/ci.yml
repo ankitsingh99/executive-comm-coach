@@ -10,10 +10,15 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-format:
     name: Code Quality & Linting
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -42,6 +47,8 @@ jobs:
     name: Test Suite (Python ${{ matrix.python-version }} on ${{ matrix.os }})
     needs: lint-and-format
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
