@@ -15,42 +15,111 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
+import kotlin.math.sqrt
+
 /**
  * Manages low-level 16kHz 16-bit linear PCM ingestion, native ring buffer,
- * Opus encoding, and AES-256 encrypted internal storage serialization.
+ * hardware DSP AudioFX offloading (AEC/NS/AGC), and AES-256 encrypted internal storage.
  */
 class AudioRecordManager(private val context: Context) {
 
     private val sampleRate = 16000
     private val channelConfig = AudioFormat.CHANNEL_IN_MONO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-    private val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat).coerceAtLeast(1024)
+    private val bufferSize: Int
+        get() = try {
+            val min = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            if (min > 0) min.coerceAtLeast(1024) else 1024
+        } catch (t: Throwable) {
+            1024
+        }
 
     private var audioRecord: AudioRecord? = null
     private val isRecording = AtomicBoolean(false)
     private val isSerializing = AtomicBoolean(false)
 
+    // Hardware DSP AudioFX handles
+    private var echoCanceler: AcousticEchoCanceler? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
+    private var gainControl: AutomaticGainControl? = null
+
     private var currentEncryptedFile: File? = null
     private var fileOutputStream: FileOutputStream? = null
+
+    /**
+     * Inspects if hardware DSP acoustic pre-processing is available on this chipset.
+     */
+    fun isHardwareDspOffloadSupported(): Boolean {
+        return try {
+            AcousticEchoCanceler.isAvailable() || NoiseSuppressor.isAvailable() || AutomaticGainControl.isAvailable()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Attaches hardware-accelerated DSP audio effects to the AudioRecord session.
+     */
+    fun attachHardwareAudioFx(sessionId: Int) {
+        try {
+            if (AcousticEchoCanceler.isAvailable()) {
+                echoCanceler = AcousticEchoCanceler.create(sessionId)?.apply {
+                    enabled = true
+                }
+            }
+            if (NoiseSuppressor.isAvailable()) {
+                noiseSuppressor = NoiseSuppressor.create(sessionId)?.apply {
+                    enabled = true
+                }
+            }
+            if (AutomaticGainControl.isAvailable()) {
+                gainControl = AutomaticGainControl.create(sessionId)?.apply {
+                    enabled = true
+                }
+            }
+        } catch (e: Exception) {
+            // Graceful fallback for emulators or chipsets without hardware DSP effects
+        }
+    }
+
+    /**
+     * Calculates fast Root-Mean-Square (RMS) acoustic energy of a 16-bit PCM chunk.
+     */
+    fun computeFrameRms(frame: ShortArray): Double {
+        if (frame.isEmpty()) return 0.0
+        var sum = 0.0
+        for (s in frame) {
+            sum += (s.toDouble() * s.toDouble())
+        }
+        return sqrt(sum / frame.size)
+    }
 
     @SuppressLint("MissingPermission")
     suspend fun startPcmStream(onFrameCaptured: (ShortArray) -> Unit) = withContext(Dispatchers.IO) {
         if (isRecording.get()) return@withContext
 
         try {
-            audioRecord = AudioRecord(
+            val record = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 sampleRate,
                 channelConfig,
                 audioFormat,
                 bufferSize
             )
-            audioRecord?.startRecording()
+            audioRecord = record
+            
+            // Offload DSP filters directly to audio hardware if supported
+            attachHardwareAudioFx(record.audioSessionId)
+
+            record.startRecording()
             isRecording.set(true)
 
-            val frameBuffer = ShortArray(512) // 32ms frame chunk
+            val frameBuffer = ShortArray(512) // 32ms frame chunk at 16kHz
             while (isRecording.get()) {
-                val readCount = audioRecord?.read(frameBuffer, 0, frameBuffer.size) ?: 0
+                val readCount = record.read(frameBuffer, 0, frameBuffer.size)
                 if (readCount > 0) {
                     onFrameCaptured(frameBuffer)
                     if (isSerializing.get()) {
@@ -133,6 +202,12 @@ class AudioRecordManager(private val context: Context) {
     fun stopCapture() {
         isRecording.set(false)
         isSerializing.set(false)
+        echoCanceler?.release()
+        echoCanceler = null
+        noiseSuppressor?.release()
+        noiseSuppressor = null
+        gainControl?.release()
+        gainControl = null
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null

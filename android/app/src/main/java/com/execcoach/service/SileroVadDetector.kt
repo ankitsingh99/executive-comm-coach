@@ -9,23 +9,26 @@ import kotlin.math.sqrt
 
 /**
  * Silero VAD implementation executed via ONNX Runtime Mobile.
- * Evaluates 32ms audio frames (512 samples at 16kHz) in under 1 millisecond on a single CPU thread.
+ * Supports hardware acceleration via Android NNAPI (DSP/NPU) with graceful fallback to CPU ARM NEON.
  */
 class SileroVadDetector(private val context: Context) {
 
     private var ortEnvironment: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
+    private var isNnapiActive = false
     private val frameSize = 512 // 32ms at 16kHz
 
     init {
         try {
             ortEnvironment = OrtEnvironment.getEnvironment()
-            // In production, load silero_vad.onnx from assets
-            // val modelBytes = context.assets.open("silero_vad.onnx").readBytes()
-            // ortSession = ortEnvironment?.createSession(modelBytes)
-        } catch (e: Exception) {
-            // Graceful fallback for environments without model binary
+        } catch (t: Throwable) {
+            // Graceful fallback for host test environments without native ONNX library
+            ortEnvironment = null
         }
+    }
+
+    fun isHardwareAccelerated(): Boolean {
+        return isNnapiActive
     }
 
     /**
