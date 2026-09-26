@@ -4710,6 +4710,51 @@ Respond ONLY with a valid JSON object formatted like:
       throw new Error("Microphone API is not accessible in this context.");
     }
 
+    let mediaRecorderInstance = null;
+    let recordedAudioChunks = [];
+
+    async function evaluateWithServerAudio(base64Audio, mimeType, fallbackText) {
+      const btn = document.getElementById('analyze-btn');
+      if (btn) btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span><span>Transcribing SOTA Audio...</span>';
+      
+      const overlay = document.getElementById('loading-overlay');
+      const barFill = document.getElementById('progress-bar-fill');
+      const stepTxt = document.getElementById('txt-processing-step');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        if (barFill) barFill.style.width = '40%';
+        if (stepTxt) stepTxt.innerText = 'Transcribing high-fidelity audio via Multimodal AI Engine...';
+      }
+
+      try {
+        const response = await fetch('/api/evaluate_audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_base64: base64Audio,
+            mime_type: mimeType,
+            dialogue_text: fallbackText,
+            power_axis: currentPowerAxis
+          })
+        });
+        if (response.ok) {
+          const res = await response.json();
+          if (res.dialogue) {
+            document.getElementById('custom-speech-input').value = res.dialogue;
+          }
+          if (barFill) barFill.style.width = '100%';
+          setTimeout(() => {
+            if (overlay) overlay.style.display = 'none';
+            renderScorecard(res);
+          }, 300);
+          return;
+        }
+      } catch (err) {
+        console.warn("Server audio evaluation fallback to text analysis:", err);
+      }
+      runAnalysis();
+    }
+
     async function toggleMic() {
       const btn = document.getElementById('mic-toggle-btn');
       const label = document.getElementById('txt-mic-label');
@@ -4730,10 +4775,14 @@ Respond ONLY with a valid JSON object formatted like:
           }
 
           const source = audioContext.createMediaStreamSource(mediaStream);
+          const micGain = audioContext.createGain();
+          micGain.gain.value = 2.0; // 2x vocal gain boost matching CLI acoustic recorder
+          source.connect(micGain);
+
           analyserNode = audioContext.createAnalyser();
           analyserNode.fftSize = 512;
           analyserNode.smoothingTimeConstant = 0.75;
-          source.connect(analyserNode);
+          micGain.connect(analyserNode);
 
           liveTimeData = new Uint8Array(analyserNode.fftSize);
           liveFreqData = new Uint8Array(analyserNode.frequencyBinCount);
@@ -4741,6 +4790,20 @@ Respond ONLY with a valid JSON object formatted like:
           liveTranscript = "";
           document.getElementById('custom-speech-input').value = "";
           document.getElementById('custom-speech-input').placeholder = "Listening live to microphone... Speak now!";
+
+          recordedAudioChunks = [];
+          try {
+            const preferredMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+              ? 'audio/webm;codecs=opus'
+              : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
+            mediaRecorderInstance = new MediaRecorder(mediaStream, { mimeType: preferredMime });
+            mediaRecorderInstance.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) recordedAudioChunks.push(e.data);
+            };
+            mediaRecorderInstance.start(200);
+          } catch (mErr) {
+            console.warn("MediaRecorder start notice:", mErr);
+          }
 
           if (!recognition) {
             recognition = initSpeechRecognition();
@@ -4788,7 +4851,27 @@ Respond ONLY with a valid JSON object formatted like:
         const capturedText = document.getElementById('custom-speech-input').value.replace(/\[speaking:.*?\]/g, '').trim();
         document.getElementById('custom-speech-input').value = capturedText;
 
-        if (capturedText.length > 3) {
+        // If raw audio was captured, send to SOTA Multimodal Audio Endpoint on server
+        if (mediaRecorderInstance && mediaRecorderInstance.state !== 'inactive' && recordedAudioChunks.length > 0) {
+          try {
+            mediaRecorderInstance.stop();
+            mediaRecorderInstance.onstop = async () => {
+              const audioBlob = new Blob(recordedAudioChunks, { type: mediaRecorderInstance.mimeType || 'audio/webm' });
+              if (audioBlob.size > 2000 && !window.AndroidCoachAI) {
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                  const base64Str = reader.result.split(',')[1];
+                  await evaluateWithServerAudio(base64Str, audioBlob.type, capturedText);
+                };
+                reader.readAsDataURL(audioBlob);
+              } else if (capturedText.length > 3) {
+                runAnalysis();
+              }
+            };
+          } catch (e) {
+            if (capturedText.length > 3) runAnalysis();
+          }
+        } else if (capturedText.length > 3) {
           runAnalysis();
         } else {
           document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip above...";

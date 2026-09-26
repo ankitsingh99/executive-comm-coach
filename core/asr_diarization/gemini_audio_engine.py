@@ -52,10 +52,11 @@ class GeminiAudioEngine:
         return bool(self.api_key and self._get_client() is not None)
 
     def process_audio(
-        self, audio_wav_path: str, speaker_id: str = "USER"
+        self, audio_wav_path: str, speaker_id: str = "USER", mime_type: Optional[str] = None
     ) -> Tuple[List[Utterance], AcousticAnalysisResult]:
         """
         Transcribes audio and extracts acoustic voice/tone characteristics using Gemini.
+        Supports WAV, WebM, OGG, MP3, and standard audio formats.
         """
         if not os.path.exists(audio_wav_path) or not self.is_available():
             return [], AcousticAnalysisResult()
@@ -73,20 +74,26 @@ class GeminiAudioEngine:
             if len(audio_bytes) < 1000:
                 return [], AcousticAnalysisResult()
 
-            # Read actual audio duration from WAV header
+            # Infer mime type if not provided
+            if not mime_type:
+                ext = os.path.splitext(audio_wav_path)[1].lower()
+                mime_type = "audio/webm" if ext == ".webm" else ("audio/ogg" if ext == ".ogg" else ("audio/mp3" if ext == ".mp3" else "audio/wav"))
+
+            # Read actual audio duration from WAV header if WAV
             audio_duration_sec = 0.0
-            try:
-                import wave
+            if mime_type == "audio/wav":
+                try:
+                    import wave
 
-                with wave.open(audio_wav_path, "rb") as wf:
-                    n_frames = wf.getnframes()
-                    sr = wf.getframerate()
-                    if sr > 0:
-                        audio_duration_sec = round(n_frames / float(sr), 2)
-            except Exception:
-                pass
+                    with wave.open(audio_wav_path, "rb") as wf:
+                        n_frames = wf.getnframes()
+                        sr = wf.getframerate()
+                        if sr > 0:
+                            audio_duration_sec = round(n_frames / float(sr), 2)
+                except Exception:
+                    pass
 
-            audio_part = types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")
+            audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
 
             prompt = """Analyze this audio recording with high precision for speech-to-text, speaker diarization, overlapping cross-talk, and acoustic tone.
 

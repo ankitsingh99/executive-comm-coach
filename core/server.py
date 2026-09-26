@@ -86,28 +86,63 @@ class EmulatorHandler(BaseHTTPRequestHandler):
         except Exception:
             payload = {}
 
-        if url_path == "/api/evaluate":
+        if url_path in ("/api/evaluate", "/api/evaluate_audio"):
             try:
                 dialogue_text = payload.get("dialogue_text", "").strip()
+                audio_base64 = payload.get("audio_base64", "").strip()
+                mime_type = payload.get("mime_type", "audio/webm")
+                counterpart_name = payload.get("counterpart_name", "Rahul")
+                power_axis = payload.get("power_axis", "LATERAL")
+                
+                utterances = []
+                
+                # If audio blob provided, transcribe directly via SOTA Gemini Multimodal Audio Engine
+                if audio_base64:
+                    import base64
+                    import tempfile
+                    
+                    try:
+                        audio_bytes = base64.b64decode(audio_base64)
+                        ext = ".webm" if "webm" in mime_type else (".ogg" if "ogg" in mime_type else ".wav")
+                        
+                        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp_f:
+                            tmp_f.write(audio_bytes)
+                            tmp_path = tmp_f.name
+                        
+                        try:
+                            from asr_diarization.gemini_audio_engine import GeminiAudioEngine
+                            gemini_engine = GeminiAudioEngine()
+                            if gemini_engine.is_available():
+                                utterances, _ = gemini_engine.process_audio(tmp_path, mime_type=mime_type)
+                                if utterances:
+                                    dialogue_text = " ".join([u.transcript for u in utterances if u.transcript])
+                        finally:
+                            if os.path.exists(tmp_path):
+                                try:
+                                    os.remove(tmp_path)
+                                except Exception:
+                                    pass
+                    except Exception as audio_err:
+                        print(f"Audio transcription error: {audio_err}")
+                
                 if not dialogue_text:
                     dialogue_text = "Speech turn."
 
-                stt = LocalSTTEngine()
-                utterances = stt.process_local_transcript(dialogue_text)
                 if not utterances:
-                    utterances = [Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript=dialogue_text)]
+                    stt = LocalSTTEngine()
+                    utterances = stt.process_local_transcript(dialogue_text)
+                    if not utterances:
+                        utterances = [Utterance(speaker="USER", start_time=0.0, end_time=3.0, transcript=dialogue_text)]
 
                 # Check verbal self-intro
                 utterances, intro_counterpart, intro_user = DiarizationEngine.detect_and_apply_verbal_introductions(
                     utterances
                 )
 
-                counterpart_name = intro_counterpart or payload.get("counterpart_name", "Rahul")
-                power_axis = (
-                    "SOLO"
-                    if (intro_user or len(utterances) <= 1 and not intro_counterpart)
-                    else payload.get("power_axis", "LATERAL")
-                )
+                if intro_counterpart:
+                    counterpart_name = intro_counterpart
+                if intro_user or (len(utterances) <= 1 and not intro_counterpart):
+                    power_axis = "SOLO"
 
                 # Auto-enroll in registry if self-intro detected
                 registry = SpeakerVoiceprintRegistry()
@@ -140,7 +175,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                     dialogue=utterances,
                 )
 
-                engine = ExecutiveCoachingEngine(use_local_only=True)
+                engine = ExecutiveCoachingEngine(use_local_only=False)
                 evaluation = engine.evaluate_session(session)
 
                 # Extract Action items
