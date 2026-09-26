@@ -436,6 +436,20 @@ class EmulatorHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "Unknown API Route")
 
+    def send_header(self, keyword: str, value: str):
+        """Sanitizes header names and values to prevent HTTP response splitting (CWE-113)."""
+        clean_keyword = "".join(c for c in str(keyword) if c not in "\r\n")
+        clean_value = "".join(c for c in str(value) if c not in "\r\n")
+        super().send_header(clean_keyword, clean_value)
+
+    def do_OPTIONS(self):
+        """Handle preflight CORS requests safely."""
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def _serve_file(self, path: str, content_type: str):
         emulator_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
         canonical_path = os.path.realpath(path)
@@ -447,17 +461,23 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             return
         with open(canonical_path, "rb") as f:
             content = f.read()
+
+        # Sanitize content_type to ensure no CRLF injection can occur
+        safe_content_type = "".join(c for c in str(content_type) if c not in "\r\n") or "application/octet-stream"
+
         self.send_response(200)
-        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Type", safe_content_type)
         self.send_header("Content-Length", str(len(content)))
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(content)
 
     def _send_json(self, data: any):
         raw = json.dumps(data).encode("utf-8")
         self.send_response(200)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(raw)
 

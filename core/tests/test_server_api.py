@@ -123,3 +123,39 @@ def test_server_voiceprint_is_user_flag():
 
     assert registry.voiceprints["Ashish"].is_user is True
     assert registry.voiceprints["Sandeep"].is_user is False
+
+
+def test_server_header_sanitization_crlf():
+    """Verify that send_header sanitizes CRLF characters to prevent HTTP response splitting (CWE-113)."""
+    captured_headers = []
+
+    class DummyHandler(EmulatorHandler):
+        def __init__(self):
+            # Bypass BaseHTTPRequestHandler init for isolated unit testing
+            pass
+
+    handler = DummyHandler()
+    # Mock super().send_header via monkeypatching
+    sent = []
+
+    def mock_super_send_header(self_obj, k, v):
+        sent.append((k, v))
+
+    import http.server
+
+    original_send_header = http.server.BaseHTTPRequestHandler.send_header
+    try:
+        http.server.BaseHTTPRequestHandler.send_header = mock_super_send_header
+
+        # Test CRLF in keyword and value
+        handler.send_header("Content-Type\r\nInjected-Header: evil", "text/html\r\nSet-Cookie: sessionId=hacked\r\n\r\n")
+
+        assert len(sent) == 1
+        k, v = sent[0]
+        assert "\r" not in k and "\n" not in k
+        assert "\r" not in v and "\n" not in v
+        assert k == "Content-TypeInjected-Header: evil"
+        assert v == "text/htmlSet-Cookie: sessionId=hacked"
+    finally:
+        http.server.BaseHTTPRequestHandler.send_header = original_send_header
+
