@@ -4682,13 +4682,41 @@ Respond ONLY with a valid JSON object formatted like:
       return rec;
     }
 
+    async function getMicrophoneMediaStream(constraints) {
+      if (window.AndroidCoachAI && typeof window.AndroidCoachAI.hasMicPermission === 'function') {
+        if (!window.AndroidCoachAI.hasMicPermission()) {
+          try {
+            window.AndroidCoachAI.requestMicPermission();
+          } catch (e) {
+            console.warn("Could not request mic permission via Android bridge:", e);
+          }
+        }
+      }
+
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      }
+
+      const legacyGetUserMedia = navigator.getUserMedia ||
+                                 navigator.webkitGetUserMedia ||
+                                 navigator.mozGetUserMedia ||
+                                 navigator.msGetUserMedia;
+      if (legacyGetUserMedia) {
+        return new Promise((resolve, reject) => {
+          legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+        });
+      }
+
+      throw new Error("Microphone API is not accessible in this context.");
+    }
+
     async function toggleMic() {
       const btn = document.getElementById('mic-toggle-btn');
       const label = document.getElementById('txt-mic-label');
 
       if (!isRecording) {
         try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
+          mediaStream = await getMicrophoneMediaStream({
             audio: {
               echoCancellation: true,
               noiseSuppression: false,
@@ -4735,7 +4763,14 @@ Respond ONLY with a valid JSON object formatted like:
 
         } catch (err) {
           console.error("Microphone access failed:", err);
-          alert("Microphone Access Request:\nPlease allow microphone permissions in your browser to record live speech and visualize real-time sound waveforms.");
+          if (window.AndroidCoachAI && typeof window.AndroidCoachAI.requestMicPermission === 'function') {
+            window.AndroidCoachAI.requestMicPermission();
+          }
+          showAppAlert(
+            "Microphone Access Needed:\nPlease ensure Microphone permission is granted in Android App Settings to record speech and visualize real-time sound waveforms.",
+            "Microphone Access",
+            "warning"
+          );
         }
       } else {
         isRecording = false;
@@ -4867,7 +4902,7 @@ Respond ONLY with a valid JSON object formatted like:
 
       if (!isAmbientListening) {
         try {
-          ambientStream = await navigator.mediaDevices.getUserMedia({
+          ambientStream = await getMicrophoneMediaStream({
             audio: {
               echoCancellation: true,
               noiseSuppression: true,
@@ -4925,7 +4960,14 @@ Respond ONLY with a valid JSON object formatted like:
 
         } catch (e) {
           console.error("Ambient ear permission error:", e);
-          alert("Microphone permission needed to enable ambient speech detection.");
+          if (window.AndroidCoachAI && typeof window.AndroidCoachAI.requestMicPermission === 'function') {
+            window.AndroidCoachAI.requestMicPermission();
+          }
+          showAppAlert(
+            "Microphone permission is required to enable ambient speech sensing.",
+            "Microphone Permission",
+            "warning"
+          );
         }
       } else {
         isAmbientListening = false;

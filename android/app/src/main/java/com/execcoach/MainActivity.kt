@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -30,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import dagger.hilt.android.AndroidEntryPoint
 
 import androidx.activity.OnBackPressedCallback
@@ -47,14 +51,16 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val recordAudioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
-        if (recordAudioGranted) {
-            pendingPermissionRequest?.let { req ->
-                req.grant(req.resources)
+        runOnUiThread {
+            if (recordAudioGranted) {
+                pendingPermissionRequest?.let { req ->
+                    req.grant(req.resources)
+                    pendingPermissionRequest = null
+                }
+            } else {
+                pendingPermissionRequest?.deny()
                 pendingPermissionRequest = null
             }
-        } else {
-            pendingPermissionRequest?.deny()
-            pendingPermissionRequest = null
         }
     }
 
@@ -98,7 +104,7 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        // Pre-request microphone permission on Android 10+
+        // Pre-request microphone & notification permissions
         requestAudioPermissions()
 
         setContent {
@@ -121,8 +127,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-    private fun requestAudioPermissions() {
+    fun requestAudioPermissions() {
         val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -134,7 +139,6 @@ class MainActivity : ComponentActivity() {
             permissionLauncher.launch(permissions.toTypedArray())
         }
     }
-
 
     @SuppressLint("SetJavaScriptEnabled")
     @Composable
@@ -153,10 +157,12 @@ class MainActivity : ComponentActivity() {
                 settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
+                    databaseEnabled = true
                     mediaPlaybackRequiresUserGesture = false
                     allowFileAccess = true
                     allowContentAccess = true
-                    // Ensure accurate mobile viewport scaling for Google Pixel
+                    allowFileAccessFromFileURLs = true
+                    allowUniversalAccessFromFileURLs = true
                     useWideViewPort = false
                     loadWithOverviewMode = false
                     cacheMode = WebSettings.LOAD_DEFAULT
@@ -164,8 +170,23 @@ class MainActivity : ComponentActivity() {
                     textZoom = 100
                 }
 
+                val assetLoader = WebViewAssetLoader.Builder()
+                    .addPathHandler("/assets/", AssetsPathHandler(context))
+                    .build()
+
                 webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    override fun shouldInterceptRequest(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): WebResourceResponse? {
+                        val uri = request?.url ?: return null
+                        return assetLoader.shouldInterceptRequest(uri)
+                    }
+
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): Boolean {
                         return false
                     }
                 }
@@ -173,20 +194,21 @@ class MainActivity : ComponentActivity() {
                 webChromeClient = object : WebChromeClient() {
                     override fun onPermissionRequest(request: PermissionRequest) {
                         runOnUiThread {
-                            val isAudio = request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+                            val requested = request.resources
+                            val isAudio = requested.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
                             if (isAudio) {
                                 if (ContextCompat.checkSelfPermission(
                                         context,
                                         Manifest.permission.RECORD_AUDIO
                                     ) == PackageManager.PERMISSION_GRANTED
                                 ) {
-                                    request.grant(request.resources)
+                                    request.grant(requested)
                                 } else {
                                     pendingPermissionRequest = request
                                     permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                                 }
                             } else {
-                                request.grant(request.resources)
+                                request.grant(requested)
                             }
                         }
                     }
@@ -214,7 +236,8 @@ class MainActivity : ComponentActivity() {
                     "AndroidCoachAI"
                 )
 
-                loadUrl("file:///android_asset/index.html")
+                // Load via secure WebViewAssetLoader domain so navigator.mediaDevices & SpeechRecognition are natively enabled
+                loadUrl("https://appassets.androidplatform.net/assets/index.html")
             }
         }
 

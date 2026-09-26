@@ -78,5 +78,33 @@ class CoachBridgeInterface(private val context: Context, private val engine: OnD
             "dark"
         }
     }
+
+    @JavascriptInterface
+    fun hasMicPermission(): Boolean {
+        return try {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun requestMicPermission(): Boolean {
+        return try {
+            if (context is com.execcoach.MainActivity) {
+                context.runOnUiThread {
+                    context.requestAudioPermissions()
+                }
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
 

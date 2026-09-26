@@ -81,6 +81,7 @@ dependencies {
     // Foreground Service & Core KTX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.webkit)
 
     // Dagger Hilt
     implementation(libs.hilt.android)
