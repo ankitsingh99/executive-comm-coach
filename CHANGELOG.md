@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-09-26
+
+### Added
+- **Secure `WebViewAssetLoader` Pipeline**: Migrated Android asset delivery to a secure virtual origin (`https://appassets.androidplatform.net/assets/index.html`) using `androidx.webkit:webkit:1.12.1`.
+- **Native Hardware Microphone Permissions Bridge**:
+  - Implemented `CoachBridgeInterface.hasMicPermission()` and `CoachBridgeInterface.requestMicPermission()`.
+  - Configured `WebChromeClient.onPermissionRequest` to automatically grant `RESOURCE_AUDIO_CAPTURE` resources to the web app when Android OS permission is active.
+- **Resilient Audio Stream Fallback (`getMicrophoneMediaStream`)**:
+  - Auto-negotiating microphone stream initialization across standard `navigator.mediaDevices.getUserMedia` and legacy platform interfaces.
+  - Replaced browser alert prompts with cohesive, theme-integrated `showAppAlert` modals for permission requests.
+- **Audio Hardware Manifest Declarations**: Declared `android.permission.MODIFY_AUDIO_SETTINGS` and non-mandatory `android.hardware.microphone` feature flags.
+
+---
+
 ## [0.3.0] - 2026-09-26
 
 ### Added

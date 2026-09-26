@@ -1,6 +1,26 @@
-# Release v0.3.0 — Executive Communication Coach
+# Release v0.4.0 — Executive Communication Coach
 
-We are pleased to announce the **v0.3.0** release of **Executive Communication Coach**, introducing full Dark Mode, Light Mode, and dynamic System Theme auto-synchronization across Android and web cockpits.
+We are pleased to announce the **v0.4.0** release of **Executive Communication Coach**, introducing a secure `WebViewAssetLoader` audio bridge, zero-latency microphone streaming, seamless Android runtime permission bridging, and custom in-app permission dialogs.
+
+---
+
+## 🌟 Key Features & Updates in v0.4.0
+
+### 1. Secure `WebViewAssetLoader` & Web Audio Pipeline
+- **Secure Context Origin**: Local assets are served over `https://appassets.androidplatform.net/assets/` via `androidx.webkit:webkit:1.12.1`.
+- **Chromium MediaDevices Unlock**: Unlocks `navigator.mediaDevices.getUserMedia()`, `AudioContext`, and `SpeechRecognition` without insecure `file://` scheme restrictions.
+
+### 2. Native Hardware Microphone Permissions Bridge
+- **Automatic Resource Delegation**: `WebChromeClient.onPermissionRequest` automatically grants `RESOURCE_AUDIO_CAPTURE` resources to the cockpit when Android OS permissions are active.
+- **Bi-directional Bridge API**: `CoachBridgeInterface.hasMicPermission()` and `requestMicPermission()` allow seamless permission requests from the web interface.
+
+### 3. Resilient Audio Engine & Themed Diagnostics
+- **`getMicrophoneMediaStream` Fallback**: Intelligent negotiation across modern Web Audio and legacy audio interfaces.
+- **Custom Executive Modals**: In-app custom themed dialogs replace native browser `alert()` popups.
+
+---
+
+## Release v0.3.0 — Executive Communication Coach
 
 ---
 
