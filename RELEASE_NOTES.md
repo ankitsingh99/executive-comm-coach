@@ -1,49 +1,51 @@
-# Release v0.1.0 — Executive Communication Coach
+# Release v0.2.0 — Executive Communication Coach
 
-We are pleased to announce the inaugural **v0.1.0** release of **Executive Communication Coach** — an intelligent, privacy-first, on-device AI communication coaching platform for English, Hindi, and code-mixed Hinglish conversations.
-
----
-
-## 🌟 Key Features & Capabilities
-
-### 1. Acoustic & Multimodal Sensing
-- **Native Real-Time Microphone Streaming**: CoreAudio/ALSA streaming via `sounddevice` with instantaneous terminal VU meter and adaptive energy & WebRTC VAD gating.
-- **Overlapping Speech & Cross-Talk Detection**: Tracks simultaneous speech, speaker collisions, and turn interruption duration.
-- **Acoustic Speaker Biometrics**: Local MFCC feature extraction and cosine-similarity voiceprint memory for persistent speaker identification.
-- **Pluggable Multi-ASR Engine Support**:
-  - Gemini 2.5 Flash Audio API (cloud)
-  - Local Faster-Whisper & FastConformer (100% offline)
-  - Sarvam AI Indic Speech Client
-
-### 2. Linguistic Coaching & Executive Persona Ontologies
-- **Dynamic Communication Scorecard**:
-  - Presence & Delivery Score (15–98)
-  - Assertiveness Index (15–98)
-  - Active Listening & Interruption Tracking Score (15–98)
-  - Filler Word & Hedging Detection (English + Hinglish phonetics)
-- **Multi-Register Coaching Rubrics**: 6 communication contexts (*Executive / Upward*, *Peer / Lateral*, *Mentorship / Downward*, *Solo Presentation*, *Casual / Informal*, *Conflict & Negotiation*).
-- **Automated Action Item Extraction & Temporal Resolution**: Extracts commitments and automatically resolves relative dates (e.g., *"kal sham 4 baje"* $\rightarrow$ concrete ISO timestamps).
-
-### 3. Privacy & DPDP Act Compliance
-- **Zero-Cloud PII Scrubbing**: Pattern-based entity redactor for Aadhaar, PAN, emails, phone numbers, and financial tokens.
-- **Statutory DPDP Safeguards**: Dual-tone audio consent chime and Right-to-Erasure voiceprint purge commands.
+We are pleased to announce the **v0.2.0** release of **Executive Communication Coach**, introducing the native Android companion app, real-time microphone Web Audio waveform visualization, edge-to-edge mobile UI optimizations, and an overhauled executive cockpit.
 
 ---
 
-## 📦 Installation & Quickstart
+## 🌟 Key Features & Updates in v0.2.0
 
+### 1. Native Android Companion App
+- **High-Performance Android APK**: Compiled and optimized for Android 10+ through Android 17+ (`minSdk = 29`, `targetSdk = 35`), running natively on modern flagships like Google Pixel 11.
+- **Hardware-Accelerated Web Audio Bridge**: Full Web Audio API `AnalyserNode` integration with `WebChromeClient` audio capture permission delegation.
+- **Edge-to-Edge Display & Cutout Handling**: Dynamic safe-area padding for punch-hole cameras and gesture navigation pills (`viewport-fit=cover`).
+- **Offline Asset Embedding**: Full coaching studio and scenario engines packaged directly into `assets/index.html`.
+
+### 2. Real-Time Microphone Oscilloscope & Pitch Tracker
+- **Acoustic Waveform Canvas**: Replaced synthetic sine waves with real-time time-domain audio data (`getByteTimeDomainData`).
+- **Dynamic Energy Gain Boost**: Soft conversational speech is dynamically boosted for crystal-clear visualization.
+- **Fundamental Pitch Tracker**: Real-time vocal pitch estimation ($85\text{ Hz} - 450\text{ Hz}$) with active speaker tone feedback.
+
+### 3. Streamlined Executive UX
+- **Segmented Workbench**: 3 focused tabs (`Scenarios`, `Live Mic`, `Ambient Gate`) reducing cognitive fatigue.
+- **Unified Mobile Bottom Bar**: Instant switching between `Coach`, `Actions`, `Dialogue`, and `Vault`.
+- **Categorized Detailed Diagnostics**: Multidimensional tabs for `Overview`, `Dynamics & Arc`, and `Strengths & Fixes`.
+
+---
+
+## 📦 Installation & Deployment
+
+### Run on Android
 ```bash
-# Direct pip install from Git
-pip install git+https://github.com/ankitsingh99/executive-comm-coach.git@v0.1.0
+# Compile debug APK
+cd android && ./gradlew assembleDebug
 
-# Run live mic coaching
-executive-comm-coach --axis UPWARD
+# Install on connected Google Pixel via ADB
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
 
-# Launch Web & Mobile App Emulator
+### Run Python Server & Web App
+```bash
+# Start backend server
 comm-coach-server 8080
+
+# Open in browser
+open http://localhost:8080
 ```
 
 ---
 
 ## 📊 Verification & Tests
-- **55/55 Automated Unit & Integration Tests Passing** covering acoustic gating, STT engines, metrics scoring, Indic normalizer, and DPDP compliance.
+- **55/55 Automated Unit & Integration Tests Passing**
+- **Clean Android Gradle Build**: All tasks executed with zero linter errors.

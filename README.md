@@ -3,15 +3,15 @@
 [![CI](https://github.com/ankitsingh99/executive-comm-coach/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitsingh99/executive-comm-coach/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ankitsingh99/executive-comm-coach?color=blue&label=Release)](https://github.com/ankitsingh99/executive-comm-coach/releases)
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://github.com/ankitsingh99/executive-comm-coach)
-[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/ankitsingh99/executive-comm-coach)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Android-lightgrey.svg)](https://github.com/ankitsingh99/executive-comm-coach)
 [![Coverage](https://img.shields.io/badge/Coverage-95.83%25-brightgreen.svg)](https://github.com/ankitsingh99/executive-comm-coach)
 [![Discussions](https://img.shields.io/badge/Discussions-Join%20Community-purple?logo=github)](https://github.com/ankitsingh99/executive-comm-coach/discussions)
 [![Privacy](https://img.shields.io/badge/Privacy-DPDP%20Act%20Compliant-10B981.svg)](https://github.com/ankitsingh99/executive-comm-coach)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An on-device, privacy-first AI communication intelligence system and companion service that analyzes spoken workplace and personal conversations across all registers (Executive, Collaborative, Casual, Solo Practice, Mentorship, and Conflict), providing persona-calibrated communication coaching, cross-talk detection, and commitment tracking.
+An on-device, privacy-first AI communication intelligence system and companion service that analyzes spoken workplace and personal conversations across all registers (Executive, Collaborative, Casual, Solo Practice, Mentorship, and Conflict), providing persona-calibrated communication coaching, cross-talk detection, commitment tracking, real-time acoustic waveform visualization, and a dedicated **Android companion app** optimized for modern flagship devices (including Google Pixel 11 on Android 17).
 
-For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE.md](ARCHITECTURE.md).
+For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE.md](ARCHITECTURE.md). For module and REST API specifications, see [API_REFERENCE.md](API_REFERENCE.md).
 
 ---
 
@@ -26,43 +26,25 @@ For an in-depth architectural breakdown and component diagram, see [ARCHITECTURE
   - **Difficult / Conflict Resolution (CONFLICT)**: Objective de-escalation, mutual resolution criteria, and neutral framing.
 - **Multilingual & Hinglish Code-Mixing Support**: Native comprehension of Hindi, Indian English, and code-mixed Hinglish with South Asian discourse particles (*matlab*, *yaani*, *haina*, *arre*, *bhai*, *theek hai*).
 - **Phonetic Hesitation & Non-Verbal Sound Detection**: Accurately itemizes vocal elongations (*ummm*, *aaaa*, *hmmm*), tongue clicks/tut-tuts (*tch*, *tsk*, *tch-tch*), and sigh sounds (*uff*, *oof*).
+- **Real-Time Microphone Waveform Oscilloscope & Pitch Tracker**: Live Web Audio API `AnalyserNode` time-domain oscilloscope, real RMS energy tracking, dynamic visual gain boost, and fundamental vocal pitch estimation ($85\text{ Hz} - 450\text{ Hz}$).
 - **Overlapping Speech & Cross-Talk Diarization**: Detects simultaneous speech turns, tags who interrupted whom, computes overlap duration, and provides coaching on floor-holding and intentional turn-taking.
 - **Automated Commitments & Action Items Engine**: Automatically captures follow-up calls, deliverables, scheduling promises, and deadlines with smart AM/PM inference and date resolution.
 - **Acoustic Voiceprint Memory Vault**: On-device biometric voiceprint recognition using local acoustic features with DPDP-compliant consent prompts and Section 12 Right-to-Erasure.
-- **Interactive Web & Mobile App Emulator**: Modern glassmorphic real-time coaching interface with live browser microphone capture, speech recognition, waveform visualizer, and insights drawer.
+- **Native Android App (Google Pixel & Android 17 Optimized)**: Hardware-accelerated edge-to-edge container, display cutout safe area insets, runtime microphone permission handling, and offline asset embedding.
 
 ---
 
 ## 2. Quickstart Guide
 
 ### Prerequisites
-- Python 3.10+ (macOS Apple Silicon or Linux)
-- Microphone access
+- **Backend / Web**: Python 3.10+ (macOS Apple Silicon or Linux) with microphone access
+- **Android App**: Android 10.0+ (API 29+) through Android 17+ (API 35+)
 
-### Installation & Packaging
+---
 
-#### Option A: Install directly from Git / GitHub Releases
-```bash
-pip install git+https://github.com/ankitsingh99/executive-comm-coach.git@v0.1.0
-```
-Once installed, run the coach directly:
-```bash
-executive-comm-coach --axis UPWARD
-comm-coach-server 8080
-```
+### Python Backend & Web Studio Setup
 
-#### Option B: Install via GitHub Packages
-```bash
-pip install --index-url https://token:<GITHUB_TOKEN>@pypi.pkg.github.com/ankitsingh99/ executive-comm-coach
-```
-
-#### Option C: Run via GitHub Container Registry (Docker)
-```bash
-docker pull ghcr.io/ankitsingh99/executive-comm-coach:latest
-docker run -p 8080:8080 ghcr.io/ankitsingh99/executive-comm-coach:latest
-```
-
-#### Option D: Developer Setup (Local Editable Mode)
+#### Local Installation (Editable Developer Mode)
 ```bash
 # Clone the repository
 git clone https://github.com/ankitsingh99/executive-comm-coach.git
@@ -72,13 +54,12 @@ cd executive-comm-coach
 python3 -m venv venv
 source venv/bin/activate
 
-# Install in editable mode
+# Install package in editable mode
 pip install -e .
 ```
 
-### Run Live Terminal Microphone Coaching
+#### Run Live Microphone Coaching (Terminal CLI)
 ```bash
-
 # Run live microphone coaching (records dynamically until silence after speech):
 ./record.sh
 
@@ -92,9 +73,9 @@ pip install -e .
 ```
 *Tip: Press <kbd>Enter</kbd> or <kbd>Ctrl+C</kbd> at any time to finish speaking immediately.*
 
-### Launch Interactive App Emulator (Web & Mobile)
+#### Launch Interactive App Studio & HUD (Web Browser)
 ```bash
-# Start local emulator server on port 8080:
+# Start local server on port 8080:
 python core/server.py 8080
 # Or using the installed CLI entrypoint:
 comm-coach-server 8080
@@ -103,14 +84,13 @@ comm-coach-server 8080
 open http://localhost:8080
 ```
 
-
-### Run Ambient Conversation Monitor (Nudge)
+#### Run Ambient Conversation Monitor (Nudge)
 ```bash
 # Passively monitors room for conversation onset with < 2.5% CPU:
 ./nudge.sh
 ```
 
-### Run Automated Test Suite
+#### Run Automated Test Suite
 ```bash
 ./venv/bin/pytest -v
 ```
@@ -118,10 +98,78 @@ open http://localhost:8080
 
 ---
 
-## 3. Modular Architecture Overview
+## 3. Android Companion App (Google Pixel / Android 17)
+
+The Android companion application provides the full-featured **Executive Communication Coach** cockpit directly on your Android smartphone with native microphone capture, real-time waveform visualization, scenario simulation, and offline operation.
+
+### Assembling the Debug APK
+```bash
+# Navigate to the android/ directory
+cd android
+
+# Compile the debug APK
+./gradlew assembleDebug
+```
+The compiled APK will be located at:
+```
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+### Installation on Google Pixel Devices
+
+#### Method 1: Instant Install via ADB (USB Cable)
+1. **Enable Developer Options**: Open phone **Settings** $\rightarrow$ **About phone** $\rightarrow$ tap **Build number** 7 times.
+2. **Enable USB Debugging**: Go to **Settings** $\rightarrow$ **System** $\rightarrow$ **Developer options** $\rightarrow$ turn on **USB debugging**.
+3. **Connect Device**: Plug your Pixel into your Mac/PC via USB-C cable and tap **Allow** on the phone prompt.
+4. **Install APK**:
+   ```bash
+   adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+#### Method 2: Wireless Debugging (No Cable)
+1. Connect your Pixel to the same Wi-Fi network as your computer.
+2. Go to **Settings** $\rightarrow$ **System** $\rightarrow$ **Developer options** $\rightarrow$ **Wireless debugging** $\rightarrow$ enable it.
+3. Tap **Pair device with pairing code** (note IP, port, and 6-digit code).
+4. Run:
+   ```bash
+   adb pair <IP>:<PAIR_PORT>
+   # Enter the 6-digit pairing code when prompted
+   adb connect <IP>:<CONNECT_PORT>
+   adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+#### Method 3: Direct Sideloading (Files by Google)
+If transferring the APK file via Google Drive, Gmail, or USB storage:
+1. Open the built-in **Files by Google** app on your Pixel.
+2. Tap **Apps** $\rightarrow$ select the **App install files (.apk)** tab.
+3. Tap `app-debug.apk`.
+4. When prompted: *"Your phone currently isn't allowed to install unknown apps from this source"*, tap **Settings** $\rightarrow$ toggle **Allow from this source** to **ON** $\rightarrow$ tap **Install**.
+
+> [!TIP]
+> **Fix for "Unsupported file" error on Pixel**: Do not tap the APK directly inside Google Drive or Chrome's download bar (which invokes the Docs/Drive viewer). Always open the APK through the native **Files by Google** app under **App install files (.apk)**.
+
+---
+
+## 4. Modular Architecture Overview
 
 ```
 executive-comm-coach/
+├── android/                          # Native Android companion application
+│   ├── app/
+│   │   ├── src/main/
+│   │   │   ├── assets/               # Embedded offline coaching studio & HUD
+│   │   │   │   └── index.html
+│   │   │   ├── java/com/execcoach/
+│   │   │   │   ├── MainActivity.kt   # Edge-to-edge hardware-accelerated container & mic permissions
+│   │   │   │   ├── ExecCoachApplication.kt
+│   │   │   │   ├── service/          # Ambient audio & Silero VAD services
+│   │   │   │   └── data/local/       # Encrypted SQLCipher database & Room DAOs
+│   │   │   └── AndroidManifest.xml   # Permissions (RECORD_AUDIO, FOREGROUND_SERVICE)
+│   │   └── build.gradle.kts          # Gradle build configuration (API 35/36/37)
+│   └── gradlew                       # Gradle build wrapper
+│
 ├── core/
 │   ├── asr_diarization/              # Audio streaming, VAD gating, STT & voiceprints
 │   │   ├── acoustic_speaker_detector.py # Pitch, RMS energy, and vocal tone classifier
@@ -156,32 +204,34 @@ executive-comm-coach/
 │   └── server.py                     # REST & WebSocket API server
 │
 ├── emulator/
-│   └── index.html                    # Glassmorphic interactive Web UI
+│   └── index.html                    # Glassmorphic interactive Web UI & mobile simulator
 │
 ├── ARCHITECTURE.md                   # Complete architectural reference & data contracts
 ├── API_REFERENCE.md                  # Comprehensive module & REST API manual
+├── CHANGELOG.md                      # Chronological version changelog
+├── RELEASE_NOTES.md                  # Curated release notes
 ├── record.sh                         # Live microphone execution script
 └── nudge.sh                          # Ambient conversation monitor script
 ```
 
 ---
 
-## 4. Documentation & Developer Guides
+## 5. Documentation & Developer Guides
 
-- **[System Architecture Guide](ARCHITECTURE.md)**: End-to-end dataflow diagrams, pipeline contracts, and operational guidelines.
+- **[System Architecture Guide](ARCHITECTURE.md)**: End-to-end dataflow diagrams, pipeline contracts, and Android container design.
 - **[API Reference & Manual](API_REFERENCE.md)**: Exhaustive class, method, data structure, and REST API documentation.
+- **[Changelog](CHANGELOG.md)**: Complete chronological history of updates and improvements.
+- **[Release Notes](RELEASE_NOTES.md)**: Highlights of current and past feature releases.
 
 ---
 
-## 5. Disclaimer & AI Attribution
+## 6. Disclaimer & AI Attribution
 
 > [!NOTE]
 > **AI Assistance Notice**: This software tool, including its core speech processing algorithms, NLP coaching logic, test suites, architecture, and user interface, was created and developed with the assistance of Artificial Intelligence (AI) systems and models. All coaching insights, transcription analysis, and behavioral scores are generated algorithmically for developmental and self-improvement purposes.
 
 ---
 
-## 6. License
+## 7. License
 
-Licensed under the Apache License, Version 2.0.
-
-
+Licensed under the [Apache License, Version 2.0](LICENSE).

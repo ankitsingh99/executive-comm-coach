@@ -37,7 +37,7 @@ graph TD
     subgraph Output Interfaces
         Q --> R[Terminal / CLI Rich Formatter]
         Q --> S[Web UI Emulator / Dashboard]
-        Q --> T[Mobile Companion App]
+        Q --> T[Android Native Companion App]
     end
 ```
 
@@ -45,12 +45,26 @@ graph TD
 
 ## 2. Directory & Module Organization
 
-The codebase is organized into three distinct layers: **Acoustic & Speech (ASR)**, **Coaching & NLP Engine**, and **Privacy Compliance**.
+The codebase is organized into four distinct layers: **Acoustic & Speech (ASR)**, **Coaching & NLP Engine**, **Privacy Compliance**, and **Android Client Layer**.
 
 ```
 executive-comm-coach/
+├── android/                          # Native Android companion application
+│   ├── app/
+│   │   ├── src/main/
+│   │   │   ├── assets/               # Local offline coaching engine bundle
+│   │   │   │   └── index.html
+│   │   │   ├── java/com/execcoach/
+│   │   │   │   ├── MainActivity.kt   # Edge-to-edge hardware-accelerated container & mic permissions
+│   │   │   │   ├── ExecCoachApplication.kt
+│   │   │   │   ├── service/          # Ambient audio & Silero VAD services
+│   │   │   │   └── data/local/       # Encrypted SQLCipher database & Room DAOs
+│   │   │   └── AndroidManifest.xml   # Permissions (RECORD_AUDIO, FOREGROUND_SERVICE)
+│   │   └── build.gradle.kts          # Gradle build configuration (API 35/36/37)
+│   └── gradlew                       # Gradle build wrapper
+│
 ├── core/
-│   ├── asr_diarization/          # Audio sensing, streaming, STT, and voice identification
+│   ├── asr_diarization/              # Audio sensing, streaming, STT, and voice identification
 │   │   ├── acoustic_speaker_detector.py  # Pitch, RMS energy, and vocal tone classifier
 │   │   ├── diarizer.py                   # Speaker turn alignment, role assignment, overlap detection
 │   │   ├── gemini_audio_engine.py        # Gemini 2.5 Flash multimodal transcription & diarization
@@ -62,7 +76,7 @@ executive-comm-coach/
 │   │   ├── speaker_voiceprint_registry.py# Local acoustic MFCC voiceprint memory & auto-identification
 │   │   └── vad_gater.py                  # Silero-style low-power ambient acoustic gate (<2.5% CPU)
 │   │
-│   ├── engine/                   # Linguistic analysis, scoring, and coaching synthesis
+│   ├── engine/                       # Linguistic analysis, scoring, and coaching synthesis
 │   │   ├── action_item_extractor.py      # Extracts follow-ups, deliverables, meetings, and deadlines
 │   │   ├── coaching_engine.py            # Primary coaching facade with automated cloud/local routing
 │   │   ├── gemini_coaching_engine.py     # Deep semantic coaching and coached rephrasing via Gemini
@@ -73,26 +87,60 @@ executive-comm-coach/
 │   │   ├── temporal_resolver.py          # Smart date/time resolver (AM/PM inference, EOD, Hinglish relative times)
 │   │   └── transcription_analyzer.py     # High-level pipeline aggregating highlights, metrics, and tasks
 │   │
-│   ├── privacy/                  # Statutory compliance and data protection
+│   ├── privacy/                      # Statutory compliance and data protection
 │   │   ├── dpdp_compliance.py            # Consent logging, dual-tone chime, right to erasure
 │   │   └── pii_redactor.py               # Pattern-based PII scrubbers (emails, phones, credentials)
 │   │
-│   ├── config.py                 # Environment, API keys, paths, and model settings
-│   ├── record_live_coach.py      # Primary live microphone interactive coaching entry point
-│   ├── cli_coach.py              # Lightweight offline transcript coaching CLI
-│   └── server.py                 # REST & WebSocket API backend for Web and Mobile UIs
+│   ├── config.py                     # Environment, API keys, paths, and model settings
+│   ├── record_live_coach.py          # Primary live microphone interactive coaching entry point
+│   ├── cli_coach.py                  # Lightweight offline transcript coaching CLI
+│   └── server.py                     # REST & WebSocket API backend for Web and Mobile UIs
 │
 ├── emulator/
-│   └── index.html                # Interactive glassmorphic Web UI and mobile companion emulator
+│   └── index.html                    # Interactive glassmorphic Web UI and mobile companion emulator
 │
-├── core/tests/                   # Comprehensive automated test suite (55+ unit & integration tests)
-├── record.sh                     # One-click shell script for live microphone coaching
-└── nudge.sh                      # Shell script for ambient conversation monitor
+├── core/tests/                       # Comprehensive automated test suite (55+ unit & integration tests)
+├── record.sh                         # One-click shell script for live microphone coaching
+└── nudge.sh                          # Shell script for ambient conversation monitor
 ```
 
 ---
 
-## 3. Core Data Contracts (`core/engine/schema.py`)
+## 3. Android Companion Architecture
+
+The Android app combines native Android lifecycle management and hardware access with an optimized, hardware-accelerated executive user interface:
+
+```mermaid
+graph TD
+    subgraph Android Host (Kotlin / Compose)
+        A[MainActivity ComponentActivity] --> B[WindowCompat Edge-to-Edge System Bars]
+        A --> C[Runtime Permission Requester - RECORD_AUDIO]
+        A --> D[WebChromeClient PermissionRequest Bridge]
+        A --> E[Hardware Accelerated AndroidView]
+    end
+
+    subgraph Client Runtime (Assets Bundle)
+        E --> F[file:///android_asset/index.html]
+        F --> G[Web Audio API AnalyserNode Streamer]
+        F --> H[Realtime Canvas Oscilloscope & Hz Pitch Tracker]
+        F --> I[Responsive Mobile HUD & Dynamic Scenarios]
+        F --> J[DPDP Biometric Vault & Local Storage]
+    end
+```
+
+### Key Android Architecture Details:
+1. **Edge-to-Edge Display & Cutout Support**:
+   - Uses `WindowCompat.setDecorFitsSystemWindows(window, true)` with themed dark navigation bar (`#0E1424`) and status bar (`#070A13`).
+   - CSS variables dynamically adapt to Android hardware punch holes via `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`.
+2. **Audio Capture Permission Delegation**:
+   - `WebChromeClient.onPermissionRequest` intercepts HTML5 `getUserMedia` requests.
+   - Automatically maps `PermissionRequest.RESOURCE_AUDIO_CAPTURE` to native Android `Manifest.permission.RECORD_AUDIO`.
+3. **High-DPI Screen Fitting**:
+   - `useWideViewPort = false` and `loadWithOverviewMode = false` prevent 980px desktop emulation, ensuring native 1:1 CSS pixel scaling on modern devices like Google Pixel 11.
+
+---
+
+## 4. Core Data Contracts (`core/engine/schema.py`)
 
 All engine components exchange strictly typed data models:
 
@@ -106,9 +154,9 @@ All engine components exchange strictly typed data models:
 
 ---
 
-## 4. Key Workflows & Entry Points
+## 5. Key Workflows & Entry Points
 
-### 1. Live Microphone Coaching
+### 1. Live Microphone Coaching (Terminal)
 ```bash
 ./record.sh
 ```
@@ -124,17 +172,23 @@ All engine components exchange strictly typed data models:
 ```
 Monitors the room with $< 2.5\%$ CPU. When conversation onset is detected, plays a gentle chime and prompts you to start coaching.
 
-### 3. Interactive Web UI Emulator
+### 3. Interactive Web Studio
 ```bash
 ./venv/bin/python core/server.py 8080
 ```
-Open `http://localhost:8080/emulator/index.html` in your browser.
+Open `http://localhost:8080` in your browser.
 
-### 4. Running the Test Suite
+### 4. Compiling the Android App
+```bash
+cd android && ./gradlew assembleDebug
+```
+Output: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+### 5. Running the Test Suite
 ```bash
 ./venv/bin/pytest -v
 ```
-Runs the 117+ automated unit and integration tests covering ASR, diarization, VAD gating, Hinglish normalization, temporal resolution, and coaching synthesis.
+Runs the automated unit and integration tests covering ASR, diarization, VAD gating, Hinglish normalization, temporal resolution, and coaching synthesis.
 
 ---
 
@@ -142,4 +196,3 @@ Runs the 117+ automated unit and integration tests covering ASR, diarization, VA
 
 > [!NOTE]
 > **AI-Assisted Development**: This software tool and its architectural components were created and authored with the assistance of Artificial Intelligence (AI) models and agentic coding workflows. All algorithms and suggestions are intended for developmental, educational, and coaching purposes.
-

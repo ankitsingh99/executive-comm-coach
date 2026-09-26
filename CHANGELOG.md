@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-09-26
+
+### Added
+- **Native Android Companion App**: Assembled debug APK (`app-debug.apk`) for Android 10+ through Android 17+ (API 35+), tested and optimized on Google Pixel 11.
+- **Hardware-Accelerated Web Audio Engine**: Integrated HTML5 Web Audio `AnalyserNode` with `WebChromeClient` audio capture permission delegation on Android.
+- **Real-Time Microphone Waveform Oscilloscope**: Live time-domain audio visualizer with dynamic RMS energy gain and fundamental vocal pitch estimation ($85\text{ Hz} - 450\text{ Hz}$).
+- **Edge-to-Edge Display & Cutout Support**: Added safe area insets for Android status bars, camera punch holes, and bottom gesture navigation pills.
+- **Streamlined Executive UI / UX**:
+  - Segmented left workbench with tabs for Scenarios, Live Mic, and Ambient Gating.
+  - Unified mobile bottom navigation bar (`Coach`, `Actions`, `Dialogue`, `Vault`).
+  - Categorized Detailed Diagnostics modal (`Overview`, `Dynamics & Arc`, `Strengths & Fixes`).
+- **Comprehensive Documentation**: Added Android ADB deployment guide, sideloading instructions, and architectural breakdown to `README.md` and `ARCHITECTURE.md`.
+
+### Fixed
+- Fixed stray character syntax error in `emulator/index.html`.
+- Fixed Android WebView 980px desktop emulation scale bug on high-DPI devices by configuring `useWideViewPort = false` and `viewport-fit=cover`.
+- Updated Android build configuration with `useLegacyPackaging = true` for seamless native library linking.
+
+---
+
 ## [0.1.0] - 2026-09-24
 
 ### Added
