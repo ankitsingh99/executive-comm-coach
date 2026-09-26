@@ -15,10 +15,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
@@ -35,6 +41,7 @@ class MainActivity : ComponentActivity() {
     private var pendingPermissionRequest: PermissionRequest? = null
     private var webViewInstance: WebView? = null
     private var backPressedTime = 0L
+    private var isDarkThemeState by mutableStateOf(true)
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -54,10 +61,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize system status & nav bars matching active system/app theme
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        // Enable edge-to-edge window decor with Compose statusBarsPadding & navigationBarsPadding
+        // to strictly prevent the app HUD from overspilling into the notification bar / camera notch.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val isSystemDark = nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        isDarkThemeState = isSystemDark
         updateSystemBarTheme(isSystemDark)
 
         // Handle Android Back gesture / button smoothly without abrupt app exit
@@ -99,6 +108,7 @@ class MainActivity : ComponentActivity() {
 
     fun updateSystemBarTheme(isDark: Boolean) {
         runOnUiThread {
+            isDarkThemeState = isDark
             val statusBarColor = if (isDark) 0xFF070A13.toInt() else 0xFFF0F4F9.toInt()
             val navBarColor = if (isDark) 0xFF0E1424.toInt() else 0xFFFFFFFF.toInt()
             window.statusBarColor = statusBarColor
@@ -107,9 +117,10 @@ class MainActivity : ComponentActivity() {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             insetsController.isAppearanceLightStatusBars = !isDark
             insetsController.isAppearanceLightNavigationBars = !isDark
-            webViewInstance?.setBackgroundColor(if (isDark) 0xFF070A13.toInt() else 0xFFF0F4F9.toInt())
+            webViewInstance?.setBackgroundColor(statusBarColor)
         }
     }
+
 
     private fun requestAudioPermissions() {
         val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
@@ -200,13 +211,20 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        AndroidView(
-            factory = { webView },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF070A13))
-        )
+                .background(if (isDarkThemeState) Color(0xFF070A13) else Color(0xFFF0F4F9))
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            AndroidView(
+                factory = { webView },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
