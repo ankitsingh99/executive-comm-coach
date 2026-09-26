@@ -25,11 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: python
-            build-mode: none
-          - language: java-kotlin
-            build-mode: manual
+        language: [ 'java-kotlin', 'python' ]
 
     steps:
       - name: Checkout repository
@@ -52,7 +48,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
 
       - name: Build Android Code for CodeQL
         if: matrix.language == 'java-kotlin'

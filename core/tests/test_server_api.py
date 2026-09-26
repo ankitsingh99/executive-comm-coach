@@ -148,7 +148,9 @@ def test_server_header_sanitization_crlf():
         http.server.BaseHTTPRequestHandler.send_header = mock_super_send_header
 
         # Test CRLF in keyword and value
-        handler.send_header("Content-Type\r\nInjected-Header: evil", "text/html\r\nSet-Cookie: sessionId=hacked\r\n\r\n")
+        handler.send_header(
+            "Content-Type\r\nInjected-Header: evil", "text/html\r\nSet-Cookie: sessionId=hacked\r\n\r\n"
+        )
 
         assert len(sent) == 1
         k, v = sent[0]
@@ -158,4 +160,3 @@ def test_server_header_sanitization_crlf():
         assert v == "text/htmlSet-Cookie: sessionId=hacked"
     finally:
         http.server.BaseHTTPRequestHandler.send_header = original_send_header
-
