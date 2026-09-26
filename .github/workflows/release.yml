@@ -42,11 +42,11 @@ jobs:
       - name: Build Python sdist and wheel
         run: python -m build
 
-      - name: Build Android Debug APK
+      - name: Build Android APKs
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug assembleRelease --no-daemon
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -57,7 +57,8 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
-            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/executive-comm-coach-debug.apk
+            android/app/build/outputs/apk/release/executive-comm-coach-release.apk
           draft: false
           prerelease: false
         env:
