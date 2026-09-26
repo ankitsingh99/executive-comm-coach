@@ -57,10 +57,31 @@ class MainActivity : ComponentActivity() {
                     req.grant(req.resources)
                     pendingPermissionRequest = null
                 }
+                // Auto-start ambient listening in WebView
+                webViewInstance?.evaluateJavascript("typeof window.autoStartAmbientEar === 'function' ? window.autoStartAmbientEar() : false", null)
+                // Start native background ambient audio sensing service
+                startAmbientServiceIfPermitted()
             } else {
                 pendingPermissionRequest?.deny()
                 pendingPermissionRequest = null
             }
+        }
+    }
+
+    fun startAmbientServiceIfPermitted() {
+        try {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                val serviceIntent = android.content.Intent(this, com.execcoach.service.AmbientAudioService::class.java).apply {
+                    action = com.execcoach.service.AmbientAudioService.ACTION_START_AMBIENT
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+            }
+        } catch (e: Exception) {
+            // Graceful service fallback
         }
     }
 
@@ -106,6 +127,7 @@ class MainActivity : ComponentActivity() {
 
         // Pre-request microphone & notification permissions
         requestAudioPermissions()
+        startAmbientServiceIfPermitted()
 
         setContent {
             AppWebViewContainer()
@@ -188,6 +210,14 @@ class MainActivity : ComponentActivity() {
                         request: WebResourceRequest?
                     ): Boolean {
                         return false
+                    }
+
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        view?.evaluateJavascript(
+                            "typeof window.autoStartAmbientEar === 'function' ? window.autoStartAmbientEar() : false",
+                            null
+                        )
                     }
                 }
 

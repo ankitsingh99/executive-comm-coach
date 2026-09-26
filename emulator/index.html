@@ -4825,6 +4825,16 @@ Respond ONLY with a valid JSON object formatted like:
       } catch (e) { }
     }
 
+    window.autoStartAmbientEar = async function() {
+      if (!isAmbientListening && !isRecording) {
+        try {
+          await toggleAmbientEar();
+        } catch (e) {
+          console.warn("Auto-start ambient ear deferred:", e);
+        }
+      }
+    };
+
     function showAmbientSpeechNudge(customText) {
       if (isRecording) return;
       if (customText) pendingNudgeText = customText;
@@ -4850,6 +4860,13 @@ Respond ONLY with a valid JSON object formatted like:
       if (pill) pill.style.display = 'none';
       if (banner) banner.style.display = 'flex';
       playExecutiveChime();
+
+      // Trigger subtle haptic pulse on mobile devices
+      if (window.navigator && typeof window.navigator.vibrate === 'function') {
+        try {
+          window.navigator.vibrate([40, 60, 40]);
+        } catch (e) { }
+      }
     }
 
     function dismissNudge() {
@@ -5135,6 +5152,26 @@ Respond ONLY with a valid JSON object formatted like:
 
     // Load Default Scenario 1 on start
     applyScenario(1);
+
+    // Auto-activate Ambient Ear listener by default so speech detection triggers automatically
+    setTimeout(() => {
+      if (typeof window.autoStartAmbientEar === 'function') {
+        window.autoStartAmbientEar();
+      }
+    }, 300);
+
+    // Ensure AudioContext starts smoothly on first interaction if blocked by autoplay policy
+    const userInteractionStartListener = () => {
+      if (typeof window.autoStartAmbientEar === 'function') {
+        window.autoStartAmbientEar();
+      }
+      window.removeEventListener('click', userInteractionStartListener);
+      window.removeEventListener('touchstart', userInteractionStartListener);
+      window.removeEventListener('keydown', userInteractionStartListener);
+    };
+    window.addEventListener('click', userInteractionStartListener, { passive: true });
+    window.addEventListener('touchstart', userInteractionStartListener, { passive: true });
+    window.addEventListener('keydown', userInteractionStartListener, { passive: true });
   </script>
 </body>
 
