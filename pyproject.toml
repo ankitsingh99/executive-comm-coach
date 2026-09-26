@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "executive-comm-coach"
-version = "0.1.0"
+version = "0.2.0"
 description = "Privacy-first, ambient AI executive communication coach for English, Hindi, and Hinglish dialogue"
 readme = "README.md"
 license = "Apache-2.0"
