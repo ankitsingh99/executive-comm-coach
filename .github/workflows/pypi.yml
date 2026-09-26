@@ -12,6 +12,9 @@ jobs:
   pypi-publish:
     name: Upload package to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/executive-comm-coach
     permissions:
       id-token: write
       contents: read
@@ -38,5 +41,8 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        continue-on-error: true
         with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+
