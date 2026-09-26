@@ -26,3 +26,20 @@
     @com.google.gson.annotations.SerializedName <fields>;
 }
 -keep class com.execcoach.data.local.entity.** { *; }
+
+# javax.lang.model & Annotation Processors (AutoValue, JavaPoet, Hilt/Room)
+-dontwarn javax.lang.model.**
+-dontwarn javax.annotation.processing.**
+-dontwarn com.google.auto.value.**
+-dontwarn autovalue.shaded.**
+-keep class javax.lang.model.** { *; }
+-keep class com.google.auto.value.** { *; }
+-keep class autovalue.shaded.com.squareup.javapoet.** { *; }
+-keep class * extends javax.annotation.processing.AbstractProcessor { *; }
+
+# Keep enums used by annotation processors and reflection
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
