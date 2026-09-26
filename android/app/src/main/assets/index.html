@@ -1649,9 +1649,14 @@
               <span class="material-symbols-outlined" style="color: var(--primary); font-size: 1.15rem;">auto_awesome</span>
               <span>Executive HUD</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.45rem;">
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <button onclick="openSettingsModal()" class="status-pill"
+                style="font-size: 0.65rem; padding: 0.25rem 0.55rem; background: rgba(255, 255, 255, 0.06); border-color: var(--bg-card-border); color: #e2e8f0; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;" title="AI Engine & Privacy Settings">
+                <span class="material-symbols-outlined" style="font-size: 0.9rem; color: var(--primary-light);">settings</span>
+                <span id="txt-engine-badge">On-Device</span>
+              </button>
               <button onclick="toggleMobileSidebar()" class="status-pill"
-                style="font-size: 0.65rem; padding: 0.25rem 0.6rem; background: rgba(99, 102, 241, 0.22); border-color: rgba(99, 102, 241, 0.45); color: #c7d2fe; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                style="font-size: 0.65rem; padding: 0.25rem 0.55rem; background: rgba(99, 102, 241, 0.22); border-color: rgba(99, 102, 241, 0.45); color: #c7d2fe; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
                 <span class="material-symbols-outlined" style="font-size: 0.85rem;">tune</span>
                 <span>Scenarios</span>
               </button>
@@ -2115,6 +2120,100 @@
                 </div>
                 <div id="modal-improvements-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
               </div>
+          </div>
+
+          <!-- AI ENGINE & CREDENTIALS SETTINGS MODAL -->
+          <div id="settings-modal" style="display: none; position: absolute; inset: 0; background: rgba(7, 10, 19, 0.98); backdrop-filter: blur(24px); z-index: 100; padding: 1.1rem; flex-direction: column; gap: 0.85rem; overflow-y: auto; animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-card-border); padding-bottom: 0.6rem;">
+              <div style="font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.4rem;">
+                <span class="material-symbols-outlined" style="font-size: 1.15rem; color: var(--primary);">tune</span>
+                <span>AI Engine &amp; Privacy Settings</span>
+              </div>
+              <button onclick="closeSettingsModal()"
+                style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+
+            <!-- Mode Selection Cards -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Select Intelligence Engine</div>
+              
+              <!-- Option 1: On-Device Engine (Default) -->
+              <label style="background: rgba(255,255,255,0.03); border: 1.5px solid var(--primary); border-radius: var(--radius-md); padding: 0.75rem; display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;" id="opt-engine-device-card">
+                <input type="radio" name="ai-engine-mode" id="opt-engine-device" value="device" checked onchange="updateSettingsEngineMode()" style="margin-top: 0.2rem; accent-color: var(--primary);">
+                <div style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #fff;">🔒 100% On-Device Neural AI</span>
+                    <span style="font-size: 0.6rem; font-weight: 700; color: var(--emerald); background: rgba(16,185,129,0.15); padding: 0.1rem 0.4rem; border-radius: 4px;">DEFAULT</span>
+                  </div>
+                  <span style="font-size: 0.68rem; color: var(--text-dim); line-height: 1.35;">Runs locally on device CPU/NPU. Zero cloud latency (&lt;20ms), 100% offline, zero API keys required, DPDP Act private.</span>
+                </div>
+              </label>
+
+              <!-- Option 2: Cloud Gemini BYOK -->
+              <label style="background: rgba(255,255,255,0.03); border: 1px solid var(--bg-card-border); border-radius: var(--radius-md); padding: 0.75rem; display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;" id="opt-engine-gemini-card">
+                <input type="radio" name="ai-engine-mode" id="opt-engine-gemini" value="gemini" onchange="updateSettingsEngineMode()" style="margin-top: 0.2rem; accent-color: var(--primary);">
+                <div style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #fff;">⚡ Gemini 2.5 Cloud (BYOK)</span>
+                    <span style="font-size: 0.6rem; color: var(--cyan); background: rgba(6,182,212,0.15); padding: 0.1rem 0.4rem; border-radius: 4px;">Deep Reasoning</span>
+                  </div>
+                  <span style="font-size: 0.68rem; color: var(--text-dim); line-height: 1.35;">Connect your own Google AI Studio Gemini API key for high-context boardroom negotiation coaching.</span>
+                </div>
+              </label>
+
+              <!-- Option 3: Custom Self-Hosted Server -->
+              <label style="background: rgba(255,255,255,0.03); border: 1px solid var(--bg-card-border); border-radius: var(--radius-md); padding: 0.75rem; display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;" id="opt-engine-custom-card">
+                <input type="radio" name="ai-engine-mode" id="opt-engine-custom" value="custom" onchange="updateSettingsEngineMode()" style="margin-top: 0.2rem; accent-color: var(--primary);">
+                <div style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #fff;">🌐 Custom Proxy / Self-Hosted</span>
+                    <span style="font-size: 0.6rem; color: #a5b4fc; background: rgba(99,102,241,0.15); padding: 0.1rem 0.4rem; border-radius: 4px;">Enterprise</span>
+                  </div>
+                  <span style="font-size: 0.68rem; color: var(--text-dim); line-height: 1.35;">Connect to a private company backend server or local Ollama endpoint.</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Gemini API Key Section (Shown when Gemini selected) -->
+            <div id="section-gemini-key" style="display: none; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 0.75rem; flex-direction: column; gap: 0.45rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-size: 0.7rem; font-weight: 700; color: #c7d2fe;">Gemini API Key</label>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.64rem; color: var(--cyan); text-decoration: underline;">Get free key ↗</a>
+              </div>
+              <div style="display: flex; gap: 0.4rem;">
+                <input type="password" id="input-gemini-key" placeholder="AIzaSy..."
+                  style="flex: 1; background: rgba(0,0,0,0.45); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.74rem; color: #fff; outline: none; font-family: var(--font-mono);">
+                <button onclick="toggleKeyVisibility()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--bg-card-border); color: var(--text-muted); border-radius: 6px; padding: 0.35rem 0.55rem; cursor: pointer; font-size: 0.7rem;">
+                  <span class="material-symbols-outlined" id="icon-key-visibility" style="font-size: 0.95rem;">visibility</span>
+                </button>
+              </div>
+              <button onclick="testGeminiConnection()" class="filter-chip" style="align-self: flex-start; margin-top: 0.2rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                <span class="material-symbols-outlined" style="font-size: 0.8rem;">check_circle</span>
+                <span>Test Key Connection</span>
+              </button>
+              <div id="txt-key-test-status" style="font-size: 0.65rem; display: none;"></div>
+            </div>
+
+            <!-- Custom Server URL Section (Shown when Custom selected) -->
+            <div id="section-custom-url" style="display: none; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--bg-card-border); border-radius: var(--radius-md); padding: 0.75rem; flex-direction: column; gap: 0.45rem;">
+              <label style="font-size: 0.7rem; font-weight: 700; color: #fff;">Custom Server Endpoint</label>
+              <input type="text" id="input-custom-url" placeholder="http://10.0.2.2:8000 or https://api.yourcoach.com"
+                style="background: rgba(0,0,0,0.45); border: 1px solid var(--bg-card-border); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.74rem; color: #fff; outline: none; font-family: var(--font-mono);">
+            </div>
+
+            <!-- Save & Action Controls -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.2rem;">
+              <button class="primary-btn" onclick="saveSettingsAndApply()" style="flex: 1; padding: 0.55rem; font-size: 0.76rem;">Save &amp; Apply</button>
+              <button onclick="closeSettingsModal()" class="filter-chip" style="padding: 0.55rem 0.85rem; font-size: 0.74rem;">Cancel</button>
+            </div>
+
+            <!-- DPDP Act Data Privacy Wipe -->
+            <div style="border-top: 1px solid var(--bg-card-border); padding-top: 0.65rem; margin-top: 0.4rem; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.7rem; font-weight: 700; color: #fca5a5;">Right to Erasure (DPDP Act)</div>
+                <div style="font-size: 0.62rem; color: var(--text-dim);">Clear all cached credentials, voiceprints &amp; sessions.</div>
+              </div>
+              <button onclick="wipeAllAppDataAndSettings()" style="background: transparent; border: 1px solid rgba(244,63,94,0.4); color: var(--rose); font-size: 0.65rem; padding: 0.3rem 0.6rem; border-radius: var(--radius-sm); cursor: pointer;">Wipe All Data</button>
             </div>
           </div>
 
@@ -3084,6 +3183,13 @@
 
     // Android Hardware / Gesture Back Navigation Handler
     window.handleAndroidBack = function() {
+      // 0. Close Settings Modal if open
+      const setModal = document.getElementById('settings-modal');
+      if (setModal && setModal.style.display === 'flex') {
+        closeSettingsModal();
+        return true;
+      }
+
       // 1. Close Insights Modal if open
       const insModal = document.getElementById('insights-modal');
       if (insModal && (insModal.style.display === 'flex' || window.getComputedStyle(insModal).display === 'flex')) {
@@ -3123,6 +3229,228 @@
       // 6. At root page (scorecard) with nothing open -> allow back gesture to exit or show toast
       return false;
     };
+
+    // AI Engine & API Provider Settings State
+    const SETTINGS_KEY = 'ecc_ai_engine_settings_v1';
+    let appSettings = {
+      engineMode: 'device', // 'device', 'gemini', 'custom'
+      geminiApiKey: '',
+      customServerUrl: ''
+    };
+
+    function loadSavedSettings() {
+      try {
+        const stored = localStorage.getItem(SETTINGS_KEY);
+        if (stored) {
+          appSettings = { ...appSettings, ...JSON.parse(stored) };
+        }
+      } catch (e) { }
+
+      // Update Topbar badge
+      const badgeEl = document.getElementById('txt-engine-badge');
+      if (badgeEl) {
+        if (appSettings.engineMode === 'gemini') badgeEl.innerText = 'Gemini 2.5';
+        else if (appSettings.engineMode === 'custom') badgeEl.innerText = 'Custom Server';
+        else badgeEl.innerText = 'On-Device';
+      }
+    }
+
+    function openSettingsModal() {
+      loadSavedSettings();
+      const modal = document.getElementById('settings-modal');
+      if (!modal) return;
+
+      const optDevice = document.getElementById('opt-engine-device');
+      const optGemini = document.getElementById('opt-engine-gemini');
+      const optCustom = document.getElementById('opt-engine-custom');
+      const inputKey = document.getElementById('input-gemini-key');
+      const inputUrl = document.getElementById('input-custom-url');
+
+      if (optDevice) optDevice.checked = appSettings.engineMode === 'device';
+      if (optGemini) optGemini.checked = appSettings.engineMode === 'gemini';
+      if (optCustom) optCustom.checked = appSettings.engineMode === 'custom';
+      if (inputKey) inputKey.value = appSettings.geminiApiKey || '';
+      if (inputUrl) inputUrl.value = appSettings.customServerUrl || '';
+
+      updateSettingsEngineMode();
+      modal.style.display = 'flex';
+    }
+
+    function closeSettingsModal() {
+      const modal = document.getElementById('settings-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function updateSettingsEngineMode() {
+      const selected = document.querySelector('input[name="ai-engine-mode"]:checked')?.value || 'device';
+      const secGemini = document.getElementById('section-gemini-key');
+      const secCustom = document.getElementById('section-custom-url');
+
+      const cardDevice = document.getElementById('opt-engine-device-card');
+      const cardGemini = document.getElementById('opt-engine-gemini-card');
+      const cardCustom = document.getElementById('opt-engine-custom-card');
+
+      if (cardDevice) cardDevice.style.borderColor = selected === 'device' ? 'var(--primary)' : 'var(--bg-card-border)';
+      if (cardGemini) cardGemini.style.borderColor = selected === 'gemini' ? 'var(--primary)' : 'var(--bg-card-border)';
+      if (cardCustom) cardCustom.style.borderColor = selected === 'custom' ? 'var(--primary)' : 'var(--bg-card-border)';
+
+      if (secGemini) secGemini.style.display = selected === 'gemini' ? 'flex' : 'none';
+      if (secCustom) secCustom.style.display = selected === 'custom' ? 'flex' : 'none';
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById('input-gemini-key');
+      const icon = document.getElementById('icon-key-visibility');
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.innerText = 'visibility_off';
+      } else {
+        input.type = 'password';
+        if (icon) icon.innerText = 'visibility';
+      }
+    }
+
+    async function testGeminiConnection() {
+      const keyInput = document.getElementById('input-gemini-key');
+      const statusEl = document.getElementById('txt-key-test-status');
+      const apiKey = (keyInput ? keyInput.value : '').trim();
+
+      if (!apiKey) {
+        alert("Please enter a Gemini API Key to test.");
+        return;
+      }
+
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#cbd5e1';
+        statusEl.innerText = "Testing connection with Gemini 2.5 Flash API...";
+      }
+
+      try {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "Respond only with: OK" }] }]
+          })
+        });
+        if (resp.ok) {
+          if (statusEl) {
+            statusEl.style.color = '#34d399';
+            statusEl.innerText = "✓ Key Valid! Gemini 2.5 Cloud Intelligence connected successfully.";
+          }
+        } else {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err.error ? err.error.message : `HTTP ${resp.status}`;
+          if (statusEl) {
+            statusEl.style.color = '#f87171';
+            statusEl.innerText = `✕ Connection failed: ${msg}`;
+          }
+        }
+      } catch (e) {
+        if (statusEl) {
+          statusEl.style.color = '#f87171';
+          statusEl.innerText = "✕ Network Error: Unable to reach Google API endpoints.";
+        }
+      }
+    }
+
+    function saveSettingsAndApply() {
+      const selected = document.querySelector('input[name="ai-engine-mode"]:checked')?.value || 'device';
+      const keyInput = document.getElementById('input-gemini-key');
+      const urlInput = document.getElementById('input-custom-url');
+
+      appSettings.engineMode = selected;
+      appSettings.geminiApiKey = (keyInput ? keyInput.value : '').trim();
+      appSettings.customServerUrl = (urlInput ? urlInput.value : '').trim();
+
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+      } catch (e) { }
+
+      loadSavedSettings();
+      closeSettingsModal();
+      alert(`[OK] Settings saved! Active Engine: ${appSettings.engineMode === 'gemini' ? 'Gemini 2.5 Cloud' : (appSettings.engineMode === 'custom' ? 'Custom Server' : '100% On-Device Neural AI')}`);
+    }
+
+    function wipeAllAppDataAndSettings() {
+      if (confirm("DPDP Act Section 12 Right to Erasure:\nPermanently clear all cached credentials, enrolled voiceprints, action items, and session history on this device?")) {
+        try {
+          localStorage.clear();
+        } catch (e) { }
+        appSettings = { engineMode: 'device', geminiApiKey: '', customServerUrl: '' };
+        loadSavedSettings();
+        closeSettingsModal();
+        alert("✓ All app data and cached credentials permanently erased.");
+        location.reload();
+      }
+    }
+
+    async function callGeminiApiDirect(text, apiKey) {
+      const prompt = `You are an elite Executive Communication Coach. Analyze dialogue transcripts for cadence, assertion, active listening, commitments, agreements, and coached improvements. Return valid JSON matching the coaching schema.
+
+Transcript:
+"${text}"
+
+Respond ONLY with a valid JSON object formatted like:
+{
+  "recognized_speaker": "Rahul Sharma",
+  "recognized_sub": "Cloud Gemini 2.5 Synced",
+  "tone": "Executive & Grounded (132 Hz)",
+  "presence": 85,
+  "assertiveness": 82,
+  "listening": 88,
+  "rephrasing": {
+    "critique": "State conclusions and recommended decisions upfront before explaining background context.",
+    "coached": "I recommend we prioritize the core deliverable to ensure our deployment timeline remains unblocked."
+  },
+  "dynamics": {
+    "user_talk_time_pct": 50,
+    "counterpart_talk_time_pct": 50,
+    "average_turn_latency_ms": 360,
+    "ask_vs_tell_ratio": 1.0,
+    "brevity_potential_pct": 10,
+    "deep_listening_score": 85,
+    "vocal_tension_index": "Calm & Grounded"
+  },
+  "action_items": [
+    {
+      "owner": "YOU",
+      "category": "Deliverable",
+      "due": "Upcoming",
+      "task": "Review and deploy caching policies",
+      "quote": "Review savings"
+    }
+  ],
+  "fillers_detected": [],
+  "agreements": [
+    {
+      "headline": "Ship Release",
+      "agreed_solution": "Ship the deployment release on schedule",
+      "speaker_turn": "USER",
+      "quote": "We have decided to ship the release"
+    }
+  ],
+  "unresolved_loops": [],
+  "top_strengths": [{"observation": "Clear conversational cadence.", "verbatim_quote": ""}],
+  "areas_for_improvement": [{"critique": "State decisions upfront.", "verbatim_quote": "", "coached_phrasing": ""}]
+}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
+      });
+      if (!response.ok) throw new Error("Gemini API Error: " + response.status);
+      const data = await response.json();
+      const rawJson = data.candidates[0].content.parts[0].text;
+      return JSON.parse(rawJson);
+    }
 
     async function loadVoiceVault() {
       const container = document.getElementById('list-vault');
@@ -3280,7 +3608,8 @@
       if (overlay) {
         overlay.style.display = 'flex';
         barFill.style.width = '25%';
-        stepTxt.innerText = window.AndroidCoachAI ? 'Running on-device neural acoustic engine (0ms cloud latency)...' : 'Extracting acoustic cadence & pitch (132 Hz)...';
+        const engineLabel = appSettings.engineMode === 'gemini' ? 'Calling Gemini 2.5 Cloud Intelligence...' : (window.AndroidCoachAI ? 'Running on-device neural acoustic engine (0ms cloud latency)...' : 'Extracting acoustic cadence & pitch (132 Hz)...');
+        stepTxt.innerText = engineLabel;
       }
 
       const p1 = setTimeout(() => {
@@ -3296,13 +3625,34 @@
       try {
         let res = null;
 
-        // 1. Check for native Android On-Device AI Engine
-        if (window.AndroidCoachAI && typeof window.AndroidCoachAI.evaluateConversation === 'function') {
+        // 1. Cloud Gemini BYOK if enabled and key provided
+        if (appSettings.engineMode === 'gemini' && appSettings.geminiApiKey) {
+          try {
+            res = await callGeminiApiDirect(text, appSettings.geminiApiKey);
+          } catch (geminiErr) {
+            console.warn("Gemini Cloud call failed, falling back to local on-device engine:", geminiErr);
+          }
+        }
+
+        // 2. Custom Server Endpoint if enabled
+        if (!res && appSettings.engineMode === 'custom' && appSettings.customServerUrl) {
+          try {
+            const resp = await fetch(`${appSettings.customServerUrl.replace(/\/+$/, '')}/api/evaluate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dialogue_text: text })
+            });
+            if (resp.ok) res = await resp.json();
+          } catch (e) { }
+        }
+
+        // 3. Native Android On-Device AI Engine (0ms cloud latency)
+        if (!res && window.AndroidCoachAI && typeof window.AndroidCoachAI.evaluateConversation === 'function') {
           const rawLocalRes = window.AndroidCoachAI.evaluateConversation(text);
           res = JSON.parse(rawLocalRes);
         }
 
-        // 2. If not on Android or native returned error, try backend API
+        // 4. Local /api/evaluate HTTP fallback (Web dev server)
         if (!res || res.status === 'error') {
           const resp = await fetch('/api/evaluate', {
             method: 'POST',

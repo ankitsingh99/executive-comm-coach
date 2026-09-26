@@ -54,7 +54,15 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             ]
             self._send_json(data)
         else:
-            local_path = os.path.join(PROJECT_ROOT, "emulator", url_path.lstrip("/"))
+            emulator_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
+            safe_rel_path = os.path.normpath(url_path.lstrip("/\\"))
+            local_path = os.path.realpath(os.path.join(emulator_dir, safe_rel_path))
+
+            # Strictly enforce directory boundary check to prevent path traversal
+            if not local_path.startswith(emulator_dir + os.sep) and local_path != emulator_dir:
+                self.send_error(403, "Forbidden")
+                return
+
             if os.path.exists(local_path) and not os.path.isdir(local_path):
                 mime, _ = mimetypes.guess_type(local_path)
                 self._serve_file(local_path, mime or "application/octet-stream")
@@ -429,10 +437,15 @@ class EmulatorHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Unknown API Route")
 
     def _serve_file(self, path: str, content_type: str):
-        if not os.path.exists(path):
+        emulator_dir = os.path.realpath(os.path.join(PROJECT_ROOT, "emulator"))
+        canonical_path = os.path.realpath(path)
+        if not canonical_path.startswith(emulator_dir + os.sep) and canonical_path != emulator_dir:
+            self.send_error(403, "Forbidden")
+            return
+        if not os.path.exists(canonical_path) or os.path.isdir(canonical_path):
             self.send_error(404, "File Not Found")
             return
-        with open(path, "rb") as f:
+        with open(canonical_path, "rb") as f:
             content = f.read()
         self.send_response(200)
         self.send_header("Content-Type", content_type)
