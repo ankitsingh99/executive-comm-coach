@@ -2,6 +2,7 @@ package com.execcoach.service
 
 import android.content.Context
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -77,5 +78,22 @@ class AudioRecordManagerTest {
     @Test
     fun testStopCapture_safelyResetsState() {
         audioManager.stopCapture()
+        assertEquals(DspPowerState.IDLE, audioManager.getCurrentDspState())
+        assertFalse(audioManager.isMicHogged())
+    }
+
+    @Test
+    fun testGetHardwareDspInfoJson_structure() {
+        val info = audioManager.getHardwareDspInfoJson()
+        assertTrue(info.contains("hardwareDspSupported"))
+        assertTrue(info.contains("currentState"))
+        assertTrue(info.contains("estimatedPowerDrain"))
+    }
+
+    @Test
+    fun testReleaseMicToStandby_transitionsState() {
+        audioManager.releaseMicToStandby()
+        assertEquals(DspPowerState.DSP_STANDBY_RELEASED, audioManager.getCurrentDspState())
+        assertFalse(audioManager.isMicHogged())
     }
 }

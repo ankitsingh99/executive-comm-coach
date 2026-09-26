@@ -90,4 +90,21 @@ class CoachBridgeInterfaceTest {
         val theme = bridge.getSystemTheme()
         assertTrue(theme == "dark" || theme == "light")
     }
+
+    @Test
+    fun testGetHardwareDspInfo_returnsValidJson() {
+        val dspJson = bridge.getHardwareDspInfo()
+        assertTrue(dspJson.contains("hardwareDspSupported") || dspJson.contains("currentState"))
+    }
+
+    @Test
+    fun testIsMicHogged_safeExecution() {
+        val isHogged = bridge.isMicHogged()
+        assertFalse(isHogged)
+    }
+
+    @Test
+    fun testTriggerMicStandbyRelease_nonMainActivityReturnsFalse() {
+        assertFalse(bridge.triggerMicStandbyRelease())
+    }
 }

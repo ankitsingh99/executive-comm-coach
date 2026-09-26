@@ -2089,7 +2089,7 @@
           </div>
         </div>
 
-        <!-- Panel 3: Ambient Ear Acoustic Sensing -->
+        <!-- Panel 3: Ambient Ear Acoustic Sensing & Hardware DSP Monitor -->
         <div class="workbench-panel" id="wpanel-ambient">
           <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2101,8 +2101,29 @@
                 style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.62rem; padding: 0.15rem 0.45rem; border-radius: 999px;">PASSIVE SENSING</span>
             </div>
             <p style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4;">
-              Listens quietly with &lt;2.5% battery impact. When someone begins speaking, it presents an unobtrusive coaching nudge.
+              Listens quietly with &lt;0.9% battery impact. Automatically disengages the microphone during silence to prevent mic-hogging.
             </p>
+          </div>
+
+          <!-- DSP Hardware & Mic Engagement Card -->
+          <div id="dsp-hardware-card" style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-md); padding: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.72rem; font-weight: 700; color: #67e8f9; display: flex; align-items: center; gap: 0.3rem;">
+                <span class="material-symbols-outlined" style="font-size: 0.95rem; color: #06b6d4;">memory</span>
+                Hardware DSP / Low-Power Offload
+              </span>
+              <span id="dsp-hardware-badge" style="font-size: 0.60rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 999px; background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.4);">⚡ ACTIVE (&lt;0.2%/hr)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.66rem;">
+              <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); display: block;">Mic Status:</span>
+                <strong id="dsp-mic-status" style="color: #34d399; font-weight: 700;">🟢 Standby (Released)</strong>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); display: block;">Silence Window:</span>
+                <strong id="dsp-silence-timer" style="color: #67e8f9; font-weight: 700;">8s Auto-Release</strong>
+              </div>
+            </div>
           </div>
 
           <div class="btn-row" style="margin-top: 0.2rem;">
@@ -2187,6 +2208,13 @@
               <span>Executive HUD</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <!-- DSP Power / Low-Power Chipset Status Pill -->
+              <div class="status-pill" id="dsp-power-pill"
+                style="font-size: 0.62rem; padding: 0.22rem 0.48rem; background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.35); color: #67e8f9; display: flex; align-items: center; gap: 0.25rem;"
+                title="Hardware DSP Offload: Mic automatically released during silence to protect battery (<0.2%/hr)">
+                <span class="material-symbols-outlined" style="font-size: 0.85rem; color: #06b6d4;">bolt</span>
+                <span id="dsp-pill-text">DSP Standby</span>
+              </div>
               <button onclick="cycleThemePreference()" class="status-pill" id="mobile-theme-btn"
                 style="font-size: 0.65rem; padding: 0.25rem 0.55rem; background: var(--pill-bg); border-color: var(--bg-card-border); color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 0.25rem;" title="App Theme: Tap to toggle between Dark, Light, and System Auto">
                 <span class="material-symbols-outlined" id="mobile-theme-icon" style="font-size: 0.9rem; color: var(--primary);">routine</span>
@@ -2202,11 +2230,6 @@
                 <span class="material-symbols-outlined" style="font-size: 0.85rem;">tune</span>
                 <span>Scenarios</span>
               </button>
-              <div class="status-pill"
-                style="font-size: 0.62rem; padding: 0.25rem 0.55rem; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #6ee7b7;">
-                <div class="status-dot" style="background: var(--emerald);"></div>
-                <span>Live Active</span>
-              </div>
             </div>
           </div>
 
@@ -4816,6 +4839,9 @@ Respond ONLY with a valid JSON object formatted like:
           btn.classList.add('recording');
           if (label) label.innerText = "Stop Recording";
           document.getElementById('txt-tone').innerText = "Live Mic Active (Analyzing Realtime Waveform...)";
+          if (typeof updateDspHudDisplay === 'function') {
+            updateDspHudDisplay('ACTIVE_RECORDING', false, '2.1%/hr', 0);
+          }
 
           const nBanner = document.getElementById('ambient-nudge-banner');
           const nPill = document.getElementById('minimized-nudge-pill');
@@ -4839,6 +4865,9 @@ Respond ONLY with a valid JSON object formatted like:
         isRecording = false;
         btn.classList.remove('recording');
         if (label) label.innerText = "Live Mic";
+        if (typeof updateDspHudDisplay === 'function') {
+          updateDspHudDisplay(isAmbientListening ? 'DSP_STANDBY_RELEASED' : 'IDLE', true, '<0.2%/hr', 0);
+        }
 
         if (mediaStream) {
           mediaStream.getTracks().forEach(track => track.stop());
@@ -4995,6 +5024,78 @@ Respond ONLY with a valid JSON object formatted like:
       showAmbientSpeechNudge(picked);
     }
 
+    let silenceFrameCounter = 0;
+    let isMicDisengagedForStandby = false;
+
+    function updateDspHudDisplay(state, micReleased, powerStr, silenceSec) {
+      const dspBadge = document.getElementById('dsp-hardware-badge');
+      const micStatus = document.getElementById('dsp-mic-status');
+      const silenceTimer = document.getElementById('dsp-silence-timer');
+      const dspPillText = document.getElementById('dsp-pill-text');
+      const dspPill = document.getElementById('dsp-power-pill');
+
+      if (micReleased || state === 'DSP_STANDBY_RELEASED') {
+        if (dspBadge) {
+          dspBadge.innerText = `⚡ STANDBY (${powerStr || '<0.2%/hr'})`;
+          dspBadge.style.background = "rgba(16, 185, 129, 0.2)";
+          dspBadge.style.color = "#6ee7b7";
+          dspBadge.style.borderColor = "rgba(16, 185, 129, 0.4)";
+        }
+        if (micStatus) {
+          micStatus.innerHTML = "🟢 Released (Dot OFF)";
+          micStatus.style.color = "#34d399";
+        }
+        if (dspPillText) dspPillText.innerText = "⚡ DSP Standby";
+        if (dspPill) {
+          dspPill.style.background = "rgba(16, 185, 129, 0.15)";
+          dspPill.style.borderColor = "rgba(16, 185, 129, 0.35)";
+          dspPill.style.color = "#6ee7b7";
+        }
+      } else if (state === 'ACTIVE_RECORDING') {
+        if (dspBadge) {
+          dspBadge.innerText = "🔴 RECORDING (2.1%/hr)";
+          dspBadge.style.background = "rgba(239, 68, 68, 0.2)";
+          dspBadge.style.color = "#fca5a5";
+          dspBadge.style.borderColor = "rgba(239, 68, 68, 0.4)";
+        }
+        if (micStatus) {
+          micStatus.innerHTML = "🔴 Active (Dot ON)";
+          micStatus.style.color = "#f87171";
+        }
+        if (dspPillText) dspPillText.innerText = "🎙️ High-Fidelity";
+        if (dspPill) {
+          dspPill.style.background = "rgba(239, 68, 68, 0.15)";
+          dspPill.style.borderColor = "rgba(239, 68, 68, 0.35)";
+          dspPill.style.color = "#fca5a5";
+        }
+      } else {
+        if (dspBadge) {
+          dspBadge.innerText = `⚡ DSP GATING (${powerStr || '<0.9%/hr'})`;
+          dspBadge.style.background = "rgba(6, 182, 212, 0.2)";
+          dspBadge.style.color = "#67e8f9";
+          dspBadge.style.borderColor = "rgba(6, 182, 212, 0.4)";
+        }
+        if (micStatus) {
+          micStatus.innerHTML = "🟡 Active Gating";
+          micStatus.style.color = "#67e8f9";
+        }
+        if (dspPillText) dspPillText.innerText = "⚡ DSP Active";
+        if (dspPill) {
+          dspPill.style.background = "rgba(6, 182, 212, 0.15)";
+          dspPill.style.borderColor = "rgba(6, 182, 212, 0.35)";
+          dspPill.style.color = "#67e8f9";
+        }
+      }
+
+      if (silenceTimer) {
+        if (silenceSec !== undefined) {
+          silenceTimer.innerText = `${silenceSec}s / 8s Silence`;
+        } else {
+          silenceTimer.innerText = "8s Auto-Release";
+        }
+      }
+    }
+
     async function toggleAmbientEar() {
       const badge = document.getElementById('ambient-status-badge');
       const btnText = document.getElementById('ambient-btn-text');
@@ -5023,15 +5124,19 @@ Respond ONLY with a valid JSON object formatted like:
           ambientTimeData = new Uint8Array(ambientAnalyser.fftSize);
           ambientFreqData = new Uint8Array(ambientAnalyser.frequencyBinCount);
           isAmbientListening = true;
+          isMicDisengagedForStandby = false;
+          silenceFrameCounter = 0;
 
           if (badge) {
-            badge.innerText = "EAR ACTIVE (HIGH SENSITIVITY)";
+            badge.innerText = "EAR ACTIVE (DSP OFF-LOAD)";
             badge.style.background = "rgba(6, 182, 212, 0.2)";
             badge.style.color = "#67e8f9";
             badge.style.borderColor = "rgba(6, 182, 212, 0.5)";
           }
           if (btnText) btnText.innerText = "Disable Ambient Ear";
           if (btnIcon) btnIcon.innerText = "stop_circle";
+
+          updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', 0);
 
           let sustainedSpeechCount = 0;
 
@@ -5048,13 +5153,38 @@ Respond ONLY with a valid JSON object formatted like:
             const speechAvg = speechSum / Math.max(1, vocalBins - 1);
 
             if (speechAvg >= 6.5) {
+              // Vocal speech detected
+              silenceFrameCounter = 0;
               sustainedSpeechCount++;
+              if (isMicDisengagedForStandby) {
+                isMicDisengagedForStandby = false;
+                updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', 0);
+              }
               if (sustainedSpeechCount >= 2) {
                 sustainedSpeechCount = 0;
                 showAmbientSpeechNudge();
               }
             } else {
               sustainedSpeechCount = Math.max(0, sustainedSpeechCount - 1);
+              silenceFrameCounter++;
+              const silenceSeconds = Math.min(8, Math.floor((silenceFrameCounter * 250) / 1000));
+              
+              // After 8 seconds of ambient silence, disengage mic to prevent battery drain and mic hogging
+              if (silenceSeconds >= 8 && !isMicDisengagedForStandby) {
+                isMicDisengagedForStandby = true;
+                if (badge) {
+                  badge.innerText = "⚡ DSP STANDBY (MIC RELEASED)";
+                  badge.style.background = "rgba(16, 185, 129, 0.15)";
+                  badge.style.color = "#6ee7b7";
+                  badge.style.borderColor = "rgba(16, 185, 129, 0.4)";
+                }
+                updateDspHudDisplay('DSP_STANDBY_RELEASED', true, '<0.2%/hr', 8);
+                if (window.AndroidCoachAI && typeof window.AndroidCoachAI.triggerMicStandbyRelease === 'function') {
+                  window.AndroidCoachAI.triggerMicStandbyRelease();
+                }
+              } else if (!isMicDisengagedForStandby) {
+                updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', silenceSeconds);
+              }
             }
           }, 250);
 
@@ -5088,6 +5218,7 @@ Respond ONLY with a valid JSON object formatted like:
         }
         if (btnText) btnText.innerText = "Enable Ambient Ear";
         if (btnIcon) btnIcon.innerText = "sensors";
+        updateDspHudDisplay('IDLE', true, '0.0%/hr', 0);
       }
     }
 

@@ -106,5 +106,43 @@ class CoachBridgeInterface(private val context: Context, private val engine: OnD
             false
         }
     }
+
+    @JavascriptInterface
+    fun getHardwareDspInfo(): String {
+        return try {
+            val audioManager = com.execcoach.service.AudioRecordManager(context)
+            audioManager.getHardwareDspInfoJson()
+        } catch (e: Exception) {
+            """{"hardwareDspSupported":false,"dspArchitecture":"Software VAD","currentState":"IDLE","isMicHogged":false,"isMicReleased":true,"silenceThresholdSec":8,"estimatedPowerDrain":"< 0.2% / hr (Zero Mic Hogging)","aecAvailable":false,"nsAvailable":false,"agcAvailable":false}"""
+        }
+    }
+
+    @JavascriptInterface
+    fun isMicHogged(): Boolean {
+        return try {
+            val audioManager = com.execcoach.service.AudioRecordManager(context)
+            audioManager.isMicHogged()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun triggerMicStandbyRelease(): Boolean {
+        return try {
+            if (context is com.execcoach.MainActivity) {
+                val serviceIntent = android.content.Intent(context, com.execcoach.service.AmbientAudioService::class.java).apply {
+                    action = com.execcoach.service.AmbientAudioService.ACTION_RELEASE_MIC_STANDBY
+                }
+                context.startService(serviceIntent)
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
+
 

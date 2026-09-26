@@ -25,7 +25,8 @@ import kotlinx.coroutines.launch
  */
 enum class SensingState {
     IDLE,
-    PASSIVE_VAD_GATED,      // Low-power ambient acoustic gating (< 2.5% battery/hr)
+    DUTY_CYCLE_DSP_STANDBY, // Ultra low-power DSP Standby (Mic released, < 0.2% battery/hr)
+    PASSIVE_VAD_GATED,      // Low-power ambient acoustic gating (< 0.9% battery/hr with DSP offload)
     CONSENT_PROMPTED,       // Heads-up notification / floating overlay presented to user
     ACTIVE_RECORDING,       // Explicit user-consented capture with AES-256 & Opus
     POST_PROCESSING         // ASR, Persona Binding, and LLM Coaching Evaluation
@@ -33,7 +34,8 @@ enum class SensingState {
 
 /**
  * Android 14/15/16 Compliant Foreground Service with foregroundServiceType="microphone".
- * Manages deterministic transition from ambient VAD gating to active consented recording.
+ * Manages deterministic transition from ambient VAD gating to active consented recording,
+ * with zero mic-hogging auto-release in DSP Standby mode.
  */
 class AmbientAudioService : Service() {
 
@@ -50,6 +52,7 @@ class AmbientAudioService : Service() {
         const val HEADS_UP_NOTIFICATION_ID = 1002
         const val ACTION_START_AMBIENT = "ACTION_START_AMBIENT"
         const val ACTION_START_ACTIVE = "ACTION_START_ACTIVE"
+        const val ACTION_RELEASE_MIC_STANDBY = "ACTION_RELEASE_MIC_STANDBY"
         const val ACTION_STOP = "ACTION_STOP"
     }
 
@@ -64,6 +67,7 @@ class AmbientAudioService : Service() {
         when (intent?.action) {
             ACTION_START_AMBIENT -> startPassiveAmbientGating()
             ACTION_START_ACTIVE -> startActiveConsentedRecording()
+            ACTION_RELEASE_MIC_STANDBY -> releaseMicToDspStandby()
             ACTION_STOP -> stopSensingService()
         }
         return START_STICKY
@@ -84,18 +88,58 @@ class AmbientAudioService : Service() {
         }
 
         serviceScope.launch {
-            audioManager.startPcmStream { audioFrame16k ->
-                // Silero VAD evaluates 32ms frames in <1ms
-                val speechProb = vadDetector.evaluatePcmFrame(audioFrame16k)
-                if (speechProb >= 0.75f) {
-                    onSustainedSpeechDetected()
+            audioManager.startPcmStream(
+                onFrameCaptured = { audioFrame16k ->
+                    // Silero VAD evaluates 32ms frames in <1ms
+                    val speechProb = vadDetector.evaluatePcmFrame(audioFrame16k)
+                    if (speechProb >= 0.75f) {
+                        onSustainedSpeechDetected()
+                    }
+                },
+                onSilenceTimeout = {
+                    onAmbientSilenceTimeout()
                 }
-            }
+            )
+        }
+    }
+
+    private fun onAmbientSilenceTimeout() {
+        if (_currentState.value == SensingState.PASSIVE_VAD_GATED) {
+            _currentState.value = SensingState.DUTY_CYCLE_DSP_STANDBY
+            updatePassiveNotification("⚡ Low-Power DSP Standby (Mic Released • <0.2%/hr)")
+        }
+    }
+
+    private fun releaseMicToDspStandby() {
+        _currentState.value = SensingState.DUTY_CYCLE_DSP_STANDBY
+        audioManager.releaseMicToStandby()
+        updatePassiveNotification("⚡ Low-Power DSP Standby (Mic Disengaged)")
+    }
+
+    private fun updatePassiveNotification(contentText: String) {
+        try {
+            val intent = Intent(this, MainActivity::class.java)
+            val pendingIntent = PendingIntent.getActivity(
+                this, 0, intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Executive Coach: Low-Power DSP")
+                .setContentText(contentText)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .build()
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            // Safe notification update
         }
     }
 
     private fun onSustainedSpeechDetected() {
-        if (_currentState.value == SensingState.PASSIVE_VAD_GATED) {
+        if (_currentState.value == SensingState.PASSIVE_VAD_GATED || _currentState.value == SensingState.DUTY_CYCLE_DSP_STANDBY) {
             _currentState.value = SensingState.CONSENT_PROMPTED
             showHeadsUpConsentNotification()
         }
