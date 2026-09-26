@@ -27,14 +27,20 @@
 }
 -keep class com.execcoach.data.local.entity.** { *; }
 
-# javax.lang.model & Annotation Processors (AutoValue, JavaPoet, Hilt/Room)
+# Keep rules for AutoValue and annotation processing classes
 -dontwarn javax.lang.model.**
 -dontwarn javax.annotation.processing.**
 -dontwarn com.google.auto.value.**
 -dontwarn autovalue.shaded.**
+-dontwarn autovalue.shaded.com.squareup.javapoet$.**
+-dontwarn autovalue.shaded.com.squareup.javapoet.**
+
+# Don't process these classes - they're only needed at compile time
 -keep class javax.lang.model.** { *; }
 -keep class com.google.auto.value.** { *; }
+-keep class autovalue.shaded.com.squareup.javapoet$.** { *; }
 -keep class autovalue.shaded.com.squareup.javapoet.** { *; }
+-keep class autovalue.shaded.** { *; }
 -keep class * extends javax.annotation.processing.AbstractProcessor { *; }
 
 # Keep enums used by annotation processors and reflection
