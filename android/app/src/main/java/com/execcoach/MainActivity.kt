@@ -26,11 +26,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import dagger.hilt.android.AndroidEntryPoint
 
+import androidx.activity.OnBackPressedCallback
+import android.widget.Toast
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private var pendingPermissionRequest: PermissionRequest? = null
     private var webViewInstance: WebView? = null
+    private var backPressedTime = 0L
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -54,6 +58,35 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, true)
         window.statusBarColor = 0xFF070A13.toInt()
         window.navigationBarColor = 0xFF0E1424.toInt()
+
+        // Handle Android Back gesture / button smoothly without abrupt app exit
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val wv = webViewInstance
+                if (wv != null) {
+                    wv.evaluateJavascript("typeof window.handleAndroidBack === 'function' ? window.handleAndroidBack() : false") { handledStr ->
+                        val handled = handledStr == "true" || handledStr == "\"true\""
+                        if (!handled) {
+                            if (wv.canGoBack()) {
+                                wv.goBack()
+                            } else {
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - backPressedTime < 2000) {
+                                    isEnabled = false
+                                    onBackPressedDispatcher.onBackPressed()
+                                } else {
+                                    backPressedTime = currentTime
+                                    Toast.makeText(this@MainActivity, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
 
         // Pre-request microphone permission on Android 10+
         requestAudioPermissions()

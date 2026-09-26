@@ -3059,7 +3059,14 @@
       loadVoiceVault();
     }
 
-    function setAppTab(tabId) {
+    let appTabHistory = ['scorecard'];
+
+    function setAppTab(tabId, isBackNav = false) {
+      if (!isBackNav && activeTab !== tabId) {
+        appTabHistory.push(tabId);
+        if (appTabHistory.length > 25) appTabHistory.shift();
+      }
+
       activeTab = tabId;
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.querySelectorAll('.bar-btn').forEach(b => b.classList.remove('active'));
@@ -3074,6 +3081,48 @@
         loadVoiceVault();
       }
     }
+
+    // Android Hardware / Gesture Back Navigation Handler
+    window.handleAndroidBack = function() {
+      // 1. Close Insights Modal if open
+      const insModal = document.getElementById('insights-modal');
+      if (insModal && (insModal.style.display === 'flex' || window.getComputedStyle(insModal).display === 'flex')) {
+        closeInsightsModal();
+        return true;
+      }
+
+      // 2. Close New Action form if open
+      const actionForm = document.getElementById('form-new-action');
+      if (actionForm && actionForm.style.display === 'flex') {
+        actionForm.style.display = 'none';
+        return true;
+      }
+
+      // 3. Clear Dialogue inspection card if open
+      const diaInspect = document.getElementById('dialogue-inspect-card');
+      if (diaInspect && diaInspect.style.display === 'flex') {
+        clearSelectedDialogueTurn();
+        return true;
+      }
+
+      // 4. Close mobile sidebar if open
+      const sidebar = document.getElementById('main-sidebar');
+      if (sidebar && sidebar.classList.contains('mobile-open')) {
+        sidebar.classList.remove('mobile-open');
+        return true;
+      }
+
+      // 5. Navigate back in Tab History
+      if (appTabHistory.length > 1) {
+        appTabHistory.pop(); // Pop current tab
+        const prevTab = appTabHistory[appTabHistory.length - 1];
+        setAppTab(prevTab, true);
+        return true;
+      }
+
+      // 6. At root page (scorecard) with nothing open -> allow back gesture to exit or show toast
+      return false;
+    };
 
     async function loadVoiceVault() {
       const container = document.getElementById('list-vault');
