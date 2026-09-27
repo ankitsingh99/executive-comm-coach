@@ -4663,8 +4663,6 @@ Respond ONLY with a valid JSON object formatted like:
       rec.interimResults = true;
       rec.lang = 'en-IN';
 
-      let silenceTimeout = null;
-
       rec.onresult = (event) => {
         let interim = '';
         let final = '';
@@ -4680,20 +4678,10 @@ Respond ONLY with a valid JSON object formatted like:
         }
         const currentText = (liveTranscript + (interim ? `[speaking: ${interim}]` : '')).trim();
         document.getElementById('custom-speech-input').value = currentText;
-
-        if (silenceTimeout) clearTimeout(silenceTimeout);
-        if (isRecording && (final || interim)) {
-          silenceTimeout = setTimeout(() => {
-            if (isRecording && liveTranscript.trim().length > 3) {
-              console.log("Silence detected (2.5s). Auto-concluding recording.");
-              toggleMic();
-            }
-          }, 2500);
-        }
       };
 
       rec.onerror = (err) => {
-        console.error("Speech recognition error:", err);
+        console.warn("Speech recognition notice:", err);
       };
 
       rec.onend = () => {
@@ -4704,6 +4692,20 @@ Respond ONLY with a valid JSON object formatted like:
 
       return rec;
     }
+
+    // Native Android Speech Recognition Bridge Handler
+    window.onNativeSpeechResult = function(transcript, isFinal) {
+      if (!isRecording) return;
+      const input = document.getElementById('custom-speech-input');
+      if (input) {
+        if (isFinal) {
+          liveTranscript += (liveTranscript ? " " : "") + transcript;
+          input.value = liveTranscript;
+        } else {
+          input.value = (liveTranscript ? liveTranscript + " " : "") + `[speaking: ${transcript}]`;
+        }
+      }
+    };
 
     async function getMicrophoneMediaStream(constraints) {
       if (window.AndroidCoachAI && typeof window.AndroidCoachAI.hasMicPermission === 'function') {
@@ -4738,7 +4740,7 @@ Respond ONLY with a valid JSON object formatted like:
 
     async function evaluateWithServerAudio(base64Audio, mimeType, fallbackText) {
       const btn = document.getElementById('analyze-btn');
-      if (btn) btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span><span>Transcribing SOTA Audio...</span>';
+      if (btn) btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span><span>Transcribing Audio...</span>';
       
       const overlay = document.getElementById('loading-overlay');
       const barFill = document.getElementById('progress-bar-fill');
@@ -4746,7 +4748,7 @@ Respond ONLY with a valid JSON object formatted like:
       if (overlay) {
         overlay.style.display = 'flex';
         if (barFill) barFill.style.width = '40%';
-        if (stepTxt) stepTxt.innerText = 'Transcribing high-fidelity audio via Multimodal AI Engine...';
+        if (stepTxt) stepTxt.innerText = 'Transcribing audio via Multimodal AI Engine...';
       }
 
       try {
@@ -4784,6 +4786,12 @@ Respond ONLY with a valid JSON object formatted like:
 
       if (!isRecording) {
         try {
+          // If ambient listener was active, pause it cleanly so live mic has exclusive hardware access
+          if (isAmbientListening && ambientStream) {
+            ambientStream.getTracks().forEach(t => t.stop());
+            ambientStream = null;
+          }
+
           mediaStream = await getMicrophoneMediaStream({
             audio: {
               echoCancellation: true,
@@ -4799,7 +4807,7 @@ Respond ONLY with a valid JSON object formatted like:
 
           const source = audioContext.createMediaStreamSource(mediaStream);
           const micGain = audioContext.createGain();
-          micGain.gain.value = 2.0; // 2x vocal gain boost matching CLI acoustic recorder
+          micGain.gain.value = 2.0;
           source.connect(micGain);
 
           analyserNode = audioContext.createAnalyser();
@@ -4816,23 +4824,30 @@ Respond ONLY with a valid JSON object formatted like:
 
           recordedAudioChunks = [];
           try {
-            const preferredMime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            const preferredMime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
               ? 'audio/webm;codecs=opus'
-              : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
-            mediaRecorderInstance = new MediaRecorder(mediaStream, { mimeType: preferredMime });
-            mediaRecorderInstance.ondataavailable = (e) => {
-              if (e.data && e.data.size > 0) recordedAudioChunks.push(e.data);
-            };
-            mediaRecorderInstance.start(200);
+              : ((window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : 'audio/mp4');
+            if (window.MediaRecorder) {
+              mediaRecorderInstance = new MediaRecorder(mediaStream, { mimeType: preferredMime });
+              mediaRecorderInstance.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) recordedAudioChunks.push(e.data);
+              };
+              mediaRecorderInstance.start(200);
+            }
           } catch (mErr) {
             console.warn("MediaRecorder start notice:", mErr);
           }
 
-          if (!recognition) {
-            recognition = initSpeechRecognition();
-          }
-          if (recognition) {
-            try { recognition.start(); } catch (e) { }
+          // Start native Android Speech Recognizer if inside APK container
+          if (window.AndroidCoachAI && typeof window.AndroidCoachAI.startNativeSpeechRecognition === 'function') {
+            window.AndroidCoachAI.startNativeSpeechRecognition();
+          } else {
+            if (!recognition) {
+              recognition = initSpeechRecognition();
+            }
+            if (recognition) {
+              try { recognition.start(); } catch (e) { }
+            }
           }
 
           isRecording = true;
@@ -4869,46 +4884,55 @@ Respond ONLY with a valid JSON object formatted like:
           updateDspHudDisplay(isAmbientListening ? 'DSP_STANDBY_RELEASED' : 'IDLE', true, '<0.2%/hr', 0);
         }
 
-        if (mediaStream) {
-          mediaStream.getTracks().forEach(track => track.stop());
-          mediaStream = null;
+        if (window.AndroidCoachAI && typeof window.AndroidCoachAI.stopNativeSpeechRecognition === 'function') {
+          window.AndroidCoachAI.stopNativeSpeechRecognition();
         }
+
         if (recognition) {
           try { recognition.stop(); } catch (e) { }
         }
 
-        const capturedText = document.getElementById('custom-speech-input').value.replace(/\[speaking:.*?\]/g, '').trim();
-        document.getElementById('custom-speech-input').value = capturedText;
-
-        // If raw audio was captured, send to SOTA Multimodal Audio Endpoint on server
-        if (mediaRecorderInstance && mediaRecorderInstance.state !== 'inactive' && recordedAudioChunks.length > 0) {
-          try {
-            mediaRecorderInstance.stop();
-            mediaRecorderInstance.onstop = async () => {
-              const audioBlob = new Blob(recordedAudioChunks, { type: mediaRecorderInstance.mimeType || 'audio/webm' });
-              if (audioBlob.size > 2000 && !window.AndroidCoachAI) {
-                const reader = new FileReader();
-                reader.onloadend = async () => {
-                  const base64Str = reader.result.split(',')[1];
-                  await evaluateWithServerAudio(base64Str, audioBlob.type, capturedText);
-                };
-                reader.readAsDataURL(audioBlob);
-              } else if (capturedText.length > 3) {
-                runAnalysis();
-              }
-            };
-          } catch (e) {
-            if (capturedText.length > 3) runAnalysis();
+        const finalizeRecording = () => {
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
           }
-        } else if (capturedText.length > 3) {
-          runAnalysis();
+          const capturedText = document.getElementById('custom-speech-input').value.replace(/\[speaking:.*?\]/g, '').trim();
+          document.getElementById('custom-speech-input').value = capturedText;
+
+          if (capturedText.length > 3) {
+            runAnalysis();
+          } else if (recordedAudioChunks.length > 0) {
+            const audioBlob = new Blob(recordedAudioChunks, { type: (mediaRecorderInstance && mediaRecorderInstance.mimeType) || 'audio/webm' });
+            if (audioBlob.size > 2000 && !window.AndroidCoachAI) {
+              const reader = new FileReader();
+              reader.onloadend = async () => {
+                const base64Str = reader.result.split(',')[1];
+                await evaluateWithServerAudio(base64Str, audioBlob.type, capturedText || "Spoken speech turn.");
+              };
+              reader.readAsDataURL(audioBlob);
+            } else {
+              document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip above...";
+            }
+          } else {
+            document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip above...";
+          }
+        };
+
+        if (mediaRecorderInstance && mediaRecorderInstance.state !== 'inactive') {
+          try {
+            mediaRecorderInstance.onstop = finalizeRecording;
+            mediaRecorderInstance.stop();
+          } catch (e) {
+            finalizeRecording();
+          }
         } else {
-          document.getElementById('custom-speech-input').placeholder = "Type or click a prompt chip above...";
+          finalizeRecording();
         }
       }
     }
 
-    // Ambient Audio Ear & Speech Detection Auto-Nudge Engine
+    // Ambient Audio Ear & Speech Detection Nudge Engine
     let isAmbientListening = false;
     let ambientAudioContext = null;
     let ambientAnalyser = null;
@@ -4919,6 +4943,7 @@ Respond ONLY with a valid JSON object formatted like:
     let nudgeActive = false;
     let isNudgeDismissed = false;
     let pendingNudgeText = "";
+    let lastNudgeTimestamp = 0;
 
     function playExecutiveChime() {
       try {
@@ -4928,7 +4953,7 @@ Respond ONLY with a valid JSON object formatted like:
         osc.type = 'sine';
         osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
         osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.18); // A5
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime); // Gentle subtle volume
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -4937,18 +4962,15 @@ Respond ONLY with a valid JSON object formatted like:
       } catch (e) { }
     }
 
-    window.autoStartAmbientEar = async function() {
-      if (!isAmbientListening && !isRecording) {
-        try {
-          await toggleAmbientEar();
-        } catch (e) {
-          console.warn("Auto-start ambient ear deferred:", e);
-        }
-      }
-    };
-
     function showAmbientSpeechNudge(customText) {
       if (isRecording) return;
+      const now = Date.now();
+      // Debounce ambient triggers so notifications/chimes cannot trigger in rapid succession
+      if (!customText && (now - lastNudgeTimestamp < 45000)) {
+        return;
+      }
+      lastNudgeTimestamp = now;
+
       if (customText) pendingNudgeText = customText;
 
       const banner = document.getElementById('ambient-nudge-banner');
@@ -5136,6 +5158,10 @@ Respond ONLY with a valid JSON object formatted like:
           if (btnText) btnText.innerText = "Disable Ambient Ear";
           if (btnIcon) btnIcon.innerText = "stop_circle";
 
+          if (window.AndroidCoachAI && typeof window.AndroidCoachAI.startAmbientService === 'function') {
+            window.AndroidCoachAI.startAmbientService();
+          }
+
           updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', 0);
 
           let sustainedSpeechCount = 0;
@@ -5152,15 +5178,15 @@ Respond ONLY with a valid JSON object formatted like:
             }
             const speechAvg = speechSum / Math.max(1, vocalBins - 1);
 
-            if (speechAvg >= 6.5) {
-              // Vocal speech detected
+            // Require meaningful vocal speech energy (>= 22.0)
+            if (speechAvg >= 22.0) {
               silenceFrameCounter = 0;
               sustainedSpeechCount++;
               if (isMicDisengagedForStandby) {
                 isMicDisengagedForStandby = false;
                 updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', 0);
               }
-              if (sustainedSpeechCount >= 2) {
+              if (sustainedSpeechCount >= 4) { // ~1.0 second of sustained vocal energy
                 sustainedSpeechCount = 0;
                 showAmbientSpeechNudge();
               }
@@ -5169,7 +5195,6 @@ Respond ONLY with a valid JSON object formatted like:
               silenceFrameCounter++;
               const silenceSeconds = Math.min(8, Math.floor((silenceFrameCounter * 250) / 1000));
               
-              // After 8 seconds of ambient silence, disengage mic to prevent battery drain and mic hogging
               if (silenceSeconds >= 8 && !isMicDisengagedForStandby) {
                 isMicDisengagedForStandby = true;
                 if (badge) {
@@ -5179,9 +5204,6 @@ Respond ONLY with a valid JSON object formatted like:
                   badge.style.borderColor = "rgba(16, 185, 129, 0.4)";
                 }
                 updateDspHudDisplay('DSP_STANDBY_RELEASED', true, '<0.2%/hr', 8);
-                if (window.AndroidCoachAI && typeof window.AndroidCoachAI.triggerMicStandbyRelease === 'function') {
-                  window.AndroidCoachAI.triggerMicStandbyRelease();
-                }
               } else if (!isMicDisengagedForStandby) {
                 updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', silenceSeconds);
               }
@@ -5209,6 +5231,9 @@ Respond ONLY with a valid JSON object formatted like:
         if (ambientAudioContext) {
           ambientAudioContext.close();
           ambientAudioContext = null;
+        }
+        if (window.AndroidCoachAI && typeof window.AndroidCoachAI.stopAmbientService === 'function') {
+          window.AndroidCoachAI.stopAmbientService();
         }
         if (badge) {
           badge.innerText = "PASSIVE SENSING";
@@ -5366,26 +5391,6 @@ Respond ONLY with a valid JSON object formatted like:
 
     // Load Default Scenario 1 on start
     applyScenario(1);
-
-    // Auto-activate Ambient Ear listener by default so speech detection triggers automatically
-    setTimeout(() => {
-      if (typeof window.autoStartAmbientEar === 'function') {
-        window.autoStartAmbientEar();
-      }
-    }, 300);
-
-    // Ensure AudioContext starts smoothly on first interaction if blocked by autoplay policy
-    const userInteractionStartListener = () => {
-      if (typeof window.autoStartAmbientEar === 'function') {
-        window.autoStartAmbientEar();
-      }
-      window.removeEventListener('click', userInteractionStartListener);
-      window.removeEventListener('touchstart', userInteractionStartListener);
-      window.removeEventListener('keydown', userInteractionStartListener);
-    };
-    window.addEventListener('click', userInteractionStartListener, { passive: true });
-    window.addEventListener('touchstart', userInteractionStartListener, { passive: true });
-    window.addEventListener('keydown', userInteractionStartListener, { passive: true });
   </script>
 </body>
 

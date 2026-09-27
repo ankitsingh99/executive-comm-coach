@@ -57,10 +57,6 @@ class MainActivity : ComponentActivity() {
                     req.grant(req.resources)
                     pendingPermissionRequest = null
                 }
-                // Auto-start ambient listening in WebView
-                webViewInstance?.evaluateJavascript("typeof window.autoStartAmbientEar === 'function' ? window.autoStartAmbientEar() : false", null)
-                // Start native background ambient audio sensing service
-                startAmbientServiceIfPermitted()
             } else {
                 pendingPermissionRequest?.deny()
                 pendingPermissionRequest = null
@@ -127,10 +123,73 @@ class MainActivity : ComponentActivity() {
 
         // Pre-request microphone & notification permissions
         requestAudioPermissions()
-        startAmbientServiceIfPermitted()
 
         setContent {
             AppWebViewContainer()
+        }
+    }
+
+    private var speechRecognizer: android.speech.SpeechRecognizer? = null
+
+    fun startSpeechRecognition(callback: (text: String, isFinal: Boolean) -> Unit) {
+        runOnUiThread {
+            try {
+                if (speechRecognizer == null) {
+                    speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this)
+                }
+                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                speechRecognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {}
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() {}
+                    override fun onError(error: Int) {}
+                    override fun onResults(results: Bundle?) {
+                        val matches = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                        val text = matches?.firstOrNull() ?: ""
+                        if (text.isNotEmpty()) {
+                            callback(text, true)
+                        }
+                    }
+                    override fun onPartialResults(partialResults: Bundle?) {
+                        val matches = partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)
+                        val text = matches?.firstOrNull() ?: ""
+                        if (text.isNotEmpty()) {
+                            callback(text, false)
+                        }
+                    }
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
+                speechRecognizer?.startListening(intent)
+            } catch (e: Exception) {
+                // Graceful fallback
+            }
+        }
+    }
+
+    fun stopSpeechRecognition() {
+        runOnUiThread {
+            try {
+                speechRecognizer?.stopListening()
+                speechRecognizer?.cancel()
+                speechRecognizer?.destroy()
+                speechRecognizer = null
+            } catch (e: Exception) {
+                // Safe teardown
+            }
+        }
+    }
+
+    fun sendSpeechToWebView(text: String, isFinal: Boolean) {
+        runOnUiThread {
+            val escaped = org.json.JSONObject.quote(text)
+            val script = "if (typeof window.onNativeSpeechResult === 'function') { window.onNativeSpeechResult($escaped, $isFinal); }"
+            webViewInstance?.evaluateJavascript(script, null)
         }
     }
 
@@ -214,10 +273,6 @@ class MainActivity : ComponentActivity() {
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        view?.evaluateJavascript(
-                            "typeof window.autoStartAmbientEar === 'function' ? window.autoStartAmbientEar() : false",
-                            null
-                        )
                     }
                 }
 

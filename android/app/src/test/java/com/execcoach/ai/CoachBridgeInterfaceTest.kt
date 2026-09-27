@@ -104,7 +104,17 @@ class CoachBridgeInterfaceTest {
     }
 
     @Test
-    fun testTriggerMicStandbyRelease_nonMainActivityReturnsFalse() {
-        assertFalse(bridge.triggerMicStandbyRelease())
+    fun testStartNativeSpeechRecognition_nonMainActivityReturnsFalse() {
+        assertFalse(bridge.startNativeSpeechRecognition())
+    }
+
+    @Test
+    fun testStopNativeSpeechRecognition_nonMainActivityReturnsFalse() {
+        assertFalse(bridge.stopNativeSpeechRecognition())
+    }
+
+    @Test
+    fun testStartAmbientService_nonMainActivityReturnsFalse() {
+        assertFalse(bridge.startAmbientService())
     }
 }

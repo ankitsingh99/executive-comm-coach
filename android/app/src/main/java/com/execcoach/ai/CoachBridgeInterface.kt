@@ -128,17 +128,57 @@ class CoachBridgeInterface(private val context: Context, private val engine: OnD
     }
 
     @JavascriptInterface
-    fun triggerMicStandbyRelease(): Boolean {
+    fun startNativeSpeechRecognition(): Boolean {
         return try {
             if (context is com.execcoach.MainActivity) {
-                val serviceIntent = android.content.Intent(context, com.execcoach.service.AmbientAudioService::class.java).apply {
-                    action = com.execcoach.service.AmbientAudioService.ACTION_RELEASE_MIC_STANDBY
+                context.startSpeechRecognition { text, isFinal ->
+                    context.sendSpeechToWebView(text, isFinal)
                 }
-                context.startService(serviceIntent)
                 true
             } else {
                 false
             }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun stopNativeSpeechRecognition(): Boolean {
+        return try {
+            if (context is com.execcoach.MainActivity) {
+                context.stopSpeechRecognition()
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun startAmbientService(): Boolean {
+        return try {
+            if (context is com.execcoach.MainActivity) {
+                context.startAmbientServiceIfPermitted()
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun stopAmbientService(): Boolean {
+        return try {
+            val serviceIntent = android.content.Intent(context, com.execcoach.service.AmbientAudioService::class.java).apply {
+                action = com.execcoach.service.AmbientAudioService.ACTION_STOP
+            }
+            context.startService(serviceIntent)
+            true
         } catch (e: Exception) {
             false
         }

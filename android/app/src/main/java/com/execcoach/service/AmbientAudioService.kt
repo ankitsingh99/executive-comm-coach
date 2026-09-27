@@ -73,8 +73,12 @@ class AmbientAudioService : Service() {
         return START_STICKY
     }
 
+    private var sustainedSpeechFrames = 0
+    private var lastConsentNotificationMs = 0L
+
     private fun startPassiveAmbientGating() {
         _currentState.value = SensingState.PASSIVE_VAD_GATED
+        sustainedSpeechFrames = 0
 
         val notification = buildOngoingPassiveNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -92,8 +96,18 @@ class AmbientAudioService : Service() {
                 onFrameCaptured = { audioFrame16k ->
                     // Silero VAD evaluates 32ms frames in <1ms
                     val speechProb = vadDetector.evaluatePcmFrame(audioFrame16k)
-                    if (speechProb >= 0.75f) {
-                        onSustainedSpeechDetected()
+                    if (speechProb >= 0.80f) {
+                        sustainedSpeechFrames++
+                        if (sustainedSpeechFrames >= 15) { // ~480ms sustained speech
+                            sustainedSpeechFrames = 0
+                            val now = System.currentTimeMillis()
+                            if (now - lastConsentNotificationMs >= 45000L) {
+                                lastConsentNotificationMs = now
+                                onSustainedSpeechDetected()
+                            }
+                        }
+                    } else {
+                        sustainedSpeechFrames = (sustainedSpeechFrames - 1).coerceAtLeast(0)
                     }
                 },
                 onSilenceTimeout = {
@@ -199,8 +213,9 @@ class AmbientAudioService : Service() {
             .setContentTitle("Spoken Dialogue Detected")
             .setContentText("Tap to start executive coaching analysis for this conversation.")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(Notification.DEFAULT_ALL)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
             .addAction(android.R.drawable.ic_media_play, "Start Coaching Session", pendingActive)
             .setAutoCancel(true)
             .build()
