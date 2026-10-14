@@ -2123,6 +2123,14 @@
                 <span style="color: var(--text-muted); display: block;">Silence Window:</span>
                 <strong id="dsp-silence-timer" style="color: #67e8f9; font-weight: 700;">8s Auto-Release</strong>
               </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); display: block;">Ambient Noise:</span>
+                <strong id="dsp-noise-floor" style="color: #a7f3d0; font-weight: 700;">Adaptive (~14dB)</strong>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); display: block;">Nudge State:</span>
+                <strong id="dsp-nudge-state" style="color: #93c5fd; font-weight: 700;">Armed</strong>
+              </div>
             </div>
           </div>
 
@@ -4942,6 +4950,14 @@ Respond ONLY with a valid JSON object formatted like:
     let ambientInterval = null;
     let nudgeActive = false;
     let isNudgeDismissed = false;
+    let isNudgeSuppressed = false;
+    let hasGoneSilentAfterDecline = false;
+    let silenceWhileSuppressedFrames = 0;
+    const SILENCE_FRAMES_FOR_REARM = 12; // ~3.0s at 250ms interval
+    let adaptiveNoiseFloor = 14.0;
+    const ADAPTIVE_NOISE_MIN = 6.0;
+    const ADAPTIVE_NOISE_MAX = 80.0;
+    let dynamicSpeechThreshold = 22.0;
     let pendingNudgeText = "";
     let lastNudgeTimestamp = 0;
 
@@ -4969,9 +4985,17 @@ Respond ONLY with a valid JSON object formatted like:
       if (!customText && (now - lastNudgeTimestamp < 45000)) {
         return;
       }
+      if (isNudgeSuppressed && !hasGoneSilentAfterDecline && !customText) {
+        return; // Suppressed until conversation goes silent for a while
+      }
       lastNudgeTimestamp = now;
 
-      if (customText) pendingNudgeText = customText;
+      if (customText) {
+        pendingNudgeText = customText;
+        isNudgeSuppressed = false;
+        hasGoneSilentAfterDecline = false;
+        silenceWhileSuppressedFrames = 0;
+      }
 
       const banner = document.getElementById('ambient-nudge-banner');
       const pill = document.getElementById('minimized-nudge-pill');
@@ -4983,8 +5007,8 @@ Respond ONLY with a valid JSON object formatted like:
         desc.innerHTML = "We detected that you started speaking! Would you like to start recording for communication coaching &amp; action item analysis?";
       }
 
-      if (isNudgeDismissed) {
-        if (pill) pill.style.display = 'flex';
+      if (isNudgeDismissed && !hasGoneSilentAfterDecline && !customText) {
+        if (pill) pill.style.display = 'none';
         if (banner) banner.style.display = 'none';
         return;
       }
@@ -5001,33 +5025,53 @@ Respond ONLY with a valid JSON object formatted like:
           window.navigator.vibrate([40, 60, 40]);
         } catch (e) { }
       }
+      updateDspHudDisplay();
     }
 
     function dismissNudge() {
       nudgeActive = false;
       isNudgeDismissed = true;
+      isNudgeSuppressed = true;
+      hasGoneSilentAfterDecline = false;
+      silenceWhileSuppressedFrames = 0;
       const banner = document.getElementById('ambient-nudge-banner');
       const pill = document.getElementById('minimized-nudge-pill');
       if (banner) banner.style.display = 'none';
-      if (pill) pill.style.display = 'flex';
+      if (pill) pill.style.display = 'none';
+
+      if (window.AndroidCoachAI && typeof window.AndroidCoachAI.declineNudge === 'function') {
+        try { window.AndroidCoachAI.declineNudge(); } catch (e) { }
+      }
+      updateDspHudDisplay();
     }
 
     function expandNudge() {
       isNudgeDismissed = false;
+      isNudgeSuppressed = false;
+      hasGoneSilentAfterDecline = false;
+      silenceWhileSuppressedFrames = 0;
       nudgeActive = true;
       const banner = document.getElementById('ambient-nudge-banner');
       const pill = document.getElementById('minimized-nudge-pill');
       if (pill) pill.style.display = 'none';
       if (banner) banner.style.display = 'flex';
+      updateDspHudDisplay();
     }
 
     function acceptNudgeAndRecord() {
       nudgeActive = false;
       isNudgeDismissed = false;
+      isNudgeSuppressed = false;
+      hasGoneSilentAfterDecline = false;
+      silenceWhileSuppressedFrames = 0;
       const banner = document.getElementById('ambient-nudge-banner');
       const pill = document.getElementById('minimized-nudge-pill');
       if (banner) banner.style.display = 'none';
       if (pill) pill.style.display = 'none';
+      if (window.AndroidCoachAI && typeof window.AndroidCoachAI.resetNudgeSuppression === 'function') {
+        try { window.AndroidCoachAI.resetNudgeSuppression(); } catch (e) { }
+      }
+      updateDspHudDisplay();
       if (!isRecording) {
         toggleMic();
       }
@@ -5043,6 +5087,9 @@ Respond ONLY with a valid JSON object formatted like:
       document.getElementById('custom-speech-input').value = picked;
       pendingNudgeText = picked;
       isNudgeDismissed = false;
+      isNudgeSuppressed = false;
+      hasGoneSilentAfterDecline = false;
+      silenceWhileSuppressedFrames = 0;
       showAmbientSpeechNudge(picked);
     }
 
@@ -5055,6 +5102,29 @@ Respond ONLY with a valid JSON object formatted like:
       const silenceTimer = document.getElementById('dsp-silence-timer');
       const dspPillText = document.getElementById('dsp-pill-text');
       const dspPill = document.getElementById('dsp-power-pill');
+      const noiseFloorEl = document.getElementById('dsp-noise-floor');
+      const nudgeStateEl = document.getElementById('dsp-nudge-state');
+
+      if (noiseFloorEl) {
+        const noiseDb = Math.round(adaptiveNoiseFloor);
+        const noiseDesc = adaptiveNoiseFloor > 35 ? "High Noise" : (adaptiveNoiseFloor > 20 ? "Moderate" : "Quiet");
+        noiseFloorEl.innerText = `~${noiseDb}dB (${noiseDesc})`;
+      }
+
+      if (nudgeStateEl) {
+        if (isNudgeSuppressed) {
+          if (hasGoneSilentAfterDecline) {
+            nudgeStateEl.innerText = "Paused (Re-arming)";
+            nudgeStateEl.style.color = "#fef08a";
+          } else {
+            nudgeStateEl.innerText = "Suppressed (Meeting Active)";
+            nudgeStateEl.style.color = "#f87171";
+          }
+        } else {
+          nudgeStateEl.innerText = "Armed";
+          nudgeStateEl.style.color = "#93c5fd";
+        }
+      }
 
       if (micReleased || state === 'DSP_STANDBY_RELEASED') {
         if (dspBadge) {
@@ -5090,7 +5160,7 @@ Respond ONLY with a valid JSON object formatted like:
           dspPill.style.borderColor = "rgba(239, 68, 68, 0.35)";
           dspPill.style.color = "#fca5a5";
         }
-      } else {
+      } else if (state) {
         if (dspBadge) {
           dspBadge.innerText = `⚡ DSP GATING (${powerStr || '<0.9%/hr'})`;
           dspBadge.style.background = "rgba(6, 182, 212, 0.2)";
@@ -5112,7 +5182,7 @@ Respond ONLY with a valid JSON object formatted like:
       if (silenceTimer) {
         if (silenceSec !== undefined) {
           silenceTimer.innerText = `${silenceSec}s / 8s Silence`;
-        } else {
+        } else if (state) {
           silenceTimer.innerText = "8s Auto-Release";
         }
       }
@@ -5178,21 +5248,66 @@ Respond ONLY with a valid JSON object formatted like:
             }
             const speechAvg = speechSum / Math.max(1, vocalBins - 1);
 
-            // Require meaningful vocal speech energy (>= 22.0)
-            if (speechAvg >= 22.0) {
+            // Dynamic Adaptive Background Noise Tracking:
+            // Continuously tracks ambient stationary noise (HVAC, fans, coffee shop rumble)
+            if (speechAvg < adaptiveNoiseFloor) {
+              // Room got quieter: adapt downwards quickly
+              adaptiveNoiseFloor = 0.82 * adaptiveNoiseFloor + 0.18 * speechAvg;
+            } else if (speechAvg < adaptiveNoiseFloor * 1.85) {
+              // Background noise raised slowly: adapt upwards gradually
+              adaptiveNoiseFloor = 0.982 * adaptiveNoiseFloor + 0.018 * speechAvg;
+            }
+            adaptiveNoiseFloor = Math.max(ADAPTIVE_NOISE_MIN, Math.min(ADAPTIVE_NOISE_MAX, adaptiveNoiseFloor));
+
+            // Dynamic speech threshold scales with the background noise level so noise does not trigger false nudges
+            dynamicSpeechThreshold = Math.max(20.0, Math.max(adaptiveNoiseFloor * 1.45, adaptiveNoiseFloor + 10.0));
+            const isSpeechDetected = speechAvg >= dynamicSpeechThreshold;
+
+            if (isSpeechDetected) {
               silenceFrameCounter = 0;
-              sustainedSpeechCount++;
               if (isMicDisengagedForStandby) {
                 isMicDisengagedForStandby = false;
                 updateDspHudDisplay('HARDWARE_DSP_GATING', false, '<0.9%/hr', 0);
               }
-              if (sustainedSpeechCount >= 4) { // ~1.0 second of sustained vocal energy
-                sustainedSpeechCount = 0;
-                showAmbientSpeechNudge();
+
+              if (isNudgeSuppressed) {
+                if (hasGoneSilentAfterDecline) {
+                  // Conversation went silent for a while after the user declined;
+                  // Now conversation is detected after this brief pause: re-arm and trigger nudge!
+                  isNudgeSuppressed = false;
+                  hasGoneSilentAfterDecline = false;
+                  silenceWhileSuppressedFrames = 0;
+                  isNudgeDismissed = false;
+                  sustainedSpeechCount = 0;
+                  if (window.AndroidCoachAI && typeof window.AndroidCoachAI.resetNudgeSuppression === 'function') {
+                    try { window.AndroidCoachAI.resetNudgeSuppression(); } catch (e) { }
+                  }
+                  showAmbientSpeechNudge();
+                } else {
+                  // Conversation from declined session is still active: suppress next nudge
+                  silenceWhileSuppressedFrames = 0;
+                }
+              } else {
+                // Normal unsuppressed flow
+                sustainedSpeechCount++;
+                if (sustainedSpeechCount >= 4) { // ~1.0 second of sustained vocal energy above dynamic threshold
+                  sustainedSpeechCount = 0;
+                  showAmbientSpeechNudge();
+                }
               }
             } else {
+              // Below dynamic threshold (silence or background noise)
               sustainedSpeechCount = Math.max(0, sustainedSpeechCount - 1);
               silenceFrameCounter++;
+
+              if (isNudgeSuppressed) {
+                silenceWhileSuppressedFrames++;
+                if (silenceWhileSuppressedFrames >= SILENCE_FRAMES_FOR_REARM) {
+                  // The room / conversation has gone silent for a while (>= 3.0s)
+                  hasGoneSilentAfterDecline = true;
+                }
+              }
+
               const silenceSeconds = Math.min(8, Math.floor((silenceFrameCounter * 250) / 1000));
               
               if (silenceSeconds >= 8 && !isMicDisengagedForStandby) {

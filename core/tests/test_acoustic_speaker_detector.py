@@ -183,3 +183,27 @@ def test_acoustic_detector_all_tone_classifications():
         detector._classify_tone(mean_pitch=150.0, pitch_range=20.0, mean_energy=0.04, pitch_std=11.0)
         == "Natural & Conversational"
     )
+
+
+def test_acoustic_detector_adapts_to_noise_level():
+    """Verify adaptive thresholding rejects continuous background noise without falsely detecting speakers."""
+    detector = AcousticSpeakerToneDetector(sample_rate=16000)
+    sr = 16000
+
+    # 1. Pure stationary background noise (e.g. HVAC/fan noise with RMS ~ 0.018)
+    np.random.seed(42)
+    t = np.linspace(0, 2.0, int(sr * 2.0), endpoint=False)
+    # Low frequency rumble + noise
+    noise_signal = (0.02 * np.sin(2 * np.pi * 60 * t) + 0.005 * np.random.randn(len(t))).astype(np.float32)
+
+    result_noise = detector.analyze_audio_signal(noise_signal, sample_rate=sr)
+    # Should not produce multi-speaker or misclassified active conversation
+    assert result_noise.detected_speaker_count == 1
+    assert result_noise.is_multi_speaker is False
+
+    # 2. Real voice mixed with background noise: voice should still be detected
+    voice = (0.35 * np.sin(2 * np.pi * 150 * t)).astype(np.float32)
+    mixed_signal = voice + noise_signal
+    result_mixed = detector.analyze_audio_signal(mixed_signal, sample_rate=sr)
+    assert result_mixed.detected_speaker_count == 1
+    assert 130 <= result_mixed.speakers[0].mean_pitch_hz <= 170

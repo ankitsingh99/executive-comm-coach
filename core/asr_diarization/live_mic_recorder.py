@@ -317,6 +317,11 @@ class LiveMicRecorder:
                 pass
             audio_queue.put(indata.copy())
 
+        # Nudge decline suppression and silence-based re-arming state
+        is_nudge_suppressed = False
+        has_gone_silent_after_decline = False
+        suppressed_silence_sec = 0.0
+
         try:
             with sd.InputStream(
                 samplerate=self.sample_rate, channels=1, dtype="int16", blocksize=block_size, callback=audio_callback
@@ -379,8 +384,30 @@ class LiveMicRecorder:
                     speech_prob = gate.calculate_speech_probability(chunk_flat, noise_floor_rms=noise_floor_rms)
                     timestamp_ms = (time.time() - start_time) * 1000.0
                     is_triggered, status_msg = gate.evaluate_frame(timestamp_ms, speech_prob)
+                    is_speech_active = is_triggered or speech_prob >= speech_prob_threshold
 
-                    if is_triggered or speech_prob >= speech_prob_threshold:
+                    if is_speech_active:
+                        if is_nudge_suppressed:
+                            if has_gone_silent_after_decline:
+                                # Conversation went silent for a while; speech detected after pause! Re-arm and nudge
+                                print(
+                                    "\n  [RESUMED CONVERSATION] Dialogue detected after brief pause. Re-arming nudge..."
+                                )
+                                is_nudge_suppressed = False
+                                has_gone_silent_after_decline = False
+                                suppressed_silence_sec = 0.0
+                            else:
+                                # Still part of declined conversation; suppress nudge
+                                suppressed_silence_sec = 0.0
+                                continue
+                    else:
+                        if is_nudge_suppressed:
+                            suppressed_silence_sec += poll_interval_sec
+                            if suppressed_silence_sec >= 3.0:  # ~3 seconds of silence
+                                has_gone_silent_after_decline = True
+                        continue
+
+                    if is_speech_active:
                         conf_pct = int(speech_prob * 100)
                         self.send_shell_desktop_notification(
                             title="Executive Communication Coach",
@@ -407,7 +434,17 @@ class LiveMicRecorder:
                         print("\033[1;36m└" + "─" * 72 + "┘\033[0m\n")
 
                         if on_speech_detected_callback:
-                            return on_speech_detected_callback(speech_prob)
+                            accepted = on_speech_detected_callback(speech_prob)
+                            if not accepted:
+                                # User declined nudge! Suppress until conversation goes silent for a while
+                                print(
+                                    "  [NUDGE DECLINED] Suppressing next nudge until conversation goes silent for a while...\n"
+                                )
+                                is_nudge_suppressed = True
+                                has_gone_silent_after_decline = False
+                                suppressed_silence_sec = 0.0
+                                continue
+                            return True
                         return True
 
         except KeyboardInterrupt:

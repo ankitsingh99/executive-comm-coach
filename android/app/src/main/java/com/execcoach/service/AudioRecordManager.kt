@@ -53,7 +53,38 @@ class AudioRecordManager(private val context: Context) {
     // Silence detection & mic auto-release configuration (default 8 seconds)
     var autoReleaseSilenceMs: Long = 8000L
     private var continuousSilenceStartMs: Long = 0L
-    private val silenceThresholdRms = 350.0
+    private val minSilenceThresholdRms = 220.0
+    private val maxSilenceThresholdRms = 2500.0
+    private var adaptiveNoiseFloorRms = 120.0
+
+    /**
+     * Dynamically updates the tracked ambient background noise floor using asymmetric IIR filtering.
+     * Decreases quickly when environment quiets down; increases slowly so human speech does not skew the baseline.
+     */
+    fun updateAdaptiveNoiseFloor(frameRms: Double): Double {
+        if (frameRms <= 0.0) return adaptiveNoiseFloorRms
+        if (frameRms < adaptiveNoiseFloorRms) {
+            adaptiveNoiseFloorRms = 0.85 * adaptiveNoiseFloorRms + 0.15 * frameRms
+        } else if (frameRms < adaptiveNoiseFloorRms * 2.2) {
+            adaptiveNoiseFloorRms = 0.985 * adaptiveNoiseFloorRms + 0.015 * frameRms
+        }
+        adaptiveNoiseFloorRms = adaptiveNoiseFloorRms.coerceIn(40.0, 1500.0)
+        return adaptiveNoiseFloorRms
+    }
+
+    /**
+     * Computes the dynamic acoustic silence threshold adapted to current ambient noise levels.
+     */
+    fun getAdaptiveSilenceThresholdRms(): Double {
+        val dynamicThreshold = adaptiveNoiseFloorRms * 1.75 + 120.0
+        return dynamicThreshold.coerceIn(minSilenceThresholdRms, maxSilenceThresholdRms)
+    }
+
+    fun getAdaptiveNoiseFloorRms(): Double = adaptiveNoiseFloorRms
+
+    fun setAdaptiveNoiseFloorRms(value: Double) {
+        adaptiveNoiseFloorRms = value.coerceIn(40.0, 2500.0)
+    }
 
     // Hardware DSP AudioFX handles
     private var echoCanceler: AcousticEchoCanceler? = null
@@ -96,7 +127,9 @@ class AudioRecordManager(private val context: Context) {
             DspPowerState.IDLE -> "0.0% / hr (Standby)"
         }
         val isMicOpen = isRecording.get() && currentDspState != DspPowerState.DSP_STANDBY_RELEASED
-        return """{"hardwareDspSupported":$dspSupported,"dspArchitecture":"$dspName","currentState":"${currentDspState.name}","isMicHogged":$isMicOpen,"isMicReleased":${!isMicOpen},"silenceThresholdSec":${autoReleaseSilenceMs / 1000},"estimatedPowerDrain":"$powerDrain","aecAvailable":$isAec,"nsAvailable":$isNs,"agcAvailable":$isAgc}"""
+        val noiseFloorFormatted = "%.1f".format(java.util.Locale.US, adaptiveNoiseFloorRms)
+        val silenceThreshFormatted = "%.1f".format(java.util.Locale.US, getAdaptiveSilenceThresholdRms())
+        return """{"hardwareDspSupported":$dspSupported,"dspArchitecture":"$dspName","currentState":"${currentDspState.name}","isMicHogged":$isMicOpen,"isMicReleased":${!isMicOpen},"silenceThresholdSec":${autoReleaseSilenceMs / 1000},"estimatedPowerDrain":"$powerDrain","aecAvailable":$isAec,"nsAvailable":$isNs,"agcAvailable":$isAgc,"adaptiveNoiseFloorRms":$noiseFloorFormatted,"adaptiveSilenceThresholdRms":$silenceThreshFormatted}"""
     }
 
     /**
@@ -167,8 +200,10 @@ class AudioRecordManager(private val context: Context) {
                 if (readCount > 0) {
                     val frameRms = computeFrameRms(frameBuffer)
                     val now = System.currentTimeMillis()
+                    updateAdaptiveNoiseFloor(frameRms)
+                    val dynamicSilenceThreshold = getAdaptiveSilenceThresholdRms()
 
-                    if (frameRms >= silenceThresholdRms) {
+                    if (frameRms >= dynamicSilenceThreshold) {
                         // Speech / vocal activity detected - reset silence timer
                         continuousSilenceStartMs = now
                         if (currentDspState == DspPowerState.DSP_STANDBY_RELEASED) {

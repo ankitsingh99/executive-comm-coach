@@ -183,6 +183,59 @@ class CoachBridgeInterface(private val context: Context, private val engine: OnD
             false
         }
     }
+
+    @JavascriptInterface
+    fun declineNudge(): Boolean {
+        return try {
+            val serviceIntent = android.content.Intent(context, com.execcoach.service.AmbientAudioService::class.java).apply {
+                action = com.execcoach.service.AmbientAudioService.ACTION_DECLINE_NUDGE
+            }
+            context.startService(serviceIntent)
+            com.execcoach.service.AmbientAudioService.activeNudgeLifecycle?.declineNudge()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun isNudgeSuppressed(): Boolean {
+        return com.execcoach.service.AmbientAudioService.activeNudgeLifecycle?.isSuppressed ?: false
+    }
+
+    @JavascriptInterface
+    fun resetNudgeSuppression(): Boolean {
+        return try {
+            val serviceIntent = android.content.Intent(context, com.execcoach.service.AmbientAudioService::class.java).apply {
+                action = com.execcoach.service.AmbientAudioService.ACTION_RESET_NUDGE_SUPPRESSION
+            }
+            context.startService(serviceIntent)
+            com.execcoach.service.AmbientAudioService.activeNudgeLifecycle?.resetSuppression()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JavascriptInterface
+    fun getAdaptiveNoiseFloor(): Double {
+        return try {
+            val audioManager = com.execcoach.service.AudioRecordManager(context)
+            audioManager.getAdaptiveNoiseFloorRms()
+        } catch (e: Exception) {
+            120.0
+        }
+    }
+
+    @JavascriptInterface
+    fun getAdaptiveSilenceThreshold(): Double {
+        return try {
+            val audioManager = com.execcoach.service.AudioRecordManager(context)
+            audioManager.getAdaptiveSilenceThresholdRms()
+        } catch (e: Exception) {
+            350.0
+        }
+    }
 }
 
 

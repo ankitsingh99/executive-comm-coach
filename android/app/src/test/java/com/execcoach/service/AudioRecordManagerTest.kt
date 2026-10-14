@@ -88,6 +88,8 @@ class AudioRecordManagerTest {
         assertTrue(info.contains("hardwareDspSupported"))
         assertTrue(info.contains("currentState"))
         assertTrue(info.contains("estimatedPowerDrain"))
+        assertTrue(info.contains("adaptiveNoiseFloorRms"))
+        assertTrue(info.contains("adaptiveSilenceThresholdRms"))
     }
 
     @Test
@@ -95,5 +97,32 @@ class AudioRecordManagerTest {
         audioManager.releaseMicToStandby()
         assertEquals(DspPowerState.DSP_STANDBY_RELEASED, audioManager.getCurrentDspState())
         assertFalse(audioManager.isMicHogged())
+    }
+
+    @Test
+    fun testAdaptiveNoiseFloorTracking() {
+        // Initial noise floor starts at baseline
+        audioManager.setAdaptiveNoiseFloorRms(200.0)
+        assertEquals(200.0, audioManager.getAdaptiveNoiseFloorRms(), 0.01)
+
+        // Drop in ambient noise: adapts downward quickly
+        val updatedQuiet = audioManager.updateAdaptiveNoiseFloor(60.0)
+        assertTrue("Noise floor should adapt downward quickly", updatedQuiet < 200.0)
+
+        // Moderate increase: adapts upward gradually
+        val updatedNoise = audioManager.updateAdaptiveNoiseFloor(180.0)
+        assertTrue(updatedNoise > updatedQuiet)
+    }
+
+    @Test
+    fun testAdaptiveSilenceThreshold_scalesWithNoiseFloor() {
+        audioManager.setAdaptiveNoiseFloorRms(100.0)
+        val lowNoiseThreshold = audioManager.getAdaptiveSilenceThresholdRms()
+
+        audioManager.setAdaptiveNoiseFloorRms(400.0)
+        val highNoiseThreshold = audioManager.getAdaptiveSilenceThresholdRms()
+
+        assertTrue("Higher background noise floor must elevate silence threshold", highNoiseThreshold > lowNoiseThreshold)
+        assertTrue(highNoiseThreshold >= 400.0)
     }
 }

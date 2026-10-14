@@ -114,8 +114,20 @@ class AcousticSpeakerToneDetector:
         min_lag = int(sample_rate / 450)  # Max pitch: 450 Hz
         max_lag = int(sample_rate / 75)  # Min pitch: 75 Hz
 
-        for frame in frames:
-            rms = np.sqrt(np.mean(frame**2))
+        # Adaptive Background Noise Floor Estimation:
+        # Pre-scan frame energies to dynamically adapt to stationary background noise (HVAC, fans, room hum)
+        frame_energies = [float(np.sqrt(np.mean(frame**2))) for frame in frames]
+        sorted_energies = np.sort(frame_energies) if frame_energies else [0.0]
+        # 15th percentile of frames estimates stationary background noise floor
+        cutoff_idx = max(1, int(len(sorted_energies) * 0.15))
+        ambient_noise_floor = float(np.mean(sorted_energies[:cutoff_idx])) if len(sorted_energies) > 0 else 0.005
+        # Cap noise floor assumption to 0.025 to avoid masking genuine soft speech
+        capped_noise_floor = min(ambient_noise_floor, 0.025)
+        # Dynamic speech threshold: scales with background noise level
+        adaptive_speech_threshold = max(0.015, capped_noise_floor * 1.6)
+
+        for i, frame in enumerate(frames):
+            rms = frame_energies[i]
             energies.append(rms)
 
             # Zero crossing rate
@@ -129,8 +141,8 @@ class AcousticSpeakerToneDetector:
             centroid = (np.sum(freqs * fft_mag) / mag_sum) if mag_sum > 1e-6 else 0.0
             centroids.append(centroid)
 
-            # Pitch via Normalized Autocorrelation
-            if rms > 0.015:  # Energy threshold for speech
+            # Pitch via Normalized Autocorrelation using dynamic threshold adapted to noise level
+            if rms > adaptive_speech_threshold:  # Energy threshold adapted to ambient noise
                 corr = np.correlate(frame, frame, mode="full")
                 corr = corr[len(corr) // 2 :]
                 if len(corr) > max_lag:

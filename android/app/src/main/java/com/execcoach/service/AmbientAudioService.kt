@@ -33,6 +33,68 @@ enum class SensingState {
 }
 
 /**
+ * State lifecycle manager for ambient speech nudging:
+ * - Detects sustained speech above noise floor
+ * - When user declines/dismisses a nudge: suppresses future nudges during the ongoing conversation
+ * - Tracks silence duration: detects when the room has gone silent for a while
+ * - When conversation resumes after the brief pause/silence, re-arms and nudges the user again.
+ */
+class AmbientNudgeLifecycle(
+    val silenceFramesThreshold: Int = 90 // ~3.0s at 32ms frames (93 frames)
+) {
+    var isSuppressed: Boolean = false
+        private set
+    var hasGoneSilentAfterDecline: Boolean = false
+        private set
+    var suppressedSilenceFrames: Int = 0
+        private set
+
+    fun declineNudge() {
+        isSuppressed = true
+        hasGoneSilentAfterDecline = false
+        suppressedSilenceFrames = 0
+    }
+
+    fun resetSuppression() {
+        isSuppressed = false
+        hasGoneSilentAfterDecline = false
+        suppressedSilenceFrames = 0
+    }
+
+    /**
+     * Evaluates a frame given whether speech is currently active.
+     * Returns true if a nudge should be allowed to process/trigger.
+     */
+    fun onAudioFrame(isSpeechActive: Boolean): Boolean {
+        if (isSpeechActive) {
+            if (isSuppressed) {
+                if (hasGoneSilentAfterDecline) {
+                    // Conversation went silent for a while, and now speech resumes after the pause!
+                    // Unsuppress and trigger nudge!
+                    resetSuppression()
+                    return true
+                } else {
+                    // Conversation ongoing from declined nudge: keep suppressed
+                    suppressedSilenceFrames = 0
+                    return false
+                }
+            } else {
+                return true
+            }
+        } else {
+            // Silence frame
+            if (isSuppressed) {
+                suppressedSilenceFrames++
+                if (suppressedSilenceFrames >= silenceFramesThreshold) {
+                    hasGoneSilentAfterDecline = true
+                }
+            }
+            return false
+        }
+    }
+}
+
+/**
  * Android 14/15/16 Compliant Foreground Service with foregroundServiceType="microphone".
  * Manages deterministic transition from ambient VAD gating to active consented recording,
  * with zero mic-hogging auto-release in DSP Standby mode.
@@ -45,6 +107,7 @@ class AmbientAudioService : Service() {
 
     private lateinit var vadDetector: SileroVadDetector
     private lateinit var audioManager: AudioRecordManager
+    val nudgeLifecycle = AmbientNudgeLifecycle()
 
     companion object {
         const val CHANNEL_ID = "exec_coach_ambient_channel"
@@ -53,11 +116,16 @@ class AmbientAudioService : Service() {
         const val ACTION_START_AMBIENT = "ACTION_START_AMBIENT"
         const val ACTION_START_ACTIVE = "ACTION_START_ACTIVE"
         const val ACTION_RELEASE_MIC_STANDBY = "ACTION_RELEASE_MIC_STANDBY"
+        const val ACTION_DECLINE_NUDGE = "ACTION_DECLINE_NUDGE"
+        const val ACTION_RESET_NUDGE_SUPPRESSION = "ACTION_RESET_NUDGE_SUPPRESSION"
         const val ACTION_STOP = "ACTION_STOP"
+
+        var activeNudgeLifecycle: AmbientNudgeLifecycle? = null
     }
 
     override fun onCreate() {
         super.onCreate()
+        activeNudgeLifecycle = nudgeLifecycle
         createNotificationChannels()
         vadDetector = SileroVadDetector(applicationContext)
         audioManager = AudioRecordManager(applicationContext)
@@ -68,9 +136,30 @@ class AmbientAudioService : Service() {
             ACTION_START_AMBIENT -> startPassiveAmbientGating()
             ACTION_START_ACTIVE -> startActiveConsentedRecording()
             ACTION_RELEASE_MIC_STANDBY -> releaseMicToDspStandby()
+            ACTION_DECLINE_NUDGE -> declineNudge()
+            ACTION_RESET_NUDGE_SUPPRESSION -> resetNudgeSuppression()
             ACTION_STOP -> stopSensingService()
         }
         return START_STICKY
+    }
+
+    fun declineNudge() {
+        try {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(HEADS_UP_NOTIFICATION_ID)
+        } catch (e: Exception) {
+            // Safe fallback
+        }
+        nudgeLifecycle.declineNudge()
+        sustainedSpeechFrames = 0
+        if (_currentState.value == SensingState.CONSENT_PROMPTED) {
+            _currentState.value = SensingState.PASSIVE_VAD_GATED
+        }
+    }
+
+    fun resetNudgeSuppression() {
+        nudgeLifecycle.resetSuppression()
+        sustainedSpeechFrames = 0
     }
 
     private var sustainedSpeechFrames = 0
@@ -94,20 +183,26 @@ class AmbientAudioService : Service() {
         serviceScope.launch {
             audioManager.startPcmStream(
                 onFrameCaptured = { audioFrame16k ->
-                    // Silero VAD evaluates 32ms frames in <1ms
+                    // Silero VAD evaluates 32ms frames with adaptive noise compensation
                     val speechProb = vadDetector.evaluatePcmFrame(audioFrame16k)
-                    if (speechProb >= 0.80f) {
-                        sustainedSpeechFrames++
-                        if (sustainedSpeechFrames >= 15) { // ~480ms sustained speech
-                            sustainedSpeechFrames = 0
-                            val now = System.currentTimeMillis()
-                            if (now - lastConsentNotificationMs >= 45000L) {
-                                lastConsentNotificationMs = now
-                                onSustainedSpeechDetected()
+                    val isSpeech = speechProb >= 0.70f
+
+                    if (isSpeech) {
+                        val allowNudge = nudgeLifecycle.onAudioFrame(true)
+                        if (allowNudge) {
+                            sustainedSpeechFrames++
+                            if (sustainedSpeechFrames >= 15) { // ~480ms sustained speech
+                                sustainedSpeechFrames = 0
+                                val now = System.currentTimeMillis()
+                                if (now - lastConsentNotificationMs >= 45000L || !nudgeLifecycle.isSuppressed) {
+                                    lastConsentNotificationMs = now
+                                    onSustainedSpeechDetected()
+                                }
                             }
                         }
                     } else {
                         sustainedSpeechFrames = (sustainedSpeechFrames - 1).coerceAtLeast(0)
+                        nudgeLifecycle.onAudioFrame(false)
                     }
                 },
                 onSilenceTimeout = {
@@ -209,6 +304,14 @@ class AmbientAudioService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val declineIntent = Intent(this, AmbientAudioService::class.java).apply {
+            action = ACTION_DECLINE_NUDGE
+        }
+        val pendingDecline = PendingIntent.getService(
+            this, 2, declineIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         val headsUpNotification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Spoken Dialogue Detected")
             .setContentText("Tap to start executive coaching analysis for this conversation.")
@@ -217,6 +320,8 @@ class AmbientAudioService : Service() {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .addAction(android.R.drawable.ic_media_play, "Start Coaching Session", pendingActive)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Decline", pendingDecline)
+            .setDeleteIntent(pendingDecline)
             .setAutoCancel(true)
             .build()
 
@@ -239,6 +344,9 @@ class AmbientAudioService : Service() {
     }
 
     override fun onDestroy() {
+        if (activeNudgeLifecycle == nudgeLifecycle) {
+            activeNudgeLifecycle = null
+        }
         serviceScope.cancel()
         super.onDestroy()
     }

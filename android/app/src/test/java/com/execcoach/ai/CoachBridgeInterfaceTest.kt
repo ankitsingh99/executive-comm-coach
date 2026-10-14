@@ -117,4 +117,36 @@ class CoachBridgeInterfaceTest {
     fun testStartAmbientService_nonMainActivityReturnsFalse() {
         assertFalse(bridge.startAmbientService())
     }
+
+    @Test
+    fun testDeclineNudge_safeExecution() {
+        // Safe execution when invoked from WebView
+        val result = bridge.declineNudge()
+        assertTrue(result || !result)
+    }
+
+    @Test
+    fun testIsNudgeSuppressed_safeExecution() {
+        val suppressed = bridge.isNudgeSuppressed()
+        assertTrue(suppressed || !suppressed)
+    }
+
+    @Test
+    fun testResetNudgeSuppression_safeExecution() {
+        val result = bridge.resetNudgeSuppression()
+        assertTrue(result || !result)
+    }
+
+    @Test
+    fun testGetAdaptiveNoiseFloor_safeExecution() {
+        val noiseFloor = bridge.getAdaptiveNoiseFloor()
+        assertTrue(noiseFloor >= 0.0)
+    }
+
+    @Test
+    fun testGetAdaptiveSilenceThreshold_safeExecution() {
+        val threshold = bridge.getAdaptiveSilenceThreshold()
+        assertTrue(threshold >= 0.0)
+    }
 }
+

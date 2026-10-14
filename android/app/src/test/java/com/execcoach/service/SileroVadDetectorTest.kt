@@ -66,4 +66,40 @@ class SileroVadDetectorTest {
         // Verify clean disposal
         vadDetector.close()
     }
+
+    @Test
+    fun testUpdateNoiseFloor_adapts() {
+        vadDetector.setNoiseFloorRms(100.0)
+        assertEquals(100.0, vadDetector.getNoiseFloorRms(), 0.01)
+
+        // Drop
+        val quiet = vadDetector.updateNoiseFloor(40.0)
+        assertTrue(quiet < 100.0)
+
+        // Increase
+        val noisy = vadDetector.updateNoiseFloor(150.0)
+        assertTrue(noisy > quiet)
+    }
+
+    @Test
+    fun testEvaluatePcmFrame_backgroundNoiseAdaptationAndRejection() {
+        // Low amplitude stationary background noise (e.g. fan noise with amplitude 100)
+        val noiseFrame = ShortArray(512) { 100 }
+        
+        // Feed background noise to establish noise floor
+        repeat(10) {
+            vadDetector.evaluatePcmFrame(noiseFrame)
+        }
+
+        // Stationary noise should be rejected (return 0.0)
+        val noiseProb = vadDetector.evaluatePcmFrame(noiseFrame)
+        assertEquals("Stationary noise should be rejected by adaptive noise floor", 0.0f, noiseProb, 0.001f)
+
+        // Vocal speech energy well above noise floor should still be detected
+        val voiceFrame = ShortArray(512) { i ->
+            (2500.0 * kotlin.math.sin(2.0 * Math.PI * i / 16.0)).toInt().toShort()
+        }
+        val voiceProb = vadDetector.evaluatePcmFrame(voiceFrame)
+        assertTrue("Speech above noise floor should be detected", voiceProb > 0.3f)
+    }
 }
