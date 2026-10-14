@@ -41,8 +41,8 @@ class NvidiaParakeetEngine:
         if self._model is None or self._processor is None:
             from transformers import AutoModelForCTC, AutoProcessor
 
-            self._processor = AutoProcessor.from_pretrained(self.model_id)
-            self._model = AutoModelForCTC.from_pretrained(self.model_id).to(self.device)
+            self._processor = AutoProcessor.from_pretrained(self.model_id)  # nosec B615
+            self._model = AutoModelForCTC.from_pretrained(self.model_id).to(self.device)  # nosec B615
             self._model.eval()
 
     def transcribe_audio_file(self, audio_wav_path: str, speaker_id: str = "USER") -> List[Utterance]:

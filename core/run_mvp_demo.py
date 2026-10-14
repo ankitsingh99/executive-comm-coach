@@ -12,6 +12,7 @@ Demonstrates:
 
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 
 # Ensure package is resolvable
@@ -54,7 +55,8 @@ def run_pipeline_demo():
     # Stage 2: DPDP Statutory Consent & Audible Notification
     # -------------------------------------------------------------------------
     print("\n[STAGE 2] DPDP Act 2023 Compliance & Consent Initiation...")
-    compliance_mgr = DPDPComplianceManager(storage_root="/tmp/exec_coach_storage")
+    demo_storage_dir = tempfile.mkdtemp(prefix="exec_coach_storage_")
+    compliance_mgr = DPDPComplianceManager(storage_root=demo_storage_dir)
     session_id = f"session_{int(datetime.now(timezone.utc).timestamp())}"
 
     chime_msg = compliance_mgr.trigger_audible_chime()

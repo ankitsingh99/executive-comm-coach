@@ -121,7 +121,7 @@ class EmulatorHandler(BaseHTTPRequestHandler):
                             if os.path.exists(tmp_path):
                                 try:
                                     os.remove(tmp_path)
-                                except Exception:
+                                except OSError:
                                     pass
                     except Exception as audio_err:
                         print(f"Audio transcription error: {audio_err}")

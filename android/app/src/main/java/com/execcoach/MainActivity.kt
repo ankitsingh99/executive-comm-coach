@@ -70,11 +70,7 @@ class MainActivity : ComponentActivity() {
                 val serviceIntent = android.content.Intent(this, com.execcoach.service.AmbientAudioService::class.java).apply {
                     action = com.execcoach.service.AmbientAudioService.ACTION_START_AMBIENT
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
+                startForegroundService(serviceIntent)
             }
         } catch (e: Exception) {
             // Graceful service fallback

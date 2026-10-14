@@ -6,6 +6,7 @@ Handles multi-speaker Indic / English code-mixed audio transcription with full s
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from typing import Any, Dict, List, Optional
@@ -61,6 +62,10 @@ class SarvamSpeechClient:
                 file_bytes=file_bytes,
             )
 
+            parsed_url = urllib.parse.urlparse(self.base_url)
+            if parsed_url.scheme not in ("http", "https"):
+                raise ValueError(f"Blocked unpermitted URL scheme: {parsed_url.scheme}")
+
             req = urllib.request.Request(
                 self.base_url,
                 data=body,
@@ -68,7 +73,7 @@ class SarvamSpeechClient:
                 method="POST",
             )
 
-            with urllib.request.urlopen(req, timeout=30.0) as response:
+            with urllib.request.urlopen(req, timeout=30.0) as response:  # nosec B310
                 if response.status == 200:
                     data = json.loads(response.read().decode("utf-8"))
                     return self._parse_sarvam_response(data)

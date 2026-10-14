@@ -211,7 +211,7 @@ Guidelines:
             config_kwargs = {"response_mime_type": "application/json"}
             try:
                 config_kwargs["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(disable=True)
-            except Exception:
+            except (AttributeError, TypeError):
                 pass
 
             response = client.models.generate_content(

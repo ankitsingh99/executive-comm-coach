@@ -140,7 +140,7 @@ class SpeakerVoiceprintRegistry:
             data = {k: v.to_dict() for k, v in self.voiceprints.items()}
             with open(self.registry_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-        except Exception:
+        except (IOError, OSError):
             pass
 
     def extract_voiceprint_features(

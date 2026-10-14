@@ -170,7 +170,7 @@ class AmbientAudioService : Service() {
         sustainedSpeechFrames = 0
 
         val notification = buildOngoingPassiveNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
@@ -330,17 +330,15 @@ class AmbientAudioService : Service() {
     }
 
     private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Executive Coaching Audio Service",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Foreground microphone capture and ambient acoustic gating"
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Executive Coaching Audio Service",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Foreground microphone capture and ambient acoustic gating"
         }
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 
     override fun onDestroy() {

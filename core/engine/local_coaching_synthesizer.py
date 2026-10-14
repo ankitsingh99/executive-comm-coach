@@ -8,6 +8,7 @@ and generates customized, contextual Executive BLUF coaching for real speech.
 import json
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import List, Optional
 
@@ -103,8 +104,12 @@ class LocalCoachingSynthesizer:
     ) -> Optional[ExecutiveCoachingEvaluation]:
         """Queries local Ollama endpoint if active on user's machine and models exist."""
         try:
+            parsed_base = urllib.parse.urlparse(self.ollama_url)
+            if parsed_base.scheme not in ("http", "https"):
+                return None
+
             req_tags = urllib.request.Request(f"{self.ollama_url}/api/tags")
-            with urllib.request.urlopen(req_tags, timeout=0.8) as resp:
+            with urllib.request.urlopen(req_tags, timeout=0.8) as resp:  # nosec B310
                 if resp.status == 200:
                     tags_data = json.loads(resp.read().decode("utf-8"))
                     avail_models = [m.get("name") for m in tags_data.get("models", [])]
@@ -124,7 +129,7 @@ class LocalCoachingSynthesizer:
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=3.0) as resp:
+            with urllib.request.urlopen(req, timeout=3.0) as resp:  # nosec B310
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     raw_response = data.get("response", "")

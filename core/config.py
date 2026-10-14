@@ -25,7 +25,7 @@ if os.path.exists(ENV_PATH):
                     v = v.strip().strip("'\"")
                     if k and not os.getenv(k):
                         os.environ[k] = v
-    except Exception:
+    except (IOError, OSError):
         pass
 
 
